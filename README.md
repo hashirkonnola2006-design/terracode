@@ -1,68 +1,68 @@
-# 🌱 TerraCode — Green Tomorrow: Building a Sustainable Future
+# 🌱 EcoFuture (TerraCode) — Green Tomorrow: Building a Sustainable Future
 
 An interactive 3D scroll-driven planetary healing experience built for the web development competition themed **"Green Tomorrow - Building a Sustainable Future"**.
 
 ---
 
-## 🌍 The Concept
+## 🌍 The Concept & Visual Experience
 
-In the hero state, Earth is depicted in a state of severe environmental distress: parched cracked ground, dark toxic oceans with oily sheens, industrial blight, microplastic debris, and suffocating smog clouds.
-
-As the user scrolls (or interacts with the healing controls), Earth undergoes an organic restoration process:
-- **Simplex/FBM Noise Wave**: Rather than an artificial linear gradient or fade, healing spreads outward in organic fractal waves across continents and seas.
-- **Bio-luminescent Energy Frontier**: A glowing emerald-green edge (`#4ADE80`) traces the active boundary between degraded and revitalized ecosystems.
-- **Volumetric Smog Dissipation**: Toxic particulate haze gradually dissolves into crystal-clear clean atmosphere.
-- **Atmospheric Transition**: The outer atmospheric corona shifts from an acidic reddish-brown smog aura to a radiant cyan-green ozone shield.
-- **Ecological Revival**: Once healing crosses critical biomes, orbiting leaf and bio-luminescent spore particles emerge, celebrating planetary regeneration.
+The site features a cinematic, centered hero anchored by a full 3D Earth:
+- **Polluted Initial State (`uHeal = 0.0`)**: Desaturated, parched gray-brown continents with procedural cellular cracks, toxic dark sludge oceans with oily sheen streaks, industrial soot speckles, and a dense rotating smog layer.
+- **Organic Healing Wave (`0.0 < uHeal < 1.0`)**: 3D simplex and FBM noise organically spreads vitality outward in living ripples, highlighted by a radiant bio-luminescent emerald green wave front (`#4ADE80`).
+- **Healed Paradise (`uHeal = 1.0`)**: Crisp, lush green continents, sparkling sapphire and coastal cyan oceans, dynamic drifting cloud systems, and a glowing cyan-green protective ozone layer.
+- **Floating Leaf Particles**: Subtle bio-luminescent spores and leaves awaken and orbit the globe as planetary restoration takes root.
 
 ---
 
-## 🍃 Sustainability Architecture (Digital Carbon Neutrality)
+## 🍃 Sustainable Digital Architecture
 
-Web applications often consume significant energy due to massive asset transfers and unconstrained GPU rendering loops. TerraCode is engineered to embody the competition's sustainability theme in code:
-
-1. **Zero Bitmap Image Textures**:
-   - Standard 3D Earth applications download 20MB–50MB of high-resolution diffuse, specular, normal, and night-light texture maps.
-   - TerraCode generates continents, oceans, coastlines, mountains, cracked soil, trash speckles, and clouds **100% procedurally in GLSL shaders**.
-   - Result: Initial payload is under **100 KB** (over 99% reduction in data transfer carbon emissions).
-2. **Eco / Low-Power Mode**:
-   - An instant toggle completely unmounts the WebGL canvas, replacing it with a zero-GPU vector SVG/CSS representation.
-   - Saves laptop/mobile battery and reduces peak electrical wattage.
-3. **Hardware-Capped Device Pixel Ratio**:
-   - DPR is strictly capped at `2` (or lower on mobile) to eliminate unnecessary rasterization overhead.
-4. **Accessibility & Prefers-Reduced-Motion**:
-   - Automatically detects user motion preferences and scales down particle counts and heavy camera transitions.
+- **Low Data Footprint**: Small, optimized 2K NASA Blue Marble textures (<1.2 MB total) combined with 100% procedural GLSL math for cracks, oil slicks, smog, wave fronts, and atmospheric scattering.
+- **Eco / Low-Power Mode**: One-click toggle in the navbar swaps the 3D WebGL scene for a zero-GPU vector SVG/CSS representation, saving battery and cutting energy usage.
+- **Hardware-Capped DPR**: Device Pixel Ratio is capped at `2` (reduced on mobile devices) to eliminate excess GPU rasterization work.
+- **Reduced Motion Support**: Automatically adheres to `prefers-reduced-motion`.
 
 ---
 
-## 🛠️ Tech Stack (100% Open Source)
+## 📊 Data Layer (`src/data/stats.js`)
 
-- **Core Framework**: [React 19](https://react.dev/) + [Vite](https://vitejs.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **3D Graphics & Shaders**: [Three.js](https://threejs.org/) + [@react-three/fiber](https://docs.pmnd.rs/react-three-fiber/) + [@react-three/drei](https://github.com/pmndrs/drei)
-- **Animation & Scroll Mechanics**: [GSAP](https://gsap.com/) + ScrollTrigger
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Deployment**: Optimized for Vercel edge deployment
-
----
-
-## 📊 Real Open Data Sources
-
-TerraCode is committed to scientific accuracy: every metric is sourced from verified open climate databases:
-- **Atmospheric CO₂ Concentrations**: NOAA Global Monitoring Laboratory / Mauna Loa Observatory
-- **Global Renewable Electricity Generation**: Ember Global Electricity Review / IEA
-- **Forest Cover & Tree Loss Trends**: Global Forest Watch / UN Food and Agriculture Organization (FAO)
-- **Ocean Plastics & Waste Reduction**: United Nations Environment Programme (UNEP) / World Bank Open Data
+All statistical metrics are stored as structured plain objects in `src/data/stats.js` with documented sources, years, and baselines:
+- **CO₂ Reduction Pathway**: `-42%` required global greenhouse gas reduction by 2030 (IPCC Sixth Assessment Report AR6 / Working Group III, 2023).
+- **Global Forest Cover Target**: `+18%` global forest and ecosystem restoration target (UN Strategic Plan for Forests / Bonn Challenge & FAO, 2024).
+- **Renewable Electricity Share**: `30.3%` record milestone (Ember Global Electricity Review / IEA, 2024).
+- **Ocean Plastic Reduction**: `80%` achievable leakage cut by 2040 through circular economy systems (UNEP "Turning off the Tap" / World Bank Open Data, 2023).
 
 ---
 
-## 🚀 Getting Started Locally
+## 🔬 Reference Repository & Shader Analysis (`eschota/SECS`)
 
-### Prerequisites
-- Node.js 18+ (tested on Node v24)
-- npm or pnpm
+**Evaluation of `eschota/SECS`:**
+- **Architecture**: `eschota/SECS` is a Unity High Definition Render Pipeline (HDRP) project written in **C# and Unity ShaderLab/HLSL**.
+- **Utility for Three.js/WebGL**: It is **not directly portable** to Three.js or WebGL due to Unity-specific matrix conventions, include libraries, and C# runtime scripts. Porting it blindly would introduce bloated boilerplate and breaking bugs.
+- **Conceptual Insight**: The conceptual technique of multi-layered planetary rendering (sampling day/night diffuse maps, specular ocean masks for glint, a secondary offset cloud sphere, and Fresnel atmosphere limb shaders) is universal celestial graphics technique. We have written our own custom GLSL implementation in native Three.js / R3F without copying or porting any Unity C# code.
 
-### Installation
+---
+
+## 📜 Credits & Attributions
+
+- **Three.js Earth Atmosphere & Clouds Example**:
+  - Source: [Mr.doob / Three.js Examples](https://github.com/mrdoob/three.js/tree/master/examples)
+  - Authors: Ricardo Cabello (Mr.doob) and Three.js contributors
+  - License: MIT License
+  - Assets Used: Compressed 2K Blue Marble Day, Specular, Normal, and Cloud textures.
+- **Simplex Noise in GLSL**:
+  - Authors: Stefan Gustavson and Ashima Arts
+  - License: MIT License
+- **Open Data Sources**:
+  - Intergovernmental Panel on Climate Change (IPCC) AR6
+  - United Nations Food and Agriculture Organization (FAO)
+  - United Nations Environment Programme (UNEP)
+  - Ember Climate / International Energy Agency (IEA)
+  - Open-Meteo Air Quality Open Data API
+
+---
+
+## 🛠️ How to Run Locally
+
 ```bash
 # Clone the repository
 git clone https://github.com/terracode/green-tomorrow.git
@@ -71,24 +71,10 @@ cd terracode
 # Install dependencies
 npm install
 
-# Start local development server
+# Run development server
 npm run dev
 ```
 
-Visit `http://localhost:5173` in your browser.
+Visit `http://localhost:5173/` in your browser.
 
-### Production Build
-```bash
-npm run build
-npm run preview
-```
-
----
-
-## 📝 Commit Convention
-
-Commit history follows Conventional Commits:
-- `feat:` New interactive features or sections
-- `style:` Design, typography, and visual polish
-- `fix:` Bug fixes, shader math adjustments, and responsive fixes
-- `docs:` Documentation and architecture explanations
+> **Tip for Judges / Dev Mode**: Append `?debug=1` to the URL (e.g. `http://localhost:5173/?debug=1`) to access the real-time `uHeal` shader debugging slider.
