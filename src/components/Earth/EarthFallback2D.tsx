@@ -94,3 +94,4 @@ export const EarthFallback2D: React.FC<EarthFallback2DProps> = ({ healProgress }
     </div>
   );
 };
+

@@ -58,3 +58,4 @@ export const AtmosphereSphere: React.FC<AtmosphereSphereProps> = ({
     </mesh>
   );
 };
+

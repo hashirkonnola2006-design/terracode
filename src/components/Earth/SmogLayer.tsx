@@ -64,3 +64,4 @@ export const SmogLayer: React.FC<SmogLayerProps> = ({
     </mesh>
   );
 };
+

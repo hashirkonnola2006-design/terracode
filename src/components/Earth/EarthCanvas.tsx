@@ -13,16 +13,16 @@ interface EarthCanvasProps {
 }
 
 /**
- * StarField component for cosmic depth
- * Lightweight procedural points (no textures)
+ * Procedural Cosmic Starfield
+ * Lightweight mathematical points (no image downloads)
  */
 const SubtleStarfield: React.FC = () => {
   const [positions] = useState(() => {
     const coords = new Float32Array(350 * 3);
     for (let i = 0; i < 350; i++) {
-      coords[i * 3] = (Math.random() - 0.5) * 40;
-      coords[i * 3 + 1] = (Math.random() - 0.5) * 40;
-      coords[i * 3 + 2] = -10 - Math.random() * 20;
+      coords[i * 3] = (Math.random() - 0.5) * 50;
+      coords[i * 3 + 1] = (Math.random() - 0.5) * 50;
+      coords[i * 3 + 2] = -12 - Math.random() * 25;
     }
     return coords;
   });
@@ -36,10 +36,10 @@ const SubtleStarfield: React.FC = () => {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={0.08}
-        color="#8da2fb"
+        size={0.07}
+        color="#c7d2fe"
         transparent
-        opacity={0.5}
+        opacity={0.65}
         sizeAttenuation
       />
     </points>
@@ -50,19 +50,16 @@ const SubtleStarfield: React.FC = () => {
  * EarthCanvas Container
  * 
  * Houses the 3D scene with R3F:
- * - Earth sphere with custom GLSL procedural healing shader.
- * - Atmosphere glow halo.
- * - Smog dissipation layer.
- * - Floating leaf and spore particle system.
- * - Automatic hardware-capped pixel ratio (max 2) for sustainable power usage.
- * - Seamless fallback to EarthFallback2D when low-power mode is enabled.
+ * - Full uncropped 3D sphere with visible continents, oceans, clouds, and atmosphere.
+ * - Perfectly centered behind the hero typography (matching Target Design B).
+ * - Capped DPR (max 2) for digital sustainability.
+ * - Instant fallback to zero-GPU 2D vector graphic in Low-Power mode.
  */
 export const EarthCanvas: React.FC<EarthCanvasProps> = ({
   healProgress,
   scrollRotation = 0,
   isLowPower = false,
 }) => {
-  // Mobile / small screen detection to reduce geometry workload
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -84,24 +81,26 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
   return (
     <div className="relative w-full h-full select-none">
       <Canvas
-        camera={{ position: [0, 0, 2.7], fov: 45 }}
+        camera={{ position: [0, 0, 3.1], fov: 42 }}
         dpr={[1, Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 2)]}
         gl={{
           antialias: true,
           powerPreference: 'high-performance',
           alpha: true,
         }}
-        className="w-full h-full pointer-events-auto"
+        className="w-full h-full"
       >
         <Suspense fallback={null}>
+          {/* Ambient space light */}
           <ambientLight intensity={0.25} />
-          <directionalLight position={[3, 2, 2]} intensity={1.8} />
+          {/* Directional Sun light */}
+          <directionalLight position={[3.2, 1.8, 2.2]} intensity={2.0} />
 
-          {/* Background subtle star field */}
+          {/* Cosmic background stars */}
           <SubtleStarfield />
 
-          {/* Group containing all Earth planetary components */}
-          <group position={[0, 0, 0]}>
+          {/* Centered Earth group - positioned with comfortable margins to prevent any cropping */}
+          <group position={[0, isMobile ? 0.05 : 0.12, 0]}>
             <EarthSphere
               healProgress={healProgress}
               scrollRotation={scrollRotation}

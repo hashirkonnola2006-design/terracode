@@ -26,3 +26,4 @@ export const LowPowerToggle: React.FC<LowPowerToggleProps> = ({ isLowPower, onTo
     </button>
   );
 };
+
