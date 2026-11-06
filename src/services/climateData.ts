@@ -120,3 +120,4 @@ export async function fetchLiveAirQuality(): Promise<LiveAirQuality | null> {
     };
   }
 }
+

@@ -1,108 +1,171 @@
 import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { EarthShaderMaterial } from './shaders/earthShader';
+import { AtmosphereShaderMaterial } from './shaders/atmosphereShader';
 
 interface EarthSphereProps {
-  healProgress: number; // 0.0 to 1.0
-  scrollRotation?: number; // radians offset driven by scroll
+  healProgress: number;   // 0 → polluted, 1 → healed
+  scrollRotation?: number; // extra Y-rotation from scroll (radians)
   lowDetail?: boolean;
 }
 
 /**
- * EarthSphere Component
- * 
- * Renders the central 3D planet using our custom procedural + textured EarthShader.
- * - Samples 2K Blue Marble maps for recognizable realistic continents and oceans.
- * - Procedural degradation (Voronoi cracks, toxic oil sludge) when uHeal = 0.
- * - Organic noise wave transition with emerald glowing frontier edge (#4ADE80).
- * - Multi-layer cloud sphere with independent rotation for depth.
+ * EarthSphere
+ *
+ * Layer stack (back to front):
+ *   1. Atmosphere halo  – back-face sphere, scale 1.14
+ *   2. Earth surface    – custom ShaderMaterial (earthShader.ts)
+ *   3. Cloud sphere     – semi-transparent, scale 1.013
+ *      • opacity 0.7 when polluted (dark smog brown)
+ *      • opacity 0.5 when healed  (white wispy clouds)
+ *
+ * Lighting: one directional "sun" from upper-left provided via
+ * the `uSunDir` uniform so the same vector drives both the surface
+ * and atmosphere shaders (keeps shadows consistent).
+ *
+ * Camera position is passed as `uCameraPos` so world-space Fresnel
+ * and specular are computed correctly (view-space normals alone
+ * break when the mesh rotates).
  */
 export const EarthSphere: React.FC<EarthSphereProps> = ({
   healProgress,
   scrollRotation = 0,
   lowDetail = false,
 }) => {
-  const meshRef = useRef<THREE.Mesh>(null!);
+  const earthRef  = useRef<THREE.Mesh>(null!);
   const cloudsRef = useRef<THREE.Mesh>(null!);
-  const materialRef = useRef<THREE.ShaderMaterial>(null!);
+  const atmoRef   = useRef<THREE.Mesh>(null!);
+  const earthMat  = useRef<THREE.ShaderMaterial>(null!);
+  const atmoMat   = useRef<THREE.ShaderMaterial>(null!);
 
-  // Load 2K textures
-  const [dayMap, specularMap, cloudsMap] = useTexture([
+  const { camera } = useThree();
+
+  // ── Textures ───────────────────────────────────────────
+  const [dayMap, specularMap, nightMap, cloudsMap] = useTexture([
     '/textures/earth_atmos_2048.jpg',
     '/textures/earth_specular_2048.jpg',
+    '/textures/earth_lights_2048.png',
     '/textures/earth_clouds_1024.png',
   ]);
 
-  // Clone shader material uniforms
-  const shaderData = useMemo(() => {
-    const uniforms = THREE.UniformsUtils.clone(EarthShaderMaterial.uniforms);
-    uniforms.uDayMap.value = dayMap;
-    uniforms.uSpecularMap.value = specularMap;
-    uniforms.uCloudsMap.value = cloudsMap;
+  // Anisotropic filtering sharpens the textures at oblique angles
+  [dayMap, specularMap, nightMap, cloudsMap].forEach((t) => {
+    t.anisotropy = 4;
+  });
 
-    return {
-      uniforms,
-      vertexShader: EarthShaderMaterial.vertexShader,
-      fragmentShader: EarthShaderMaterial.fragmentShader,
-    };
-  }, [dayMap, specularMap, cloudsMap]);
+  // ── Earth shader uniforms (clone so each instance is independent) ──
+  const earthUniforms = useMemo(() => {
+    const u = THREE.UniformsUtils.clone(EarthShaderMaterial.uniforms);
+    u.uDayMap.value      = dayMap;
+    u.uSpecularMap.value = specularMap;
+    u.uNightMap.value    = nightMap;
+    u.uCloudsMap.value   = cloudsMap;
+    return u;
+  }, [dayMap, specularMap, nightMap, cloudsMap]);
 
+  // ── Atmosphere shader uniforms ─────────────────────────
+  const atmoUniforms = useMemo(
+    () => THREE.UniformsUtils.clone(AtmosphereShaderMaterial.uniforms),
+    []
+  );
+
+  // ── Cloud material (plain MeshStandardMaterial, not custom) ──
+  // We rely on Three.js built-in lighting for clouds so they respond
+  // naturally to the same directional sun light added in EarthCanvas.
+  const cloudsMat = useMemo(() => {
+    const m = new THREE.MeshStandardMaterial({
+      map:         cloudsMap,
+      transparent: true,
+      opacity:     0.6,
+      blending:    THREE.NormalBlending,
+      depthWrite:  false,
+    });
+    return m;
+  }, [cloudsMap]);
+
+  // ── Per-frame update ───────────────────────────────────
   useFrame((state) => {
-    if (!materialRef.current || !meshRef.current) return;
+    const t = state.clock.elapsedTime;
 
-    // Advance time uniform
-    materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    /* Pass current camera world-position to shaders so world-space
+       Fresnel and specular are always correct regardless of rotation. */
+    const camPos = camera.position;
 
-    // Smoothly interpolate uHeal uniform
-    const currentHeal = materialRef.current.uniforms.uHeal.value;
-    materialRef.current.uniforms.uHeal.value = THREE.MathUtils.lerp(
-      currentHeal,
-      healProgress,
-      0.1
-    );
+    if (earthMat.current) {
+      const u = earthMat.current.uniforms;
+      u.uTime.value      = t;
+      u.uHeal.value      = THREE.MathUtils.lerp(u.uHeal.value, healProgress, 0.08);
+      u.uCameraPos.value.copy(camPos);
+    }
+    if (atmoMat.current) {
+      const u = atmoMat.current.uniforms;
+      u.uHeal.value      = THREE.MathUtils.lerp(u.uHeal.value, healProgress, 0.08);
+      u.uCameraPos.value.copy(camPos);
+    }
 
-    // Idle axial rotation + scroll rotation
-    const baseRotation = (state.clock.elapsedTime * 0.05) + scrollRotation;
-    meshRef.current.rotation.y = baseRotation;
-    // Natural axial tilt (23.5 degrees)
-    meshRef.current.rotation.z = 0.22;
-    meshRef.current.rotation.x = 0.12;
+    // Idle Y rotation (slow spin) + scroll-driven offset
+    const yRot = t * 0.045 + scrollRotation;
+    // Slight axial tilt (Earth's real tilt is 23.4° ≈ 0.41 rad)
+    const tiltX = 0.18, tiltZ = 0.0;
 
-    // Rotate separate clouds layer slightly faster for 3D depth
+    if (earthRef.current) {
+      earthRef.current.rotation.set(tiltX, yRot, tiltZ);
+    }
     if (cloudsRef.current) {
-      cloudsRef.current.rotation.y = baseRotation * 1.15;
-      cloudsRef.current.rotation.z = 0.22;
-      cloudsRef.current.rotation.x = 0.12;
+      // Clouds rotate ~8 % faster for parallax depth
+      cloudsRef.current.rotation.set(tiltX, yRot * 1.08, tiltZ);
+      // Cloud opacity: thick brown smog when polluted, wispy white when healed
+      const h = earthMat.current?.uniforms.uHeal.value ?? healProgress;
+      cloudsMat.opacity = THREE.MathUtils.lerp(cloudsMat.opacity,
+        0.72 - h * 0.28, // 0.72 → 0.44 (smog→clouds)
+        0.06);
+      cloudsMat.color.lerpColors(
+        new THREE.Color(0.28, 0.22, 0.14), // smog brown
+        new THREE.Color(1.0,  1.0,  1.0),  // white cloud
+        h
+      );
+    }
+    if (atmoRef.current) {
+      atmoRef.current.rotation.set(tiltX, yRot, tiltZ);
     }
   });
 
-  const segments = lowDetail ? 36 : 64;
+  const seg = lowDetail ? 36 : 64;
 
   return (
     <group>
-      {/* Main Earth Surface Sphere */}
-      <mesh ref={meshRef}>
-        <sphereGeometry args={[1, segments, segments]} />
+      {/* ── 1. Atmosphere halo (back-face, slightly larger) ── */}
+      <mesh ref={atmoRef} scale={1.14}>
+        <sphereGeometry args={[1, seg, seg]} />
         <shaderMaterial
-          ref={materialRef}
-          uniforms={shaderData.uniforms}
-          vertexShader={shaderData.vertexShader}
-          fragmentShader={shaderData.fragmentShader}
+          ref={atmoMat}
+          uniforms={atmoUniforms}
+          vertexShader={AtmosphereShaderMaterial.vertexShader}
+          fragmentShader={AtmosphereShaderMaterial.fragmentShader}
+          side={THREE.BackSide}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
         />
       </mesh>
 
-      {/* Outer 3D Cloud Sphere with Translucency */}
-      <mesh ref={cloudsRef} scale={[1.012, 1.012, 1.012]}>
-        <sphereGeometry args={[1, segments, segments]} />
-        <meshStandardMaterial
-          map={cloudsMap}
-          transparent
-          opacity={0.35 + healProgress * 0.25}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
+      {/* ── 2. Earth surface ── */}
+      <mesh ref={earthRef}>
+        <sphereGeometry args={[1, seg, seg]} />
+        <shaderMaterial
+          ref={earthMat}
+          uniforms={earthUniforms}
+          vertexShader={EarthShaderMaterial.vertexShader}
+          fragmentShader={EarthShaderMaterial.fragmentShader}
         />
+      </mesh>
+
+      {/* ── 3. Cloud / smog sphere ── */}
+      <mesh ref={cloudsRef} scale={1.013}>
+        <sphereGeometry args={[1, seg, seg]} />
+        <primitive object={cloudsMat} attach="material" />
       </mesh>
     </group>
   );
