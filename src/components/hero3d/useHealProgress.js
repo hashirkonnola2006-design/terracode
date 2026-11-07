@@ -48,3 +48,4 @@ export function useHealProgress(scrollProgress = 0) {
     setForcedHeal,
   };
 }
+
