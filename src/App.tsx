@@ -7,7 +7,7 @@ import { ImpactSection }  from './components/Impact/ImpactSection';
 import { HealedMoment }   from './components/HealedMoment/HealedMoment';
 import { GetInvolved }    from './components/GetInvolved/GetInvolved';
 import { Footer }         from './components/Footer/Footer';
-import { EarthCanvas }    from './components/Earth/EarthCanvas';
+import { Scene }          from './components/hero3d/Scene';
 import { heroStats, storyStats, actionCards } from './data/stats';
 import { Sliders, X }     from 'lucide-react';
 
@@ -130,11 +130,10 @@ export function App() {
   return (
     <div className="relative bg-[#030712] text-white min-h-screen selection:bg-emerald-500 selection:text-black">
       
-      {/* ── Fixed 3D Earth Canvas Layer (pinned across whole page) ── */}
-      <EarthCanvas
+      {/* ── Fixed Cinematic Hero 3D Scene Layer (pinned across whole page) ── */}
+      <Scene
         scrollProgress={scrollProgress}
         scrollVelocity={scrollVelocity}
-        isLowPower={isLowPower}
         onTelemetry={handleTelemetry}
       />
 

@@ -25,4 +25,4 @@ dist-ssr
 
 
 # Test artifacts
-.chrome_test_profile
+.chrome_*
