@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import {
@@ -89,8 +89,16 @@ const CloudShader = {
 };
 
 export const Clouds = ({ scrollRotation = 0, healProgress = 0 }) => {
+  const { viewport } = useThree();
   const cloudsRef = useRef(null);
   const matRef = useRef(null);
+
+  const isPortrait = viewport.width < viewport.height;
+  const anchorX = isPortrait ? 0.36 : 0.41;
+  const anchorY = isPortrait ? 0.40 : 0.36;
+  const sunDir = useMemo(() => {
+    return new THREE.Vector3(-viewport.width * anchorX, viewport.height * anchorY, 0.15).normalize();
+  }, [viewport.width, viewport.height, anchorX, anchorY]);
 
   const cloudsMap = useTexture('/textures/earth_clouds_1024.png');
 
@@ -104,16 +112,17 @@ export const Clouds = ({ scrollRotation = 0, healProgress = 0 }) => {
   const uniforms = useMemo(() => {
     const u = THREE.UniformsUtils.clone(CloudShader.uniforms);
     u.uMap.value = cloudsMap;
-    u.uSunDir.value.set(-1.95, 1.10, 0.55).normalize();
+    u.uSunDir.value.copy(sunDir);
     u.uHeal.value = healProgress;
     return u;
-  }, [cloudsMap]);
+  }, [cloudsMap, sunDir]);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
 
     if (matRef.current) {
       matRef.current.uniforms.uHeal.value = healProgress;
+      matRef.current.uniforms.uSunDir.value.copy(sunDir);
       matRef.current.uniforms.uTime.value = t;
     }
 

@@ -76,18 +76,26 @@ const AtmosphereShader = {
 export const Atmosphere = ({ healProgress = 0 }) => {
   const atmoRef = useRef(null);
   const matRef = useRef(null);
-  const { camera } = useThree();
+  const { camera, viewport } = useThree();
+
+  const isPortrait = viewport.width < viewport.height;
+  const anchorX = isPortrait ? 0.36 : 0.41;
+  const anchorY = isPortrait ? 0.40 : 0.36;
+  const sunDir = useMemo(() => {
+    return new THREE.Vector3(-viewport.width * anchorX, viewport.height * anchorY, 0.15).normalize();
+  }, [viewport.width, viewport.height, anchorX, anchorY]);
 
   const uniforms = useMemo(() => {
     const u = THREE.UniformsUtils.clone(AtmosphereShader.uniforms);
-    u.uSunDir.value.set(-1.95, 1.10, 0.55).normalize();
+    u.uSunDir.value.copy(sunDir);
     u.uHeal.value = healProgress;
     return u;
-  }, []);
+  }, [sunDir]);
 
   useFrame(() => {
     if (matRef.current) {
       matRef.current.uniforms.uCameraPos.value.copy(camera.position);
+      matRef.current.uniforms.uSunDir.value.copy(sunDir);
       matRef.current.uniforms.uHeal.value = healProgress;
     }
   });

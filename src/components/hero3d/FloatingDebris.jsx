@@ -403,6 +403,8 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
             initMesh(m, bottleData);
           }
         }}
+        castShadow
+        receiveShadow
         args={[bottleGeom, matClearBottle, COUNT_BOTTLES]}
       />
 
@@ -414,6 +416,8 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
             initMesh(m, bagData);
           }
         }}
+        castShadow
+        receiveShadow
         args={[bagGeom, matTranslucentBag, COUNT_BAGS]}
       />
 
@@ -425,6 +429,8 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
             initMesh(m, canData);
           }
         }}
+        castShadow
+        receiveShadow
         args={[canGeom, matSodaCan, COUNT_CANS]}
       />
 
@@ -436,6 +442,8 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
             initMesh(m, crateData);
           }
         }}
+        castShadow
+        receiveShadow
         args={[crateGeom, matBlueCrate, COUNT_CRATES]}
       />
 
@@ -447,6 +455,8 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
             initMesh(m, tireData);
           }
         }}
+        castShadow
+        receiveShadow
         args={[tireGeom, matRubberTire, COUNT_TIRES]}
       />
 
@@ -458,6 +468,8 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
             initMesh(m, cupData);
           }
         }}
+        castShadow
+        receiveShadow
         args={[cupGeom, matPaperCup, COUNT_CUPS]}
       />
 
@@ -469,6 +481,8 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
             initMesh(m, capData);
           }
         }}
+        castShadow
+        receiveShadow
         args={[capGeom, matCap, COUNT_CAPS]}
       />
     </group>

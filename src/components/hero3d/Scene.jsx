@@ -61,7 +61,7 @@ const WorldController = ({
   return (
     <>
       <SpaceBackground mousePos={mousePos} reducedMotion={reducedMotion} />
-      <Sun healProgress={healProgress} reducedMotion={reducedMotion} />
+      <Sun healProgress={healProgress} reducedMotion={reducedMotion} isLowEnd={isLowEnd} />
 
       <group ref={earthGroupRef} scale={EARTH_BASE_SCALE}>
         <Earth scrollRotation={scrollProgress * 1.5} healProgress={healProgress} />
@@ -170,6 +170,7 @@ export const Scene = ({ scrollProgress = 0, scrollVelocity = 0, onTelemetry }) =
         }`}
       >
         <Canvas
+          shadows={{ type: THREE.PCFSoftShadowMap }}
           camera={{ position: [0, 0, CAMERA_START_Z], fov: CAMERA_FOV }}
           dpr={[1, Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1.75, 1.75)]}
           gl={{
@@ -178,6 +179,10 @@ export const Scene = ({ scrollProgress = 0, scrollVelocity = 0, onTelemetry }) =
             powerPreference: 'high-performance',
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.15,
+          }}
+          onCreated={({ gl }) => {
+            gl.shadowMap.enabled = true;
+            gl.shadowMap.type = THREE.PCFSoftShadowMap;
           }}
           style={{ background: 'transparent' }}
         >

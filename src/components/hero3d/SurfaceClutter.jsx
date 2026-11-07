@@ -331,6 +331,8 @@ export const SurfaceClutter = ({ scrollRotation = 0, healProgress = 0, isLowEnd 
               initMesh(m, clutterData.bags);
             }
           }}
+          castShadow
+          receiveShadow
           args={[bagGeom, clutterMaterial, bagCount]}
         />
 
@@ -342,6 +344,8 @@ export const SurfaceClutter = ({ scrollRotation = 0, healProgress = 0, isLowEnd 
               initMesh(m, clutterData.tires);
             }
           }}
+          castShadow
+          receiveShadow
           args={[tireGeom, clutterMaterial, tireCount]}
         />
 
@@ -353,6 +357,8 @@ export const SurfaceClutter = ({ scrollRotation = 0, healProgress = 0, isLowEnd 
               initMesh(m, clutterData.crates);
             }
           }}
+          castShadow
+          receiveShadow
           args={[crateGeom, clutterMaterial, crateCount]}
         />
 
@@ -364,6 +370,8 @@ export const SurfaceClutter = ({ scrollRotation = 0, healProgress = 0, isLowEnd 
               initMesh(m, clutterData.cans);
             }
           }}
+          castShadow
+          receiveShadow
           args={[canGeom, clutterMaterial, canCount]}
         />
 
@@ -375,6 +383,8 @@ export const SurfaceClutter = ({ scrollRotation = 0, healProgress = 0, isLowEnd 
               initMesh(m, clutterData.bottles);
             }
           }}
+          castShadow
+          receiveShadow
           args={[bottleGeom, clutterMaterial, bottleCount]}
         />
 
@@ -386,6 +396,8 @@ export const SurfaceClutter = ({ scrollRotation = 0, healProgress = 0, isLowEnd 
               initMesh(m, clutterData.nets);
             }
           }}
+          castShadow
+          receiveShadow
           args={[netGeom, clutterMaterial, netCount]}
         />
 
@@ -397,6 +409,8 @@ export const SurfaceClutter = ({ scrollRotation = 0, healProgress = 0, isLowEnd 
               initMesh(m, clutterData.medium);
             }
           }}
+          castShadow
+          receiveShadow
           args={[shardGeom, clutterMaterial, mediumCount]}
         />
 
@@ -408,6 +422,8 @@ export const SurfaceClutter = ({ scrollRotation = 0, healProgress = 0, isLowEnd 
               initMesh(m, clutterData.tiny);
             }
           }}
+          castShadow
+          receiveShadow
           args={[speckleGeom, clutterMaterial, tinyCount]}
         />
       </group>

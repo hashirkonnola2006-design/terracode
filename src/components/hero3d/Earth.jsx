@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { EarthShader } from './shaders/EarthShader';
@@ -17,8 +17,17 @@ export const INITIAL_ROTATION_Y = 2.94;     // Centers India & the Indian Ocean 
 export const HEAL_SCALE_EXPANSION = 0.035;  // Expands ~3.5% as biosphere restores
 
 export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0 }) => {
+  const { viewport } = useThree();
   const earthRef = useRef(null);
   const shaderMatRef = useRef(null);
+
+  // Compute direction matching Sun.jsx viewport coordinates
+  const isPortrait = viewport.width < viewport.height;
+  const anchorX = isPortrait ? 0.36 : 0.41;
+  const anchorY = isPortrait ? 0.40 : 0.36;
+  const sunDir = useMemo(() => {
+    return new THREE.Vector3(-viewport.width * anchorX, viewport.height * anchorY, 0.15).normalize();
+  }, [viewport.width, viewport.height, anchorX, anchorY]);
 
   // Load NASA 2K Blue Marble textures with linear mipmap filtering
   const [dayMap, atmosMap, normalMap, specularMap] = useTexture([
@@ -44,16 +53,17 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0 }) => 
     u.uAtmosMap.value = atmosMap;
     u.uNormalMap.value = normalMap;
     u.uSpecularMap.value = specularMap;
-    u.uSunDir.value.set(-1.95, 1.10, 0.55).normalize();
+    u.uSunDir.value.copy(sunDir);
     u.uHeal.value = healProgress;
     return u;
-  }, [dayMap, atmosMap, normalMap, specularMap]);
+  }, [dayMap, atmosMap, normalMap, specularMap, sunDir]);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
 
     if (shaderMatRef.current) {
       shaderMatRef.current.uniforms.uHeal.value = healProgress;
+      shaderMatRef.current.uniforms.uSunDir.value.copy(sunDir);
     }
 
     if (earthRef.current) {
@@ -76,6 +86,8 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0 }) => 
             if (onEarthMesh) onEarthMesh(m);
           }
         }}
+        castShadow
+        receiveShadow
       >
         <sphereGeometry args={[EARTH_RADIUS, EARTH_SEGMENTS, EARTH_SEGMENTS]} />
         <shaderMaterial
