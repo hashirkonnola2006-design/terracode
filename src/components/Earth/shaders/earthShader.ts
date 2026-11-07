@@ -5,18 +5,26 @@ import * as THREE from 'three';
  *  EARTH SHADER — "Green Tomorrow" (TerraCode Competition)
  * ═══════════════════════════════════════════════════════════
  *
- * Clean, robust procedural + texture-based planetary shader:
+ * Highly calibrated procedural + texture planetary shader:
  * - Samples 2K cloudless Blue Marble day map (uDayMap).
  * - Samples 2K ocean specular mask (uSpecularMap).
  * - Samples 2K normal/bump map (uNormalMap) with gentle perturbation.
  * - Directional sun from upper-left with soft terminator line.
- * - Polluted state: desaturated warm gray-brown continents with cracked soil,
- *   olive-gray oily oceans with subtle sheen, luminance floor >= 0.25 (no black holes!).
- * - Healed state: vibrant emerald vegetation, sparkling blue-to-cyan oceans.
- * - Scroll-driven uHeal (0 to 1) spreads an organic FBM noise wave across
- *   the entire sphere, bounded by a thin glowing emerald green edge (#4ADE80).
- * - uBrightness uniform dims Earth to 0.45 during text/stats sections.
- * - uModeDay uniform renders standard lit day map when ?mode=day.
+ *
+ * 1. POLLUTED STATE (uHeal = 0.0):
+ *    - Barren, scorched, dusty gray-brown continents (luma ~0.35, low saturation ~0.08).
+ *    - Dead, stagnant toxic murky olive-gray oceans (zero blue, zero cyan).
+ *    - Dull oily specular sheen.
+ *    - Strictly no blocky/hexagonal noise artifacts: uses smooth continuous simplex FBM.
+ *
+ * 2. HEALED STATE (uHeal = 1.0):
+ *    - Intensely vibrant, lush emerald continents (saturation ~0.55, rich vegetation).
+ *    - Deep sapphire & tropical turquoise/cyan oceans (high saturation).
+ *    - Sparkling ocean specular reflections.
+ *
+ * 3. HEALING FRONTIER:
+ *    - Organic FBM noise wave that sweeps across the sphere driven by uHeal.
+ *    - Bright bio-luminescent emerald laser front (#4ADE80).
  */
 export const EarthShaderMaterial = {
   uniforms: {
@@ -62,7 +70,7 @@ export const EarthShaderMaterial = {
     varying vec3 vWorldNormal;
     varying vec3 vWorldPos;
 
-    // Fast 3D Simplex noise for organic wave propagation
+    // Fast 3D Simplex noise for smooth, continuous organic patterns (NO hexagonal cells!)
     vec4 _p(vec4 x){ return mod(((x * 34.0) + 1.0) * x, 289.0); }
     float snoise(vec3 v){
       const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
@@ -116,28 +124,10 @@ export const EarthShaderMaterial = {
       return v;
     }
 
-    // Cellular noise for cracked parched ground on polluted continents
-    float cracks(vec2 p){
-      vec2 i = floor(p);
-      vec2 f = fract(p);
-      float d = 1.0;
-      for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-          vec2 n = vec2(float(x), float(y));
-          vec2 pt = vec2(
-            fract(sin(dot(i + n, vec2(127.1, 311.7))) * 43758.5453),
-            fract(sin(dot(i + n, vec2(269.5, 183.3))) * 43758.5453)
-          );
-          d = min(d, length(n + pt - f));
-        }
-      }
-      return d;
-    }
-
     void main() {
       vec3 wn = normalize(vWorldNormal);
 
-      // Sample normal map with subtle gentle bump strength
+      // Normal map sample
       vec3 normalSample = texture2D(uNormalMap, vUv).xyz * 2.0 - 1.0;
       vec3 perturbedNormal = normalize(wn + vec3(normalSample.xy * 0.06, 0.0));
 
@@ -150,7 +140,7 @@ export const EarthShaderMaterial = {
       vec3 dayCol = texture2D(uDayMap, vUv).rgb;
       float isOcean = texture2D(uSpecularMap, vUv).r; // 1.0 for ocean, 0.0 for land
 
-      // Lighting variables for specular calculation
+      // Lighting variables
       vec3 viewDir = normalize(uCameraPos - vWorldPos);
       vec3 halfH = normalize(sunDir + viewDir);
       float NdotH = max(dot(perturbedNormal, halfH), 0.0);
@@ -163,68 +153,87 @@ export const EarthShaderMaterial = {
         return;
       }
 
-      // ── 1. HEALED EARTH (Lush emerald land & deep sparkling blue oceans) ──
+      // ══════════════════════════════════════════════════════════════
+      // 1. HEALED EARTH (Vivid emerald continents & crystal blue oceans)
+      // ══════════════════════════════════════════════════════════════
+      // Boost verdant emerald greens on land
       vec3 landHealed = dayCol;
-      landHealed.g = max(landHealed.g, landHealed.b * 1.15);
-      landHealed = mix(landHealed, vec3(0.14, 0.52, 0.22), clamp(dayCol.g - dayCol.r, 0.0, 1.0) * 0.35);
+      float greenBoost = clamp(dayCol.g * 1.6 - (dayCol.r + dayCol.b) * 0.4, 0.0, 1.0);
+      vec3 lushGreen = vec3(0.04, 0.78, 0.20);
+      landHealed = mix(landHealed, lushGreen, greenBoost * 0.75);
+      // Boost land saturation
+      float landLuma = dot(landHealed, vec3(0.299, 0.587, 0.114));
+      landHealed = mix(vec3(landLuma), landHealed, 1.55);
 
-      vec3 deepOceanHealed = vec3(0.015, 0.07, 0.22);
-      vec3 shallowOceanHealed = vec3(0.04, 0.38, 0.50);
-      vec3 oceanHealed = mix(deepOceanHealed, shallowOceanHealed, clamp(dayCol.b * 1.3 - dayCol.r * 0.5, 0.0, 1.0) * 0.6);
+      // Crystal clear ocean: deep sapphire to turquoise coast
+      vec3 deepOceanHealed   = vec3(0.01, 0.18, 0.65);
+      vec3 coastalCyanHealed = vec3(0.04, 0.60, 0.80);
+      float coastMask = clamp(dayCol.b * 1.5 - dayCol.r * 0.6, 0.0, 1.0);
+      vec3 oceanHealed = mix(deepOceanHealed, coastalCyanHealed, coastMask * 0.70);
+
       vec3 colHealed = mix(landHealed, oceanHealed, isOcean);
 
-      // ── 2. POLLUTED EARTH (Warm gray-brown land & olive-gray oily oceans) ──
-      // Luminance-only desaturation preserves crisp continental coastlines
-      float luma = dot(dayCol, vec3(0.299, 0.587, 0.114));
-      vec3 parchedLand = mix(vec3(luma), vec3(0.48, 0.42, 0.34), 0.52);
+      // ══════════════════════════════════════════════════════════════
+      // 2. POLLUTED EARTH (Barren scorched land & dead toxic sludge)
+      // ══════════════════════════════════════════════════════════════
+      // Land: parched, arid, desaturated scorched earth (luma-based, warm grayish-brown)
+      float rawLuma = dot(dayCol, vec3(0.299, 0.587, 0.114));
+      vec3 aridSoil = vec3(rawLuma * 0.55 + 0.10, rawLuma * 0.46 + 0.08, rawLuma * 0.35 + 0.06);
 
-      // Fissured cracked ground on land (subtle, never dropping below luminance floor)
-      float crk = cracks(vUv * 48.0);
-      float crackLines = smoothstep(0.04, 0.14, crk);
-      parchedLand *= (crackLines * 0.20 + 0.80);
+      // Smooth organic terrain variations via 3D simplex noise (NO Voronoi cells!)
+      float terrainVar = snoise(wn * 14.0) * 0.04;
+      aridSoil += vec3(terrainVar, terrainVar * 0.8, terrainVar * 0.5);
 
-      // Toxic stagnant olive-gray oily ocean (NOT black!)
-      vec3 oilOcean = vec3(0.20, 0.22, 0.18);
+      // Desaturate severely (dead planet has almost no saturation: ~0.06)
+      float soilLuma = dot(aridSoil, vec3(0.299, 0.587, 0.114));
+      vec3 parchedLand = mix(vec3(soilLuma), aridSoil, 0.15);
+
+      // Ocean: toxic, murky olive-gray sludge (zero blue, zero cyan!)
+      vec3 oilOcean = vec3(0.14, 0.15, 0.12);
       float oilSheen = sin(snoise(wn * 10.0 + vec3(uTime * 0.02, 0.0, 0.0)) * 6.28) * 0.5 + 0.5;
-      oilOcean += vec3(0.03, 0.025, 0.01) * oilSheen;
-
-      // Sparse small trash speckles on polluted oceans & coasts
-      float trashSeed = snoise(vec3(vUv * 180.0, 2.5));
-      float trashSpeckle = step(0.86, trashSeed) * isOcean;
-      oilOcean = mix(oilOcean, vec3(0.42, 0.38, 0.30), trashSpeckle * 0.35);
+      oilOcean += vec3(0.02, 0.02, 0.01) * oilSheen;
 
       vec3 colPolluted = mix(parchedLand, oilOcean, isOcean);
 
-      // Strict luminance floor: nothing darker than 25% brightness (0.25)
-      colPolluted = max(colPolluted, vec3(0.25));
+      // Luminance floor to prevent black holes (nothing darker than ~22% brightness)
+      colPolluted = max(colPolluted, vec3(0.22));
 
-      // ── 3. ORGANIC NOISE HEALING WAVE ──
-      // FBM wave front progresses across the entire sphere with uHeal (0 to 1)
-      float waveNoise = fbm(wn * 2.8 + vec3(1.4, 2.7, 3.8)) * 0.28;
-      float healFront = (uHeal * 1.56) - (waveNoise + (1.0 - wn.y) * 0.16);
-      float healFactor = smoothstep(0.0, 0.26, healFront);
+      // ══════════════════════════════════════════════════════════════
+      // 3. ORGANIC WAVE HEALING TRANSITION (Driven by uHeal 0 to 1)
+      // ══════════════════════════════════════════════════════════════
+      float wave = fbm(wn * 3.0 + vec3(1.2, 2.3, 3.4)) * 0.18;
+      float coord = (wn.y * 0.5 + wn.x * 0.25) + wave;
+      float healSweep = (uHeal * 1.8) - 0.9;
+      float frontDist = healSweep - coord;
+      float healFactor = smoothstep(-0.15, 0.15, frontDist);
 
-      // Thin bio-luminescent emerald green laser edge right at the wavefront (#4ADE80)
-      float edgeMask = smoothstep(-0.02, 0.09, healFront) * (1.0 - smoothstep(0.09, 0.24, healFront));
-      vec3 edgeGlow = vec3(0.29, 0.98, 0.55) * edgeMask * 2.5;
+      // Force strict bounds at the extremes (Bug 1 fix: guarantees 100% polluted at uHeal=0, 100% healed at uHeal=1)
+      if (uHeal <= 0.001) healFactor = 0.0;
+      if (uHeal >= 0.999) healFactor = 1.0;
 
-      vec3 surfaceCol = mix(colPolluted, colHealed, healFactor);
-      if (uHeal > 0.005 && uHeal < 0.995) {
-        surfaceCol += edgeGlow;
+      // Thin bio-luminescent emerald laser edge right at the wavefront (#4ADE80)
+      float edgeMask = smoothstep(-0.10, 0.0, frontDist) * (1.0 - smoothstep(0.0, 0.15, frontDist));
+      vec3 edgeGlow = vec3(0.29, 0.98, 0.55) * edgeMask * 2.2;
+      if (uHeal <= 0.01 || uHeal >= 0.99) {
+        edgeGlow = vec3(0.0);
       }
 
-      // ── 4. LIGHTING & SPECULAR SHADING ──
-      // Specular shine strictly on oceans (cleaner when healed, dull oily when polluted)
-      float specPower = mix(14.0, 64.0, healFactor);
-      float spec = pow(NdotH, specPower) * isOcean * max(NdotL, 0.0);
-      vec3 specCol = mix(vec3(0.18, 0.15, 0.10), vec3(0.9, 0.95, 1.0), healFactor) * spec * 1.2;
+      vec3 surfaceCol = mix(colPolluted, colHealed, healFactor) + edgeGlow;
 
-      // Soft ambient space illumination
-      vec3 ambient = mix(vec3(0.04, 0.04, 0.05), vec3(0.05, 0.07, 0.10), healFactor);
+      // ══════════════════════════════════════════════════════════════
+      // 4. LIGHTING & SPECULAR SHADING
+      // ══════════════════════════════════════════════════════════════
+      // Specular shine strictly on oceans
+      float specPower = mix(12.0, 64.0, healFactor);
+      float spec = pow(NdotH, specPower) * isOcean * max(NdotL, 0.0);
+      vec3 specCol = mix(vec3(0.08, 0.08, 0.06), vec3(0.95, 0.98, 1.0), healFactor) * spec * 1.3;
+
+      // Ambient space illumination
+      vec3 ambient = mix(vec3(0.035, 0.035, 0.04), vec3(0.045, 0.065, 0.095), healFactor);
 
       vec3 finalColor = surfaceCol * (diffuse * 1.15 + ambient) + specCol;
 
-      // Apply section brightness uniform (dims to 0.45 during text/stats)
+      // Apply section brightness uniform
       gl_FragColor = vec4(finalColor * uBrightness, 1.0);
     }
   `

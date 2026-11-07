@@ -1,0 +1,58 @@
+[
+  {
+    "id": "Bug 3",
+    "title": "Hero Earth Diameter",
+    "status": "PASS",
+    "expected": "About 70% of viewport height (65%–75%)",
+    "measured": "Diameter 70.0% (756px) of 1080px",
+    "screenshot": "bug3_hero_diameter.png"
+  },
+  {
+    "id": "Bug 1",
+    "title": "Healing Visibility (Saturation Increase)",
+    "status": "PASS",
+    "expected": "Healed Earth saturation ≥ +40% vs polluted Earth",
+    "measured": "Polluted sat: 0.022, Healed sat: 0.441 (+1948.4% higher, Green +35.2%)",
+    "screenshot": "bug1_healed_earth.png"
+  },
+  {
+    "id": "Bug 2",
+    "title": "Land Texture Artifacts",
+    "status": "PASS",
+    "expected": "Smooth continuous 3D simplex FBM, LinearMipmapLinear filtering, zero hexagonal cells",
+    "measured": "Voronoi cell code removed: true, Smooth continuous noise active: true",
+    "screenshot": "bug2_land_smoothness.png"
+  },
+  {
+    "id": "Bug 4",
+    "title": "Impact Split & Text Overlaps",
+    "status": "PASS",
+    "expected": "In Impact section, Earth sits on opposite side with ≥24px clear gap, 0 overlaps >10%",
+    "measured": "Stats Section (Scroll 18%): min gap 106px (0 overlaps >10%); Impact 1 Clean Energy (Scroll 48%): min gap 126px (0 overlaps >10%); Impact 2 Restoring Forests (Scroll 63%): min gap 121px (0 overlaps >10%); Impact 3 Water & Oceans (Scroll 78%): min gap 389px (0 overlaps >10%)",
+    "screenshot": "bug4_Impact_1_Clean_Energy__Scroll_48__.png"
+  },
+  {
+    "id": "Bug 5",
+    "title": "Floating Yellow Sprite Removal",
+    "status": "PASS",
+    "expected": "Zero yellow star sprites orbiting Earth on Hero; pure emerald foliage spores + shooting star streak",
+    "measured": "Star sprite removed: true, Particles strictly hidden on Hero: true",
+    "screenshot": "bug5_clean_orbit.png"
+  },
+  {
+    "id": "Bug 6",
+    "title": "Navbar Glass & Glow Removal",
+    "status": "PASS",
+    "expected": "Navbar is permanent sleek glass (backdrop-blur, alpha < 0.5), no blurry green blob behind it",
+    "measured": "Background: rgba(6, 11, 22, 0.45), Backdrop filter: blur(12px)",
+    "screenshot": "bug6_navbar_glass.png"
+  },
+  {
+    "id": "Bug 7",
+    "title": "Soft Round Stars & Nebula",
+    "status": "PASS",
+    "expected": "Circular Gaussian point shader (zero square dots), varied colors & sizes, deep space nebula",
+    "measured": "Circular Gaussian shader: true, Multi-layer nebula: true, Shooting star: true",
+    "screenshot": "bug7_soft_stars_nebula.png"
+  }
+]

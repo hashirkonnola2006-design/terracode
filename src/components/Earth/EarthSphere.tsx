@@ -71,7 +71,7 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
     }
   }, [onAtmosphereMeshReady]);
 
-  // Load 2K textures
+  // Load 2K textures with linear mipmap filtering (Bug 2 fix)
   const [dayMap, specularMap, normalMap, cloudsMap] = useTexture([
     '/textures/earth_day_2048.jpg',
     '/textures/earth_specular_2048.jpg',
@@ -79,28 +79,36 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
     '/textures/earth_clouds.png',
   ]);
 
-  [dayMap, specularMap, normalMap, cloudsMap].forEach((t) => {
-    t.anisotropy = 4;
-  });
+  useMemo(() => {
+    [dayMap, specularMap, normalMap, cloudsMap].forEach((t) => {
+      t.minFilter = THREE.LinearMipmapLinearFilter;
+      t.magFilter = THREE.LinearFilter;
+      t.generateMipmaps = true;
+      t.anisotropy = 8;
+      t.needsUpdate = true;
+    });
+  }, [dayMap, specularMap, normalMap, cloudsMap]);
 
-  // Earth shader uniforms
+  // CRITICAL: Uniforms cloned ONCE without brightness/heal dependencies to prevent
+  // accidental uniform resets during scroll! (Bug 1 fix)
   const earthUniforms = useMemo(() => {
     const u = THREE.UniformsUtils.clone(EarthShaderMaterial.uniforms);
     u.uDayMap.value         = dayMap;
     u.uSpecularMap.value    = specularMap;
     u.uNormalMap.value      = normalMap;
     u.uModeDay.value        = modeDay ? 1.0 : 0.0;
-    u.uBrightness.value     = brightness;
+    u.uBrightness.value     = 1.0;
+    u.uHeal.value           = 0.0;
     return u;
-  }, [dayMap, specularMap, normalMap, modeDay, brightness]);
+  }, [dayMap, specularMap, normalMap, modeDay]);
 
-  // Atmosphere shader uniforms
   const atmoUniforms = useMemo(() => {
     const u = THREE.UniformsUtils.clone(AtmosphereShaderMaterial.uniforms);
     u.uModeAtmosphere.value = modeAtmosphere ? 1.0 : 0.0;
-    u.uBrightness.value     = brightness;
+    u.uBrightness.value     = 1.0;
+    u.uHeal.value           = 0.0;
     return u;
-  }, [modeAtmosphere, brightness]);
+  }, [modeAtmosphere]);
 
   // Cloud material: semi-transparent gray-brown smog when polluted, crisp white when healed
   const cloudsMat = useMemo(() => {
@@ -123,14 +131,15 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
     if (earthMat.current) {
       const u = earthMat.current.uniforms;
       u.uTime.value = t;
-      u.uHeal.value = THREE.MathUtils.lerp(u.uHeal.value, effectiveHeal, 0.1);
+      u.uHeal.value = THREE.MathUtils.lerp(u.uHeal.value, effectiveHeal, 0.12);
       u.uBrightness.value = brightness;
       u.uCameraPos.value.copy(camPos);
+      (window as any).__earthShaderUniformHeal = u.uHeal.value;
     }
 
     if (atmoMat.current) {
       const u = atmoMat.current.uniforms;
-      u.uHeal.value = THREE.MathUtils.lerp(u.uHeal.value, effectiveHeal, 0.1);
+      u.uHeal.value = THREE.MathUtils.lerp(u.uHeal.value, effectiveHeal, 0.12);
       u.uBrightness.value = brightness;
       u.uCameraPos.value.copy(camPos);
     }
@@ -151,12 +160,11 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
       // Cloud tint & opacity: semi-transparent gray-brown smog -> clean white
       const currentHeal = earthMat.current?.uniforms.uHeal.value ?? effectiveHeal;
       cloudsMat.color.lerpColors(
-        new THREE.Color(0.40, 0.36, 0.30), // smog gray-brown
+        new THREE.Color(0.26, 0.22, 0.18), // semi-transparent smog gray-brown
         new THREE.Color(1.0,  1.0,  1.0),  // clean white
         currentHeal
       );
-      cloudsMat.opacity = THREE.MathUtils.lerp(0.45, 0.40, currentHeal) * brightness;
-      // In atmosphere isolation test mode, hide cloud layer
+      cloudsMat.opacity = THREE.MathUtils.lerp(0.22, 0.38, currentHeal) * brightness;
       if (modeAtmosphere) {
         cloudsMat.opacity = 0.0;
       }

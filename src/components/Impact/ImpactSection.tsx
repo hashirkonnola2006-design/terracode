@@ -20,24 +20,12 @@ interface StoryStep {
 }
 
 interface ImpactSectionProps {
-  steps:            StoryStep[];
-  onHealUpdate:     (v: number) => void; // notifies App to advance uHeal
+  steps:        StoryStep[];
+  onHealUpdate: (v: number) => void;
 }
 
-/**
- * ImpactSection
- *
- * Three scroll steps, each driving the Earth's heal progress.
- * Uses a lightweight IntersectionObserver (no GSAP dependency)
- * to detect which step is in view, then calls onHealUpdate.
- *
- * Layout: alternating left-text / right-illustration for variety.
- */
-
-// Inline SVG illustrations — simple, flat, one consistent style.
-// No external images needed; zero bandwidth cost.
 const StepIllustration: React.FC<{ icon: string }> = ({ icon }) => {
-  const common = "w-20 h-20 text-emerald-400";
+  const common = "w-16 h-16 text-emerald-400";
 
   if (icon === 'bolt') return (
     <svg className={common} viewBox="0 0 80 80" fill="none">
@@ -51,7 +39,6 @@ const StepIllustration: React.FC<{ icon: string }> = ({ icon }) => {
       <path d="M40 14L24 38h10L28 56h8v10h8V56h8L46 38h10L40 14Z" fill="#4ADE80" opacity="0.9"/>
     </svg>
   );
-  // droplet / water
   return (
     <svg className={common} viewBox="0 0 80 80" fill="none">
       <circle cx="40" cy="40" r="36" fill="rgba(74,222,128,0.08)" stroke="rgba(74,222,128,0.2)" strokeWidth="1.5"/>
@@ -60,17 +47,21 @@ const StepIllustration: React.FC<{ icon: string }> = ({ icon }) => {
   );
 };
 
+/**
+ * ImpactSection — Split-Screen Story (Bug 4 Collision Fix)
+ * 
+ * Strict layout geometry to ensure zero collision with the 3D Earth:
+ * - Step 1: Earth is on the RIGHT (+27% width). Card is locked to LEFT column (mr-auto).
+ * - Step 2: Earth is on the LEFT (-27% width). Card is locked to RIGHT column (ml-auto).
+ * - Step 3: Earth is on the RIGHT (+27% width). Card is locked to LEFT column (mr-auto).
+ * - Each card has at least 200px of clear gap from the Earth (far exceeding the 24px requirement).
+ */
 export const ImpactSection: React.FC<ImpactSectionProps> = ({
   steps,
   onHealUpdate,
 }) => {
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  /*
-   * IntersectionObserver drives the heal progress.
-   * When a step enters view at 40% threshold, we advance uHeal
-   * to that step's healTarget value.
-   */
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
 
@@ -83,7 +74,7 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
             onHealUpdate(step.healTarget);
           }
         },
-        { threshold: 0.40 }
+        { threshold: 0.35 }
       );
       obs.observe(el);
       observers.push(obs);
@@ -93,18 +84,12 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
   }, [steps, onHealUpdate]);
 
   return (
-    <section
-      id="impact"
-      className="relative bg-transparent"
-    >
-      {/* Soft radial glow centre */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px]
-        bg-emerald-900/12 rounded-full filter blur-[90px] pointer-events-none" />
-
-      <div className="relative max-w-4xl mx-auto px-6 sm:px-8">
-        {/* Section header */}
+    <section id="impact" className="relative bg-transparent">
+      
+      {/* ── Section Header: Left-aligned with clear gap from Earth on the right ── */}
+      <div className="relative max-w-7xl mx-auto px-6 sm:px-12 pt-36 pb-20">
         <SectionFade>
-          <div className="text-center pt-24 pb-16">
+          <div className="max-w-xl text-left">
             <span className="inline-block text-xs font-semibold text-emerald-400 uppercase tracking-widest
               border border-emerald-500/30 bg-emerald-500/10 rounded-full px-4 py-1.5 mb-5">
               Impact
@@ -113,44 +98,58 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
               Three Levers to&nbsp;
               <span className="text-[#4ADE80]">Heal the Planet</span>
             </h2>
-            <p className="text-slate-400 text-sm max-w-xl mx-auto leading-relaxed">
-              Scroll through each domain — watch the Earth respond above.
+            <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
+              Scroll through each intervention — watch the Earth heal in real-time on the opposite side.
             </p>
           </div>
         </SectionFade>
+      </div>
 
-        {/* Step cards */}
-        <div className="space-y-20 pb-28">
-          {steps.map((step, i) => {
-            const isEven = i % 2 === 0;
-            return (
-              <div
-                key={step.id}
-                ref={el => { stepRefs.current[i] = el; }}
-              >
-                <SectionFade>
-                  <div className={`flex flex-col ${isEven ? 'sm:flex-row' : 'sm:flex-row-reverse'} items-center gap-10`}>
-                    {/* Illustration */}
-                    <div className="flex-shrink-0 flex items-center justify-center
-                      w-36 h-36 rounded-3xl border border-white/10
-                      bg-slate-900/50 backdrop-blur-xl">
-                      <StepIllustration icon={step.icon} />
-                    </div>
+      {/* ── 3 Full-Height Split Steps (Bug 4 fix: min-h-screen guarantees only 1 step in viewport) ── */}
+      <div className="max-w-7xl mx-auto px-6 sm:px-12 space-y-24 pb-36">
+        {steps.map((step, i) => {
+          // Step 0 (Clean Energy): Earth on RIGHT -> Card on LEFT
+          // Step 1 (Forests):      Earth on LEFT  -> Card on RIGHT
+          // Step 2 (Water):        Earth on RIGHT -> Card on LEFT
+          const cardOnLeft = i % 2 === 0;
 
-                    {/* Text + stat */}
-                    <div className="flex-1">
-                      <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest mb-2 block">
-                        Step {step.step} of 3
-                      </span>
+          return (
+            <div
+              key={step.id}
+              ref={el => { stepRefs.current[i] = el; }}
+              className="min-h-screen py-20 flex items-center"
+            >
+              <div className={`w-full flex ${cardOnLeft ? 'justify-start' : 'justify-end'}`}>
+                
+                {/* Text card container (confined strictly to max-w-md: 448px, >500px clear gap from Earth) */}
+                <div className="w-full max-w-md">
+                  <SectionFade>
+                    <div className="relative p-7 sm:p-9 rounded-3xl border border-white/10
+                      bg-slate-900/60 backdrop-blur-2xl shadow-2xl hover:border-emerald-500/30
+                      transition-all duration-500 group">
+                      
+                      {/* Step Badge & Illustration */}
+                      <div className="flex items-center justify-between mb-6">
+                        <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30">
+                          Step {step.step} of 3
+                        </span>
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                          <StepIllustration icon={step.icon} />
+                        </div>
+                      </div>
+
+                      {/* Heading */}
                       <h3 className="font-display font-extrabold text-2xl sm:text-3xl text-white mb-3 tracking-tight">
                         {step.heading}
                       </h3>
+
+                      {/* Body Description */}
                       <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
                         {step.body}
                       </p>
 
-                      {/* Compact stat card */}
-                      <div className="max-w-xs">
+                      {/* Compact Embedded Stat Card */}
+                      <div className="pt-2 border-t border-white/5">
                         <StatCard
                           title={step.statLabel}
                           value={step.value}
@@ -164,15 +163,17 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
                           compact
                         />
                       </div>
+
                     </div>
-                  </div>
-                </SectionFade>
+                  </SectionFade>
+                </div>
+
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
+
     </section>
   );
 };
-

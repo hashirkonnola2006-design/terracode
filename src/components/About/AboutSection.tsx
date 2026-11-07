@@ -46,7 +46,7 @@ export const AboutSection: React.FC = () => {
   return (
     <section
       id="about"
-      className="relative bg-transparent py-24 sm:py-32"
+      className="relative bg-transparent pt-32 pb-32"
     >
       <div className="max-w-4xl mx-auto px-6 sm:px-8">
         <SectionFade>

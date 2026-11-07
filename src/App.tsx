@@ -150,12 +150,12 @@ export function App() {
         {/* 1. Hero Section */}
         <HeroSection />
 
-        {/* 2. Stats Strip */}
+        {/* 2. Stats Strip (Bug 4 fix: positioned cleanly below the elevated Earth) */}
         <section
           id="stats-section"
-          className="relative bg-transparent py-16 sm:py-20"
+          className="relative bg-transparent min-h-screen flex flex-col justify-end pt-32 pb-20"
         >
-          <div className="relative max-w-4xl mx-auto px-6 sm:px-8">
+          <div className="relative max-w-4xl mx-auto px-6 sm:px-8 w-full">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {heroStats.map(stat => (
                 <StatCard
@@ -174,7 +174,7 @@ export function App() {
                 />
               ))}
             </div>
-            <p className="mt-7 text-center text-[11px] text-slate-500">
+            <p className="mt-6 text-center text-[11px] text-slate-500">
               Verified climate benchmarks sourced from open international databases.
             </p>
           </div>

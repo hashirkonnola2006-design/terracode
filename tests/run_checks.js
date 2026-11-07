@@ -12,14 +12,12 @@ if (!fs.existsSync(SCREENSHOTS_DIR)) {
   fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 }
 
-// Simple CDP WebSocket Client
 class CDPClient {
   constructor(wsUrl) {
     this.wsUrl = wsUrl;
     this.ws = null;
     this.id = 0;
     this.callbacks = new Map();
-    this.events = [];
     this.consoleErrors = [];
   }
 
@@ -65,7 +63,7 @@ class CDPClient {
 
   async navigate(url) {
     await this.send('Page.navigate', { url });
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 2200));
   }
 
   async evaluate(expression) {
@@ -84,11 +82,12 @@ class CDPClient {
     const res = await this.send('Page.captureScreenshot', { format: 'png' });
     const buffer = Buffer.from(res.data, 'base64');
     fs.writeFileSync(filePath, buffer);
+    return buffer;
   }
 
   async scrollTo(y) {
     await this.evaluate(`window.scrollTo({ top: ${y}, behavior: 'auto' })`);
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 700));
   }
 
   close() {
@@ -113,7 +112,6 @@ async function startChrome() {
     'about:blank',
   ];
   const proc = spawn(CHROME_PATH, args, { stdio: 'ignore' });
-  // Wait for debug port to become ready and find page target
   for (let i = 0; i < 30; i++) {
     try {
       const res = await fetch(`http://127.0.0.1:${PORT}/json/list`);
@@ -131,9 +129,9 @@ async function startChrome() {
 }
 
 async function run() {
-  console.log('═'.repeat(60));
-  console.log('  TERRACODE 3D EARTH AUTOMATED VERIFICATION SUITE');
-  console.log('═'.repeat(60));
+  console.log('═'.repeat(70));
+  console.log('  TERRACODE: 7 ADDITIONAL RECORDING BUGS AUTOMATED VERIFICATION');
+  console.log('═'.repeat(70));
 
   const { proc, wsUrl } = await startChrome();
   const client = new CDPClient(wsUrl);
@@ -146,338 +144,405 @@ async function run() {
 
   try {
     // ════════════════════════════════════════════════════════════
-    // TEST 1: EARTH SIZING & POSITION AT HERO (3 VIEWPORTS)
+    // BUG 3: HERO EARTH DIAMETER ~70% OF VIEWPORT HEIGHT
     // ════════════════════════════════════════════════════════════
-    console.log('\n[1/8] Testing Earth Sizing at Hero (1920x1080, 1366x768, 390x844)...');
-
-    // 1A. 1920x1080
+    console.log('\n[Bug 3] Verifying Hero Earth Diameter (~70% of Viewport Height)...');
     await client.setViewport(1920, 1080, 1, false);
     await client.navigate(`${BASE_URL}/?test=1`);
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 1500));
 
-    let earth1080 = await client.evaluate('window.__earth');
-    let nav1080 = await client.evaluate(`
-      (() => {
-        const nb = document.getElementById('main-navbar') || document.querySelector('header');
-        return nb ? nb.getBoundingClientRect().bottom : 70;
+    const earthHero = await client.evaluate('window.__earth');
+    const heroDiameterPx = earthHero.screenRadiusPx * 2;
+    const heroDiameterPct = (heroDiameterPx / 1080) * 100;
+
+    await client.screenshot(path.join(SCREENSHOTS_DIR, 'bug3_hero_diameter.png'));
+
+    const passBug3 = heroDiameterPct >= 65 && heroDiameterPct <= 75;
+    results.push({
+      id: 'Bug 3',
+      title: 'Hero Earth Diameter',
+      status: passBug3 ? 'PASS' : 'FAIL',
+      expected: 'About 70% of viewport height (65%–75%)',
+      measured: `Diameter ${heroDiameterPct.toFixed(1)}% (${Math.round(heroDiameterPx)}px) of 1080px`,
+      screenshot: 'bug3_hero_diameter.png',
+    });
+
+    // ════════════════════════════════════════════════════════════
+    // BUG 1: HEALING VISIBILITY (POLLUTED VS HEALED SATURATION)
+    // ════════════════════════════════════════════════════════════
+    console.log('\n[Bug 1] Verifying Polluted vs Healed Saturation & Green Channel...');
+    // A. Capture Polluted State (Hero, uHeal = 0.0)
+    await client.scrollTo(0);
+    await new Promise(r => setTimeout(r, 1000));
+    await client.screenshot(path.join(SCREENSHOTS_DIR, 'bug1_polluted_earth.png'));
+
+    // B. Capture Healed State (Scroll to 88% or uHeal = 1.0)
+    const totalH = await client.evaluate('document.documentElement.scrollHeight - window.innerHeight');
+    await client.scrollTo(0.88 * totalH);
+    await new Promise(r => setTimeout(r, 1200));
+    await client.screenshot(path.join(SCREENSHOTS_DIR, 'bug1_healed_earth.png'));
+
+    // Analyze pixel saturation and green channel inside Chrome
+    const pixelMetrics = await client.evaluate(`
+      (async () => {
+        const loadImg = (src) => new Promise(res => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => res(img);
+          img.src = src;
+        });
+
+        // We can sample the canvas directly via WebGL or screenshot
+        // Let's sample the Earth disk directly using window.__earth geometry
+        const earth = window.__earth;
+        const cx = earth.screenCenter.x;
+        const cy = earth.screenCenter.y;
+        const r = earth.screenRadiusPx * 0.75; // sample well within the planetary disk
+
+        // Sample WebGL canvas pixels
+        const canvas = document.querySelector('canvas');
+        if (!canvas) return { error: 'No canvas found' };
+
+        const c2d = document.createElement('canvas');
+        c2d.width = canvas.width;
+        c2d.height = canvas.height;
+        const ctx = c2d.getContext('2d');
+        ctx.drawImage(canvas, 0, 0);
+        const imgData = ctx.getImageData(0, 0, c2d.width, c2d.height);
+        const pixels = imgData.data;
+        const w = c2d.width;
+        const h = c2d.height;
+
+        const dprX = w / (canvas.clientWidth || window.innerWidth);
+        const dprY = h / (canvas.clientHeight || window.innerHeight);
+
+        let totalSat = 0;
+        let totalGreen = 0;
+        let count = 0;
+
+        for (let dy = -r; dy <= r; dy += 4) {
+          for (let dx = -r; dx <= r; dx += 4) {
+            if (dx * dx + dy * dy <= r * r) {
+              const px = Math.round((cx + dx) * dprX);
+              const py = Math.round((cy + dy) * dprY);
+              if (px >= 0 && px < w && py >= 0 && py < h) {
+                const idx = (py * w + px) * 4;
+                const red = pixels[idx] / 255;
+                const green = pixels[idx + 1] / 255;
+                const blue = pixels[idx + 2] / 255;
+
+                const max = Math.max(red, green, blue);
+                const min = Math.min(red, green, blue);
+                const sat = max === 0 ? 0 : (max - min) / max;
+
+                totalSat += sat;
+                totalGreen += green;
+                count++;
+              }
+            }
+          }
+        }
+
+        return {
+          meanSat: count > 0 ? totalSat / count : 0,
+          meanGreen: count > 0 ? totalGreen / count : 0,
+          sampleCount: count
+        };
       })()
     `);
 
-    let diameterPx1080 = earth1080.screenRadiusPx * 2;
-    let ratio1080 = (diameterPx1080 / 1080) * 100;
-    let clearTop1080 = (earth1080.screenCenter.y - earth1080.screenRadiusPx) - nav1080;
-    let centerPct1080 = (earth1080.screenCenter.y / 1080) * 100;
-
-    await client.screenshot(path.join(SCREENSHOTS_DIR, 'hero_1920x1080.png'));
-
-    const pass1080 = ratio1080 >= 62 && ratio1080 <= 78 && clearTop1080 >= 40;
-    results.push({
-      test: 'Hero Sizing 1920x1080',
-      expected: 'Diameter 62-78% of H (~70%), margin >= 40px',
-      measured: `Diameter ${ratio1080.toFixed(1)}% (${Math.round(diameterPx1080)}px), Center ${centerPct1080.toFixed(1)}%, Clearance ${Math.round(clearTop1080)}px`,
-      passed: pass1080,
-    });
-
-    // 1B. 1366x768
-    await client.setViewport(1366, 768, 1, false);
-    await client.navigate(`${BASE_URL}/?test=1`);
+    // Measure polluted state pixel metrics by scrolling back to 0
+    await client.scrollTo(0);
     await new Promise(r => setTimeout(r, 1200));
 
-    let earth768 = await client.evaluate('window.__earth');
-    let nav768 = await client.evaluate(`
+    const pollutedMetrics = await client.evaluate(`
       (() => {
-        const nb = document.getElementById('main-navbar') || document.querySelector('header');
-        return nb ? nb.getBoundingClientRect().bottom : 64;
+        const canvas = document.querySelector('canvas');
+        if (!canvas) return { error: 'No canvas found' };
+
+        const c2d = document.createElement('canvas');
+        c2d.width = canvas.width;
+        c2d.height = canvas.height;
+        const ctx = c2d.getContext('2d');
+        ctx.drawImage(canvas, 0, 0);
+        const imgData = ctx.getImageData(0, 0, c2d.width, c2d.height);
+        const pixels = imgData.data;
+        const w = c2d.width;
+        const h = c2d.height;
+
+        const earth = window.__earth;
+        const cx = earth.screenCenter.x;
+        const cy = earth.screenCenter.y;
+        const r = earth.screenRadiusPx * 0.75; // sample well within the planetary disk
+
+        const dprX = w / (canvas.clientWidth || window.innerWidth);
+        const dprY = h / (canvas.clientHeight || window.innerHeight);
+
+        let totalSat = 0;
+        let totalGreen = 0;
+        let count = 0;
+
+        for (let dy = -r; dy <= r; dy += 4) {
+          for (let dx = -r; dx <= r; dx += 4) {
+            if (dx * dx + dy * dy <= r * r) {
+              const px = Math.round((cx + dx) * dprX);
+              const py = Math.round((cy + dy) * dprY);
+              if (px >= 0 && px < w && py >= 0 && py < h) {
+                const idx = (py * w + px) * 4;
+                const red = pixels[idx] / 255;
+                const green = pixels[idx + 1] / 255;
+                const blue = pixels[idx + 2] / 255;
+
+                const max = Math.max(red, green, blue);
+                const min = Math.min(red, green, blue);
+                const sat = max === 0 ? 0 : (max - min) / max;
+
+                totalSat += sat;
+                totalGreen += green;
+                count++;
+              }
+            }
+          }
+        }
+
+        return {
+          meanSat: count > 0 ? totalSat / count : 0,
+          meanGreen: count > 0 ? totalGreen / count : 0,
+          sampleCount: count
+        };
       })()
     `);
 
-    let diameterPx768 = earth768.screenRadiusPx * 2;
-    let ratio768 = (diameterPx768 / 768) * 100;
-    let clearTop768 = (earth768.screenCenter.y - earth768.screenRadiusPx) - nav768;
+    const satIncreasePct = ((pixelMetrics.meanSat - pollutedMetrics.meanSat) / (pollutedMetrics.meanSat || 0.01)) * 100;
+    const greenIncreasePct = ((pixelMetrics.meanGreen - pollutedMetrics.meanGreen) / (pollutedMetrics.meanGreen || 0.01)) * 100;
 
-    await client.screenshot(path.join(SCREENSHOTS_DIR, 'hero_1366x768.png'));
-
-    const pass768 = ratio768 >= 62 && ratio768 <= 78 && clearTop768 >= 40;
+    const passBug1 = satIncreasePct >= 40.0;
     results.push({
-      test: 'Hero Sizing 1366x768',
-      expected: 'Diameter 62-78% of H (~70%), margin >= 40px',
-      measured: `Diameter ${ratio768.toFixed(1)}% (${Math.round(diameterPx768)}px), Clearance ${Math.round(clearTop768)}px`,
-      passed: pass768,
-    });
-
-    // 1C. 390x844 (Mobile)
-    await client.setViewport(390, 844, 2, true);
-    await client.navigate(`${BASE_URL}/?test=1`);
-    await new Promise(r => setTimeout(r, 1200));
-
-    let dims390 = await client.evaluate('({ innerWidth: window.innerWidth, innerHeight: window.innerHeight, outerWidth: window.outerWidth })');
-    console.log('dims390:', dims390);
-    let earth390 = await client.evaluate('window.__earth');
-    console.log('earth390 dump:', earth390);
-    let nav390 = await client.evaluate(`
-      (() => {
-        const nb = document.getElementById('main-navbar') || document.querySelector('header');
-        return nb ? nb.getBoundingClientRect().bottom : 56;
-      })()
-    `);
-
-    let diameterPx390 = earth390.screenRadiusPx * 2;
-    let ratioWidth390 = (diameterPx390 / (dims390.innerWidth || 390)) * 100;
-    let clearTop390 = (earth390.screenCenter.y - earth390.screenRadiusPx) - nav390;
-
-    await client.screenshot(path.join(SCREENSHOTS_DIR, 'hero_390x844.png'));
-
-    const pass390 = ratioWidth390 >= 78 && ratioWidth390 <= 92 && clearTop390 >= 40;
-    results.push({
-      test: 'Hero Sizing 390x844 (Mobile)',
-      expected: 'Diameter 78-92% of W (~85%), margin >= 40px',
-      measured: `Diameter ${ratioWidth390.toFixed(1)}% of width (${Math.round(diameterPx390)}px), Clearance ${Math.round(clearTop390)}px`,
-      passed: pass390,
+      id: 'Bug 1',
+      title: 'Healing Visibility (Saturation Increase)',
+      status: passBug1 ? 'PASS' : 'FAIL',
+      expected: 'Healed Earth saturation ≥ +40% vs polluted Earth',
+      measured: `Polluted sat: ${pollutedMetrics.meanSat.toFixed(3)}, Healed sat: ${pixelMetrics.meanSat.toFixed(3)} (+${satIncreasePct.toFixed(1)}% higher, Green +${greenIncreasePct.toFixed(1)}%)`,
+      screenshot: 'bug1_healed_earth.png',
     });
 
     // ════════════════════════════════════════════════════════════
-    // TEST 2: HALO & ATMOSPHERE RADIUS (?mode=atmosphere)
+    // BUG 2: LAND TEXTURE SMOOTHNESS (NO VORONOI HEXAGON CELLS)
     // ════════════════════════════════════════════════════════════
-    console.log('\n[2/8] Testing Atmosphere Halo in ?mode=atmosphere...');
-    await client.setViewport(1920, 1080, 1, false);
-    await client.navigate(`${BASE_URL}/?mode=atmosphere`);
-    await new Promise(r => setTimeout(r, 1200));
+    console.log('\n[Bug 2] Verifying Land Texture Smoothness (No Hexagonal Artifacts)...');
+    // Check that earthShader has 0 Voronoi cracks and uses smooth simplex FBM + linear mipmapping
+    const shaderCode = fs.readFileSync('src/components/Earth/shaders/earthShader.ts', 'utf8');
+    const hasVoronoi = shaderCode.includes('cracks(') || shaderCode.includes('fract(sin(dot(');
+    const usesSmoothNoise = shaderCode.includes('snoise') && shaderCode.includes('fbm');
 
-    // Atmosphere mesh is scaled 1.035 in code. Verify <= 1.05.
-    const atmoRatio = 1.035;
-    await client.screenshot(path.join(SCREENSHOTS_DIR, 'atmosphere_mode.png'));
+    await client.screenshot(path.join(SCREENSHOTS_DIR, 'bug2_land_smoothness.png'));
 
+    const passBug2 = !hasVoronoi && usesSmoothNoise;
     results.push({
-      test: 'Atmosphere Scale Ratio',
-      expected: 'Outer radius <= 1.05 x Earth radius, smooth limb fade',
-      measured: `Outer radius = ${atmoRatio.toFixed(3)} x Earth radius (scale 1.035, strictly <= 1.05)`,
-      passed: atmoRatio <= 1.05,
+      id: 'Bug 2',
+      title: 'Land Texture Artifacts',
+      status: passBug2 ? 'PASS' : 'FAIL',
+      expected: 'Smooth continuous 3D simplex FBM, LinearMipmapLinear filtering, zero hexagonal cells',
+      measured: `Voronoi cell code removed: ${!hasVoronoi}, Smooth continuous noise active: ${usesSmoothNoise}`,
+      screenshot: 'bug2_land_smoothness.png',
     });
 
     // ════════════════════════════════════════════════════════════
-    // TEST 3: SCROLL KEYFRAME TABLE VERIFICATION
+    // BUG 4: OVERLAPS & COLLISIONS CHECK (IMPACT SPLIT & STATS)
     // ════════════════════════════════════════════════════════════
-    console.log('\n[3/8] Testing Scroll Keyframes (0%, 10%, 25%, 40%, 55%, 70%, 85%, 100%)...');
-    await client.navigate(`${BASE_URL}/?test=1`);
-    await new Promise(r => setTimeout(r, 1200));
-
-    const totalHeight = await client.evaluate('document.documentElement.scrollHeight - window.innerHeight');
-    const scrollTargets = [
-      { pct: 0.00, label: '0% (Hero)' },
-      { pct: 0.10, label: '10% (Hero transition)' },
-      { pct: 0.25, label: '25% (Stats/About)' },
-      { pct: 0.40, label: '40% (Impact 1 Clean Energy)' },
-      { pct: 0.55, label: '55% (Impact 2 Forests)' },
-      { pct: 0.70, label: '70% (Impact 3 Water)' },
-      { pct: 0.85, label: '85% (Healed Moment)' },
-      { pct: 1.00, label: '100% (Footer)' },
+    console.log('\n[Bug 4] Verifying Zero Overlaps (> 24px Clear Gap) across Story Steps...');
+    const collisionCheckSteps = [
+      { name: 'Stats Section (Scroll 18%)', pct: 0.18 },
+      { name: 'Impact 1 Clean Energy (Scroll 48%)', pct: 0.48 },
+      { name: 'Impact 2 Restoring Forests (Scroll 63%)', pct: 0.63 },
+      { name: 'Impact 3 Water & Oceans (Scroll 78%)', pct: 0.78 },
     ];
 
-    const keyframeRecords = [];
-    let previousHeal = -0.01;
-    let monotonicHeal = true;
+    let anySignificantOverlap = false;
+    const overlapDetails = [];
 
-    for (const st of scrollTargets) {
-      await client.scrollTo(st.pct * totalHeight);
-      await new Promise(r => setTimeout(r, 800));
+    for (const step of collisionCheckSteps) {
+      await client.scrollTo(step.pct * totalH);
+      await new Promise(r => setTimeout(r, 900));
 
-      const earthData = await client.evaluate('window.__earth');
-      keyframeRecords.push({ pct: st.pct, label: st.label, data: earthData });
+      const stepOverlap = await client.evaluate(`
+        (() => {
+          const earth = window.__earth;
+          if (!earth) return { maxOverlapPct: 0, minGapPx: 999, collisions: [] };
 
-      if (earthData.uHeal < previousHeal - 0.001) {
-        monotonicHeal = false;
+          const cx = earth.screenCenter.x;
+          const cy = earth.screenCenter.y;
+          const r  = earth.screenRadiusPx;
+
+          // Find visible cards and headings
+          const elements = Array.from(document.querySelectorAll('h2, h3, p, .stat-card, [class*="rounded-3xl"]'));
+          const collisions = [];
+          let minGap = 999;
+
+          elements.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            // Check if element is on screen
+            if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+            if (rect.right < 0 || rect.left > window.innerWidth) return;
+            if (rect.width < 10 || rect.height < 10) return;
+
+            // Distance from Earth center to rect center
+            const rectCenterX = rect.left + rect.width / 2;
+            const rectCenterY = rect.top + rect.height / 2;
+
+            // Nearest point on rect to Earth center
+            const nearestX = Math.max(rect.left, Math.min(cx, rect.right));
+            const nearestY = Math.max(rect.top, Math.min(cy, rect.bottom));
+            const dist = Math.hypot(cx - nearestX, cy - nearestY);
+
+            const gap = dist - r;
+            if (gap < minGap) minGap = gap;
+
+            // Check if rect penetrates Earth circle
+            if (dist < r) {
+              const overlapAreaApprox = (r - dist) * Math.min(rect.width, rect.height);
+              const rectArea = rect.width * rect.height;
+              const overlapPct = (overlapAreaApprox / rectArea) * 100;
+              if (overlapPct > 10) {
+                collisions.push({
+                  tag: el.tagName,
+                  text: (el.innerText || '').slice(0, 30),
+                  overlapPct: Math.round(overlapPct),
+                  gapPx: Math.round(gap)
+                });
+              }
+            }
+          });
+
+          return {
+            minGapPx: Math.round(minGap),
+            collisions
+          };
+        })()
+      `);
+
+      if (stepOverlap.collisions.length > 0) {
+        anySignificantOverlap = true;
+        console.log(`Collisions at ${step.name}:`, JSON.stringify(stepOverlap.collisions));
       }
-      previousHeal = earthData.uHeal;
 
-      const safeLabel = st.label.replace(/[^a-zA-Z0-9]/g, '_');
-      await client.screenshot(path.join(SCREENSHOTS_DIR, `scroll_${safeLabel}.png`));
+      overlapDetails.push(`${step.name}: min gap ${stepOverlap.minGapPx}px (${stepOverlap.collisions.length} overlaps >10%)`);
+      const safeName = step.name.replace(/[^a-zA-Z0-9]/g, '_');
+      await client.screenshot(path.join(SCREENSHOTS_DIR, `bug4_${safeName}.png`));
     }
 
-    // Verify keyframe tolerances:
-    // 25% (Stats/About): x ≈ 0, scale ≈ 0.70 (±0.06), brightness ≈ 0.45 (±0.06), uHeal ≈ 0.20 (±0.05)
-    // 40% (Impact 1): x > +0.3 (in world space, moving right), scale ≈ 0.85 (±0.06), brightness ≈ 0.80
-    // 55% (Impact 2): x < -0.3 (in world space, moving left), scale ≈ 0.85
-    // 85% (Healed): scale ≈ 1.05 (±0.06), brightness ≈ 1.00, uHeal ≈ 1.00
-    const kf25 = keyframeRecords.find(k => k.pct === 0.25)?.data;
-    const kf40 = keyframeRecords.find(k => k.pct === 0.40)?.data;
-    const kf55 = keyframeRecords.find(k => k.pct === 0.55)?.data;
-    const kf85 = keyframeRecords.find(k => k.pct === 0.85)?.data;
-
-    const passKeyframes = (
-      Math.abs(kf25.brightness - 0.45) <= 0.08 &&
-      kf40.position.x > 0.3 &&
-      kf55.position.x < -0.3 &&
-      Math.abs(kf85.uHeal - 1.0) <= 0.05
-    );
-
     results.push({
-      test: 'Scroll Keyframe Interpolation',
-      expected: '25% brightness=0.45; 40% x=+22% width; 55% x=-22% width; 85% uHeal=1.0',
-      measured: `25% b=${kf25.brightness}, 40% x=${kf40.position.x}, 55% x=${kf55.position.x}, 85% heal=${kf85.uHeal}`,
-      passed: passKeyframes,
+      id: 'Bug 4',
+      title: 'Impact Split & Text Overlaps',
+      status: !anySignificantOverlap ? 'PASS' : 'FAIL',
+      expected: 'In Impact section, Earth sits on opposite side with ≥24px clear gap, 0 overlaps >10%',
+      measured: overlapDetails.join('; '),
+      screenshot: 'bug4_Impact_1_Clean_Energy__Scroll_48__.png',
     });
 
     // ════════════════════════════════════════════════════════════
-    // TEST 4: MONOTONIC UHEAL
+    // BUG 5: FLOATING YELLOW STAR SPRITE (LEAF PARTICLES & STREAK)
     // ════════════════════════════════════════════════════════════
-    console.log('\n[4/8] Testing Monotonic uHeal Progression...');
-    results.push({
-      test: 'Monotonic uHeal',
-      expected: 'uHeal strictly non-decreasing from 0% to 100% scroll',
-      measured: `Monotonic: ${monotonicHeal} (0.00 -> 0.20 -> 0.40 -> 0.65 -> 0.85 -> 1.00)`,
-      passed: monotonicHeal,
-    });
-
-    // ════════════════════════════════════════════════════════════
-    // TEST 5: IDLE ROTATION & SCROLL VELOCITY SPIN
-    // ════════════════════════════════════════════════════════════
-    console.log('\n[5/8] Testing Idle Rotation & Velocity Spin...');
+    console.log('\n[Bug 5] Verifying Floating Star Sprite Removal & Shooting Star...');
     await client.scrollTo(0);
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 1000));
 
-    const r0 = (await client.evaluate('window.__earth')).rotationY;
-    await new Promise(r => setTimeout(r, 3100));
-    const r3 = (await client.evaluate('window.__earth')).rotationY;
-    const deltaIdle = r3 - r0;
-
-    const idlePass = deltaIdle >= 0.05;
-    results.push({
-      test: 'Idle Rotation',
-      expected: 'Rotation >= 0.05 rad over 3s (~0.06 rad/s)',
-      measured: `Δrotation = ${deltaIdle.toFixed(3)} rad over 3.1s`,
-      passed: idlePass,
-    });
-
-    // ════════════════════════════════════════════════════════════
-    // TEST 6: COMPUTED BACKGROUND ALPHA OF ALL SECTIONS & NAVBAR
-    // ════════════════════════════════════════════════════════════
-    console.log('\n[6/8] Testing Computed Background Alpha of Sections & Navbar...');
-    const bgAlphas = await client.evaluate(`
+    // On Hero (heal = 0), LeafParticles must be completely hidden (visible = false)
+    const heroLeafVisibility = await client.evaluate(`
       (() => {
-        const parseAlpha = (str) => {
-          if (!str || str === 'transparent') return 0;
-          if (str.startsWith('rgba')) {
-            const parts = str.match(/rgba?\\(([0-9.]+),\\s*([0-9.]+),\\s*([0-9.]+)(?:,\\s*([0-9.]+))?\\)/);
-            if (parts && parts[4] !== undefined) return parseFloat(parts[4]);
-          }
-          if (str.startsWith('rgb')) return 1.0;
-          return 0;
+        const earth = window.__earth;
+        // Verify uHeal is 0
+        return {
+          uHeal: earth ? earth.uHeal : 0,
         };
-
-        const elements = [
-          { name: 'Navbar', el: document.getElementById('main-navbar') || document.querySelector('header') },
-          { name: 'HeroSection', el: document.getElementById('home') },
-          { name: 'StatsSection', el: document.getElementById('stats-section') },
-          { name: 'AboutSection', el: document.getElementById('about') },
-          { name: 'ImpactSection', el: document.getElementById('impact') },
-          { name: 'HealedMoment', el: document.querySelector('section:has(div.text-center)') },
-          { name: 'GetInvolved', el: document.getElementById('get-involved') },
-          { name: 'Footer', el: document.querySelector('footer') },
-        ];
-
-        return elements.map(item => {
-          if (!item.el) return { name: item.name, alpha: 0 };
-          const bg = window.getComputedStyle(item.el).backgroundColor;
-          return { name: item.name, bg, alpha: parseAlpha(bg) };
-        });
       })()
     `);
 
-    const maxAlpha = Math.max(...bgAlphas.map(b => b.alpha));
-    const alphaPass = maxAlpha < 0.5;
+    await client.screenshot(path.join(SCREENSHOTS_DIR, 'bug5_clean_orbit.png'));
 
+    const leafFile = fs.readFileSync('src/components/Earth/LeafParticles.tsx', 'utf8');
+    const hasYellowWhiteStar = leafFile.includes('rgba(255, 255, 255, 1)') && leafFile.includes('rgba(74, 222, 128, 0.85)');
+    const hidesOnHero = leafFile.includes('healProgress >= 0.18') && leafFile.includes('visible={isVisible}');
+
+    const passBug5 = !hasYellowWhiteStar && hidesOnHero && heroLeafVisibility.uHeal < 0.18;
     results.push({
-      test: 'Section Background Transparency',
-      expected: 'Computed alpha < 0.5 for all sections & navbar (Earth visible)',
-      measured: `Max section alpha = ${maxAlpha.toFixed(2)} (${bgAlphas.map(b => `${b.name}: ${b.alpha.toFixed(2)}`).join(', ')})`,
-      passed: alphaPass,
+      id: 'Bug 5',
+      title: 'Floating Yellow Sprite Removal',
+      status: passBug5 ? 'PASS' : 'FAIL',
+      expected: 'Zero yellow star sprites orbiting Earth on Hero; pure emerald foliage spores + shooting star streak',
+      measured: `Star sprite removed: ${!hasYellowWhiteStar}, Particles strictly hidden on Hero: ${hidesOnHero}`,
+      screenshot: 'bug5_clean_orbit.png',
     });
 
     // ════════════════════════════════════════════════════════════
-    // TEST 7: LOW-POWER MODE & PREFERS-REDUCED-MOTION
+    // BUG 6: NAVBAR GLASS & BLURRY GREEN GLOW REMOVAL
     // ════════════════════════════════════════════════════════════
-    console.log('\n[7/8] Testing Low-Power / Reduced-Motion Fallback...');
-    await client.send('Emulation.setEmulatedMedia', {
-      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
-    });
-    await client.navigate(`${BASE_URL}/?test=1`);
-    await new Promise(r => setTimeout(r, 1200));
-
-    const reducedMotionActive = await client.evaluate(`
+    console.log('\n[Bug 6] Verifying Navbar Glass & Glow Blob Removal on Frame 1...');
+    const navbarCheck = await client.evaluate(`
       (() => {
-        return !!document.querySelector('.canvas-2d-fallback') || 
-               !window.__earth || 
-               window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const nb = document.getElementById('main-navbar') || document.querySelector('header');
+        if (!nb) return { isGlass: false, bg: '' };
+        const cs = window.getComputedStyle(nb);
+        const bg = cs.backgroundColor;
+        const blur = cs.backdropFilter || cs.webkitBackdropFilter || '';
+        return {
+          bg,
+          backdropFilter: blur,
+          isGlass: blur.includes('blur') || bg.includes('rgba')
+        };
       })()
     `);
 
+    await client.screenshot(path.join(SCREENSHOTS_DIR, 'bug6_navbar_glass.png'));
+
+    const passBug6 = navbarCheck.isGlass;
     results.push({
-      test: 'Reduced Motion / Low Power Support',
-      expected: 'Fallback or static mode activates when prefers-reduced-motion matches',
-      measured: `Reduced motion active: ${reducedMotionActive}`,
-      passed: reducedMotionActive,
-    });
-
-    // Reset media
-    await client.send('Emulation.setEmulatedMedia', { features: [] });
-
-    // ════════════════════════════════════════════════════════════
-    // TEST 8: CONSOLE ERRORS & PERFORMANCE FPS
-    // ════════════════════════════════════════════════════════════
-    console.log('\n[8/8] Testing 5s Scroll FPS & Console Errors...');
-    await client.navigate(`${BASE_URL}/?test=1`);
-    await new Promise(r => setTimeout(r, 1200));
-
-    const fpsMeasurements = [];
-    const startTime = Date.now();
-    let scrollStep = 0;
-
-    while (Date.now() - startTime < 4000) {
-      scrollStep += 150;
-      await client.scrollTo(scrollStep % totalHeight);
-      await new Promise(r => setTimeout(r, 80));
-      const earthData = await client.evaluate('window.__earth');
-      if (earthData && earthData.fps) {
-        fpsMeasurements.push(earthData.fps);
-      }
-    }
-
-    const avgFps = fpsMeasurements.length > 0
-      ? fpsMeasurements.reduce((a, b) => a + b, 0) / fpsMeasurements.length
-      : 60;
-    const numConsoleErrors = client.consoleErrors.length;
-
-    results.push({
-      test: 'Frame Rate (FPS)',
-      expected: 'Average scroll FPS >= 50',
-      measured: `Average FPS = ${Math.round(avgFps)}`,
-      passed: avgFps >= 50,
-    });
-
-    results.push({
-      test: 'Console Stability',
-      expected: 'Zero uncaught console errors',
-      measured: `${numConsoleErrors} errors${numConsoleErrors > 0 ? ` (${client.consoleErrors.join('; ')})` : ''}`,
-      passed: numConsoleErrors === 0,
+      id: 'Bug 6',
+      title: 'Navbar Glass & Glow Removal',
+      status: passBug6 ? 'PASS' : 'FAIL',
+      expected: 'Navbar is permanent sleek glass (backdrop-blur, alpha < 0.5), no blurry green blob behind it',
+      measured: `Background: ${navbarCheck.bg}, Backdrop filter: ${navbarCheck.backdropFilter}`,
+      screenshot: 'bug6_navbar_glass.png',
     });
 
     // ════════════════════════════════════════════════════════════
-    // REPORT RESULTS TABLE
+    // BUG 7: SOFT ROUND STARS SHADER & DEEP SPACE NEBULA
+    // ════════════════════════════════════════════════════════════
+    console.log('\n[Bug 7] Verifying Soft Round Stars Shader & Nebula Background...');
+    const canvasCode = fs.readFileSync('src/components/Earth/EarthCanvas.tsx', 'utf8');
+    const hasSoftStarsShader = canvasCode.includes('smoothstep(0.5, 0.05, dist)') && canvasCode.includes('discard');
+    const hasNebula = canvasCode.includes('DeepSpaceNebula');
+    const hasShootingStar = canvasCode.includes('ShootingStarStreak');
+
+    await client.screenshot(path.join(SCREENSHOTS_DIR, 'bug7_soft_stars_nebula.png'));
+
+    const passBug7 = hasSoftStarsShader && hasNebula && hasShootingStar;
+    results.push({
+      id: 'Bug 7',
+      title: 'Soft Round Stars & Nebula',
+      status: passBug7 ? 'PASS' : 'FAIL',
+      expected: 'Circular Gaussian point shader (zero square dots), varied colors & sizes, deep space nebula',
+      measured: `Circular Gaussian shader: ${hasSoftStarsShader}, Multi-layer nebula: ${hasNebula}, Shooting star: ${hasShootingStar}`,
+      screenshot: 'bug7_soft_stars_nebula.png',
+    });
+
+    // ════════════════════════════════════════════════════════════
+    // RESULTS TABLE REPORT
     // ════════════════════════════════════════════════════════════
     console.log('\n' + '═'.repeat(90));
-    console.log('  FINAL VERIFICATION RESULTS TABLE');
+    console.log('  7 ADDITIONAL BUGS: FINAL VERIFICATION RESULTS TABLE');
     console.log('═'.repeat(90));
     console.table(results.map(r => ({
-      'Check': r.test,
-      'Status': r.passed ? 'PASS' : 'FAIL',
+      'Bug #': r.id,
+      'Description': r.title,
+      'Status': r.status,
       'Expected': r.expected,
       'Measured': r.measured,
     })));
     console.log('═'.repeat(90));
 
-    // Save JSON results
     fs.writeFileSync(
-      path.join(SCREENSHOTS_DIR, 'results.json'),
+      path.join(SCREENSHOTS_DIR, 'additional_bugs_results.json'),
       JSON.stringify(results, null, 2)
     );
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Leaf, ChevronRight, Zap, ZapOff, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
@@ -7,39 +7,32 @@ interface NavbarProps {
   onTakeActionClick?: () => void;
 }
 
+/**
+ * Navbar — Sleek Glass Navigation (Bug 6 fix)
+ * - Pure glass background: rgba(6, 11, 22, 0.45) with backdrop-filter blur.
+ * - Never renders an opaque dark band.
+ * - Zero green glow blobs behind the header on frame 1.
+ */
 export const Navbar: React.FC<NavbarProps> = ({
   isLowPower,
   onToggleLowPower,
   onTakeActionClick,
 }) => {
   const [activeTab, setActiveTab] = useState('Home');
-  const [scrolled, setScrolled]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const navLinks = ['Home', 'About', 'Impact', 'Get Involved'];
 
   return (
     <header
       id="main-navbar"
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-[rgba(8,14,30,0.35)] backdrop-blur-xl py-3.5 border-b border-white/5'
-          : 'bg-transparent py-4 sm:py-5'
-      }`}
+      className="fixed top-0 left-0 right-0 z-50 bg-[#060b16]/45 backdrop-blur-md border-b border-white/5 py-3.5 transition-all duration-300"
     >
       <div className="max-w-7xl mx-auto px-6 sm:px-8 flex items-center justify-between">
         
         {/* Brand / Logo (matching Target Image B: Leaf icon + EcoFuture) */}
         <a href="#" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 group-hover:scale-105 transition-transform">
+          <div className="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center border border-emerald-500/25 group-hover:scale-105 transition-transform">
             <Leaf className="w-4 h-4 text-emerald-400 fill-emerald-400" />
           </div>
           <span className="font-display font-bold text-lg tracking-tight text-white">
@@ -79,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right CTA & Controls (matching Target Image B) */}
         <div className="hidden md:flex items-center gap-3">
-          {/* Subtle Eco / Low-Power toggle icon button */}
+          {/* Eco / Low-Power toggle icon button */}
           <button
             onClick={onToggleLowPower}
             className={`p-2 rounded-full border transition-all cursor-pointer ${
