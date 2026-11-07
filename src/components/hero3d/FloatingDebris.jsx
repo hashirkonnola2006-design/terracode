@@ -3,363 +3,389 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // ═══════════════════════════════════════════════════════════════
-// TWEAKABLE CONSTANTS (Detailed Floating Space Wastes)
+// TWEAKABLE CONSTANTS (Cinematic Clutter of Small Floating Wastes)
 // ═══════════════════════════════════════════════════════════════
-export const DRIFT_SPEED = 0.04;
+export const SMALL_DEBRIS_SCALE = 0.036;  // Small debris scale (realistic relative to Earth radius = 0.70)
+export const ORBIT_MIN_RADIUS   = 0.78;   // Inner orbit just skimming above the atmosphere
+export const ORBIT_MAX_RADIUS   = 1.58;   // Outer edge of orbital debris halo
+export const DRIFT_SPEED_MULT   = 0.035;  // Slow, serene orbital drift speed
 
-// ── 1. PROCEDURAL BLUE INDUSTRIAL MILK CRATE ──
-// Open hollow frame with diamond lattice side cutouts & handles (NOT a solid block!)
-function createMilkCrateLatticeTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d');
+// Clutter item counts (Total ~230 instanced items across 7 draw calls)
+export const COUNT_BOTTLES = 32; // Small transparent water bottles
+export const COUNT_BAGS    = 42; // Small translucent crumpled bags & sheets
+export const COUNT_CANS    = 36; // Small soda cans & metal tins
+export const COUNT_CRATES  = 18; // Small industrial crates & containers
+export const COUNT_TIRES   = 18; // Small rubber tires
+export const COUNT_CUPS    = 22; // Small takeaway coffee cups
+export const COUNT_CAPS    = 64; // Small colorful bottle caps, wrappers & chips
 
-  // Solid blue border frame
-  ctx.fillStyle = '#0f4db8';
-  ctx.fillRect(0, 0, 256, 256);
-
-  // Clear inner lattice area
-  ctx.clearRect(14, 14, 228, 228);
-
-  // Draw criss-cross diamond grid ribs
-  ctx.strokeStyle = '#0f4db8';
-  ctx.lineWidth = 7;
-  const step = 22;
-
-  for (let x = -256; x < 512; x += step) {
-    ctx.beginPath();
-    ctx.moveTo(x, 14);
-    ctx.lineTo(x + 228, 242);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(x, 242);
-    ctx.lineTo(x + 228, 14);
-    ctx.stroke();
-  }
-
-  // Handle cutout in upper-middle
-  ctx.clearRect(60, 38, 136, 38);
-  ctx.fillStyle = '#0a3680';
-  ctx.strokeStyle = '#082a66';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(60, 38, 136, 38);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  return texture;
-}
-
-// ── 2. DETAILED WATER BOTTLE GEOMETRY ──
-// Lathe geometry with realistic base, 4 molded grip rings, tapered shoulder & threaded neck
+// ── 1. PROCEDURAL GEOMETRIES (Crisp, Detailed, Low-Poly) ──
 function createWaterBottleGeometry() {
   const points = [];
   points.push(new THREE.Vector2(0.0, 0.0));
-  points.push(new THREE.Vector2(0.32, 0.03));
-  points.push(new THREE.Vector2(0.36, 0.10));
+  points.push(new THREE.Vector2(0.28, 0.04));
+  points.push(new THREE.Vector2(0.32, 0.12));
 
-  // 4 molded horizontal grip ridges
-  for (let i = 0; i < 4; i++) {
-    const y = 0.20 + i * 0.20;
-    points.push(new THREE.Vector2(0.38, y));
-    points.push(new THREE.Vector2(0.34, y + 0.05));
-    points.push(new THREE.Vector2(0.38, y + 0.10));
+  // Molded grip ridges
+  for (let i = 0; i < 3; i++) {
+    const y = 0.22 + i * 0.22;
+    points.push(new THREE.Vector2(0.34, y));
+    points.push(new THREE.Vector2(0.30, y + 0.06));
+    points.push(new THREE.Vector2(0.34, y + 0.12));
   }
 
-  points.push(new THREE.Vector2(0.37, 1.15));
-  points.push(new THREE.Vector2(0.22, 1.38));
-  points.push(new THREE.Vector2(0.14, 1.50));
-  points.push(new THREE.Vector2(0.14, 1.70));
-  points.push(new THREE.Vector2(0.16, 1.72));
-  points.push(new THREE.Vector2(0.16, 1.80));
-  points.push(new THREE.Vector2(0.0, 1.80));
+  points.push(new THREE.Vector2(0.33, 1.15));
+  points.push(new THREE.Vector2(0.18, 1.38));
+  points.push(new THREE.Vector2(0.13, 1.50));
+  points.push(new THREE.Vector2(0.13, 1.70));
+  points.push(new THREE.Vector2(0.15, 1.72));
+  points.push(new THREE.Vector2(0.15, 1.82));
+  points.push(new THREE.Vector2(0.0, 1.82));
 
-  const geom = new THREE.LatheGeometry(points, 24);
+  const geom = new THREE.LatheGeometry(points, 14);
   geom.center();
   return geom;
 }
 
-// ── 3. CRUMPLED PLASTIC GROCERY BAG WITH HANDLES ──
-// Billowing folds with two looped handles at top
-function createDetailedBagGeometry() {
-  const geom = new THREE.CylinderGeometry(0.32, 0.40, 1.10, 20, 14, true);
+function createShoppingBagGeometry() {
+  const geom = new THREE.CylinderGeometry(0.28, 0.38, 1.10, 12, 8, true);
   const pos = geom.attributes.position;
-
+  // Subtle organic crumpled deformations
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
     const z = pos.getZ(i);
-
-    // Multi-octave wrinkles & billowing puff
-    const crinkle1 = Math.sin(x * 8.0 + y * 6.5) * 0.07;
-    const crinkle2 = Math.cos(z * 9.0 - y * 7.5) * 0.05;
-    const bulge = Math.cos(y * 2.5) * 0.08;
-
-    pos.setXYZ(i, x + crinkle1 + bulge, y, z + crinkle2);
+    const noise = Math.sin(y * 6.0 + x * 4.0) * 0.06 + Math.cos(z * 7.0) * 0.04;
+    pos.setXYZ(i, x * (1.0 + noise), y, z * (1.0 + noise));
   }
   geom.computeVertexNormals();
+  geom.center();
   return geom;
 }
 
-// ── 4. DENTED SODA CAN GEOMETRY ──
-// Realistic cylinder with an indented crush dent
 function createDentedCanGeometry() {
-  const geom = new THREE.CylinderGeometry(0.24, 0.24, 0.75, 28, 16);
+  const geom = new THREE.CylinderGeometry(0.26, 0.26, 0.75, 16);
   const pos = geom.attributes.position;
-
+  // Subtle realistic dent on one side
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
     const z = pos.getZ(i);
-
-    // Indented crushed dent on one side
-    const d = Math.hypot(x - 0.22, y * 1.4, z);
-    if (d < 0.28) {
-      const dent = Math.cos((d / 0.28) * Math.PI * 0.5) * 0.08;
-      pos.setX(i, x - dent);
+    if (x > 0.12 && Math.abs(y) < 0.22) {
+      pos.setX(i, x * 0.72);
+      pos.setZ(i, z * 0.82);
     }
   }
   geom.computeVertexNormals();
+  geom.center();
   return geom;
 }
 
-// ── 5. SODA CAN GRAPHICS TEXTURE ──
+function createSmallCrateGeometry() {
+  const geom = new THREE.BoxGeometry(0.85, 0.55, 0.65);
+  geom.center();
+  return geom;
+}
+
+function createTireGeometry() {
+  const geom = new THREE.TorusGeometry(0.42, 0.18, 10, 18);
+  geom.center();
+  return geom;
+}
+
+function createCoffeeCupGeometry() {
+  const geom = new THREE.CylinderGeometry(0.32, 0.22, 0.75, 14);
+  geom.center();
+  return geom;
+}
+
+function createCapGeometry() {
+  const geom = new THREE.CylinderGeometry(0.18, 0.18, 0.10, 12);
+  geom.center();
+  return geom;
+}
+
+// ── 2. PROCEDURAL TEXTURES ──
 function createSodaCanTexture() {
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
+  canvas.width = 128;
+  canvas.height = 128;
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#cc0000';
-  ctx.fillRect(0, 0, 512, 512);
+  ctx.fillStyle = '#d92626';
+  ctx.fillRect(0, 0, 128, 128);
 
-  // Silver metallic rims
-  ctx.fillStyle = '#b0b8c2';
-  ctx.fillRect(0, 0, 512, 38);
-  ctx.fillRect(0, 474, 512, 38);
+  ctx.fillStyle = '#b8c0cc';
+  ctx.fillRect(0, 0, 128, 14);
+  ctx.fillRect(0, 114, 128, 14);
 
-  // Dynamic white swoosh
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.moveTo(0, 240);
-  ctx.bezierCurveTo(140, 170, 360, 330, 512, 230);
-  ctx.lineTo(512, 290);
-  ctx.bezierCurveTo(360, 390, 140, 230, 0, 300);
-  ctx.closePath();
+  ctx.arc(64, 64, 28, 0, Math.PI * 2);
   ctx.fill();
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
   return texture;
 }
 
+function createCrateTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#145cb8';
+  ctx.fillRect(0, 0, 64, 64);
+
+  ctx.strokeStyle = '#0a3675';
+  ctx.lineWidth = 3;
+  for (let i = 8; i < 64; i += 12) {
+    ctx.strokeRect(i, 4, 8, 56);
+  }
+
+  return new THREE.CanvasTexture(canvas);
+}
+
 export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) => {
-  // References for each distinct hero floating waste
-  const crateRef     = useRef(null);
-  const bagRef       = useRef(null);
-  const bottleRef    = useRef(null);
-  const canRef       = useRef(null);
-  const tireRef      = useRef(null);
-  const cupRef       = useRef(null);
-  const distBottleRef= useRef(null);
-  const distCapRef   = useRef(null);
+  // Instanced mesh refs
+  const bottleInstRef = useRef(null);
+  const bagInstRef    = useRef(null);
+  const canInstRef    = useRef(null);
+  const crateInstRef  = useRef(null);
+  const tireInstRef   = useRef(null);
+  const cupInstRef    = useRef(null);
+  const capInstRef    = useRef(null);
+
+  const dummy = useMemo(() => new THREE.Object3D(), []);
 
   // Textures
-  const crateLatticeTex = useMemo(() => createMilkCrateLatticeTexture(), []);
-  const canTexture      = useMemo(() => createSodaCanTexture(), []);
+  const canTexture   = useMemo(() => createSodaCanTexture(), []);
+  const crateTexture = useMemo(() => createCrateTexture(), []);
 
   // Geometries
   const bottleGeom = useMemo(() => createWaterBottleGeometry(), []);
-  const bagGeom    = useMemo(() => createDetailedBagGeometry(), []);
+  const bagGeom    = useMemo(() => createShoppingBagGeometry(), []);
   const canGeom    = useMemo(() => createDentedCanGeometry(), []);
-  const tireGeom   = useMemo(() => new THREE.TorusGeometry(0.32, 0.13, 14, 28), []);
-  const cupGeom    = useMemo(() => new THREE.CylinderGeometry(0.20, 0.15, 0.50, 24), []);
-  const lidGeom    = useMemo(() => new THREE.CylinderGeometry(0.21, 0.21, 0.05, 24), []);
-  const capGeom    = useMemo(() => new THREE.CylinderGeometry(0.15, 0.15, 0.10, 20), []);
-  const pullTabGeom= useMemo(() => new THREE.BoxGeometry(0.08, 0.015, 0.14), []);
+  const crateGeom  = useMemo(() => createSmallCrateGeometry(), []);
+  const tireGeom   = useMemo(() => createTireGeometry(), []);
+  const cupGeom    = useMemo(() => createCoffeeCupGeometry(), []);
+  const capGeom    = useMemo(() => createCapGeometry(), []);
 
   // Materials
-  // 1. Blue Crate Materials (Solid frame + open alpha-tested lattice walls)
-  const matCrateSolid = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#0f4db8',
-    roughness: 0.38,
-    metalness: 0.06,
-  }), []);
-
-  const matCrateLattice = useMemo(() => new THREE.MeshStandardMaterial({
-    map: crateLatticeTex,
-    color: '#0f4db8',
-    roughness: 0.38,
-    metalness: 0.06,
-    transparent: true,
-    alphaTest: 0.45,
-    side: THREE.DoubleSide,
-  }), []);
-
-  // 2. Translucent Plastic Shopping Bag Material
-  const matTranslucentBag = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: '#f0f5fa',
-    roughness: 0.24,
-    transmission: 0.72,
-    thickness: 0.15,
-    transparent: true,
-    opacity: 0.85,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-  }), []);
-
-  // 3. Clear Water Bottle Material (PET plastic with reflections)
   const matClearBottle = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: '#dce8f5',
-    roughness: 0.06,
-    transmission: 0.88,
-    ior: 1.48,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.05,
+    color: '#ffffff',
+    roughness: 0.12,
+    transmission: 0.85,
+    ior: 1.45,
     transparent: true,
     opacity: 0.75,
     depthWrite: false,
-    side: THREE.FrontSide,
+    side: THREE.DoubleSide,
   }), []);
 
-  const matBlueCap = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#1565c0',
+  const matTranslucentBag = useMemo(() => new THREE.MeshPhysicalMaterial({
+    color: '#ffffff',
     roughness: 0.35,
+    transmission: 0.60,
+    transparent: true,
+    opacity: 0.80,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  }), []);
+
+  const matSodaCan = useMemo(() => new THREE.MeshStandardMaterial({
+    map: canTexture,
+    roughness: 0.28,
+    metalness: 0.75,
+  }), []);
+
+  const matBlueCrate = useMemo(() => new THREE.MeshStandardMaterial({
+    map: crateTexture,
+    roughness: 0.42,
     metalness: 0.05,
   }), []);
 
-  // 4. Aluminum Dented Soda Can Material
-  const matSodaCan = useMemo(() => new THREE.MeshStandardMaterial({
-    map: canTexture,
-    roughness: 0.22,
-    metalness: 0.82,
-  }), []);
-
-  const matSilverMetal = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#ccd2db',
-    roughness: 0.20,
-    metalness: 0.92,
-  }), []);
-
-  // 5. Matte Rubber Tire Material
   const matRubberTire = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#161619',
-    roughness: 0.88,
-    metalness: 0.08,
+    color: '#1a1a1d',
+    roughness: 0.90,
+    metalness: 0.04,
   }), []);
 
-  // 6. Paper Coffee Cup Material
   const matPaperCup = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#c8a882',
+    color: '#c9b18c',
     roughness: 0.78,
   }), []);
 
-  const matPlasticLid = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#f8fafc',
-    roughness: 0.28,
+  const matCap = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#ffffff',
+    roughness: 0.35,
+    metalness: 0.10,
   }), []);
 
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
+  // Multi-color palette for varied colorful clutter
+  const capPalette = useMemo(() => [
+    new THREE.Color('#2563eb'), // electric blue
+    new THREE.Color('#dc2626'), // red
+    new THREE.Color('#16a34a'), // bright green
+    new THREE.Color('#eab308'), // yellow
+    new THREE.Color('#f97316'), // orange
+    new THREE.Color('#e2e8f0'), // silver/white
+    new THREE.Color('#9333ea'), // purple
+  ], []);
 
-    // Smooth dissolution as Earth heals
-    const heroTrashScale = Math.max(0.0, 1.0 - smoothstep(0.32, 0.85, healProgress));
+  const bottlePalette = useMemo(() => [
+    new THREE.Color('#d4eaf7'), // clear cyan
+    new THREE.Color('#c6f6d5'), // eco green tint
+    new THREE.Color('#e2e8f0'), // crisp clear
+    new THREE.Color('#bee3f8'), // sky blue tint
+  ], []);
 
-    // 1. Blue Industrial Milk Crate (Upper-Left between Sun & Earth)
-    if (crateRef.current) {
-      const px = -1.65 + mousePos.x * 0.10;
-      const py = 1.05 + mousePos.y * 0.08;
-      crateRef.current.position.set(px, py, 0.25);
-      crateRef.current.rotation.x = -0.35 + Math.sin(t * 0.22) * 0.08;
-      crateRef.current.rotation.y = t * 0.18;
-      crateRef.current.rotation.z = 0.40 + Math.cos(t * 0.16) * 0.06;
-      const s = 0.32 * heroTrashScale;
-      crateRef.current.scale.set(s, s, s);
+  const bagPalette = useMemo(() => [
+    new THREE.Color('#f7fafc'), // white grocery bag
+    new THREE.Color('#bee3f8'), // blue shopping bag
+    new THREE.Color('#feebc8'), // tan biodegradable bag
+    new THREE.Color('#e2e8f0'), // smoky translucent bag
+  ], []);
+
+  // Generate true orbital shell parameters for clutter particles
+  const generateClutterData = (count, baseScale, minRadius, maxRadius, colorPalette = null) => {
+    const list = [];
+    let seed = 789123 + count * 13;
+    const rand = () => {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    };
+
+    for (let i = 0; i < count; i++) {
+      const radius = minRadius + rand() * (maxRadius - minRadius);
+      // Realistic orbital plane angles
+      const inclination = (rand() - 0.5) * Math.PI * 0.70; // -63° to +63°
+      const nodeAngle   = rand() * Math.PI * 2;
+      const baseAngle   = rand() * Math.PI * 2;
+      const orbitSpeed  = (rand() > 0.45 ? 1 : -1) * (0.012 + rand() * 0.024) * DRIFT_SPEED_MULT;
+
+      const scale = baseScale * (0.75 + rand() * 0.50);
+      const threshold = 0.10 + rand() * 0.72; // Dissolve stagger
+
+      const color = colorPalette
+        ? colorPalette[Math.floor(rand() * colorPalette.length)]
+        : null;
+
+      list.push({
+        radius,
+        inclination,
+        nodeAngle,
+        baseAngle,
+        currentAngle: baseAngle,
+        orbitSpeed,
+        scale,
+        threshold,
+        color,
+        rotX: rand() * Math.PI * 2,
+        rotY: rand() * Math.PI * 2,
+        rotZ: rand() * Math.PI * 2,
+        rotSpeedX: (rand() - 0.5) * 0.40,
+        rotSpeedY: (rand() - 0.5) * 0.35,
+        rotSpeedZ: (rand() - 0.5) * 0.30,
+      });
     }
+    return list;
+  };
 
-    // 2. Translucent Shopping Bag with Handles (Upper-Right)
-    if (bagRef.current) {
-      const px = 1.85 + mousePos.x * 0.10;
-      const py = 0.45 + mousePos.y * 0.08;
-      bagRef.current.position.set(px, py, 0.35);
-      bagRef.current.rotation.x = 0.32 + Math.sin(t * 0.28) * 0.10;
-      bagRef.current.rotation.y = -0.45 + t * 0.12;
-      bagRef.current.rotation.z = 0.25 + Math.cos(t * 0.20) * 0.08;
-      const s = 0.42 * heroTrashScale;
-      bagRef.current.scale.set(s, s, s);
-    }
+  const bottleData = useMemo(() => generateClutterData(COUNT_BOTTLES, SMALL_DEBRIS_SCALE * 0.95, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS, bottlePalette), [bottlePalette]);
+  const bagData    = useMemo(() => generateClutterData(COUNT_BAGS,    SMALL_DEBRIS_SCALE * 1.05, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS, bagPalette), [bagPalette]);
+  const canData    = useMemo(() => generateClutterData(COUNT_CANS,    SMALL_DEBRIS_SCALE * 0.90, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS), []);
+  const crateData  = useMemo(() => generateClutterData(COUNT_CRATES,  SMALL_DEBRIS_SCALE * 0.85, ORBIT_MIN_RADIUS + 0.10, ORBIT_MAX_RADIUS), []);
+  const tireData   = useMemo(() => generateClutterData(COUNT_TIRES,   SMALL_DEBRIS_SCALE * 0.85, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS), []);
+  const cupData    = useMemo(() => generateClutterData(COUNT_CUPS,    SMALL_DEBRIS_SCALE * 0.85, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS), []);
+  const capData    = useMemo(() => generateClutterData(COUNT_CAPS,    SMALL_DEBRIS_SCALE * 0.55, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS + 0.12, capPalette), [capPalette]);
 
-    // 3. Transparent Water Bottle (Bottom-Left Foreground)
-    if (bottleRef.current) {
-      const px = -1.80 + mousePos.x * 0.12;
-      const py = -1.02 + mousePos.y * 0.08;
-      bottleRef.current.position.set(px, py, 1.05);
-      bottleRef.current.rotation.x = 0.45 + Math.sin(t * 0.24) * 0.06;
-      bottleRef.current.rotation.y = 0.50 + Math.cos(t * 0.18) * 0.05;
-      bottleRef.current.rotation.z = -0.70 + Math.sin(t * 0.20) * 0.04;
-      const s = 0.62 * heroTrashScale;
-      bottleRef.current.scale.set(s, s, s);
-    }
+  // Compute 3D position on tilted orbital plane
+  const computeOrbitalPos = (item) => {
+    const a = item.currentAngle;
+    const r = item.radius;
 
-    // 4. Dented Soda Can (Lower-Right)
-    if (canRef.current) {
-      const px = 1.62 + mousePos.x * 0.10;
-      const py = -1.05 + mousePos.y * 0.08;
-      canRef.current.position.set(px, py, 0.50);
-      canRef.current.rotation.x = 0.50 + Math.sin(t * 0.25) * 0.08;
-      canRef.current.rotation.y = 0.70 + t * 0.20;
-      canRef.current.rotation.z = -0.55;
-      const s = 0.32 * heroTrashScale;
-      canRef.current.scale.set(s, s, s);
-    }
+    // Position in orbital plane
+    const x0 = r * Math.cos(a);
+    const z0 = r * Math.sin(a);
 
-    // 5. Rubber Car Tire (Upper-Right Corner)
-    if (tireRef.current) {
-      const px = 1.65 + mousePos.x * 0.08;
-      const py = 1.15 + mousePos.y * 0.06;
-      tireRef.current.position.set(px, py, -0.15);
-      tireRef.current.rotation.x = t * 0.22;
-      tireRef.current.rotation.y = t * 0.16;
-      const s = 0.28 * heroTrashScale;
-      tireRef.current.scale.set(s, s, s);
-    }
+    // Tilt by orbital inclination
+    const x1 = x0;
+    const y1 = -z0 * Math.sin(item.inclination);
+    const z1 = z0 * Math.cos(item.inclination);
 
-    // 6. Paper Coffee Cup (Mid-Left Edge)
-    if (cupRef.current) {
-      const px = -1.95 + mousePos.x * 0.08;
-      const py = -0.18 + mousePos.y * 0.06;
-      cupRef.current.position.set(px, py, 0.30);
-      cupRef.current.rotation.x = 0.65 + Math.sin(t * 0.20) * 0.06;
-      cupRef.current.rotation.y = t * 0.14;
-      cupRef.current.rotation.z = 0.40;
-      const s = 0.34 * heroTrashScale;
-      cupRef.current.scale.set(s, s, s);
-    }
+    // Rotate by ascending node angle around Y
+    const cosN = Math.cos(item.nodeAngle);
+    const sinN = Math.sin(item.nodeAngle);
 
-    // 7. Distant Drifting Bottle (Far Upper-Right)
-    if (distBottleRef.current) {
-      const px = 2.15 + Math.sin(t * 0.10) * 0.05;
-      const py = 1.40 + Math.cos(t * 0.08) * 0.04;
-      distBottleRef.current.position.set(px, py, -0.80);
-      distBottleRef.current.rotation.x = t * 0.15;
-      distBottleRef.current.rotation.y = t * 0.10;
-      const s = 0.24 * heroTrashScale;
-      distBottleRef.current.scale.set(s, s, s);
-    }
+    const x = x1 * cosN - z1 * sinN + mousePos.x * 0.05;
+    const y = y1 + mousePos.y * 0.04;
+    const z = x1 * sinN + z1 * cosN;
 
-    // 8. Distant Bottle Cap (Far Lower-Left)
-    if (distCapRef.current) {
-      const px = -1.45 + Math.sin(t * 0.12) * 0.04;
-      const py = -1.35 + Math.cos(t * 0.10) * 0.03;
-      distCapRef.current.position.set(px, py, -0.50);
-      distCapRef.current.rotation.x = t * 0.30;
-      distCapRef.current.rotation.y = t * 0.25;
-      const s = 0.18 * heroTrashScale;
-      distCapRef.current.scale.set(s, s, s);
+    return { x, y, z };
+  };
+
+  // Synchronously initialize instance matrices and colors
+  const initMesh = (mesh, data) => {
+    if (!mesh || !data) return;
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      const pos = computeOrbitalPos(item);
+
+      dummy.position.set(pos.x, pos.y, pos.z);
+      dummy.rotation.set(item.rotX, item.rotY, item.rotZ);
+      dummy.scale.set(item.scale, item.scale, item.scale);
+      dummy.updateMatrix();
+
+      mesh.setMatrixAt(i, dummy.matrix);
+
+      if (item.color) {
+        mesh.setColorAt(i, item.color);
+      }
     }
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) {
+      mesh.instanceColor.needsUpdate = true;
+    }
+  };
+
+  useFrame((state, delta) => {
+    const clampedDelta = Math.min(delta, 0.05);
+
+    const updateInstances = (mesh, data) => {
+      if (!mesh) return;
+
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        item.currentAngle += item.orbitSpeed * clampedDelta * 60;
+        item.rotX += item.rotSpeedX * clampedDelta;
+        item.rotY += item.rotSpeedY * clampedDelta;
+        item.rotZ += item.rotSpeedZ * clampedDelta;
+
+        const pos = computeOrbitalPos(item);
+
+        // Smooth dissolution as Earth heals on scroll
+        const localDissolve = Math.max(0.0, 1.0 - smoothstep(item.threshold * 0.45, item.threshold * 0.45 + 0.38, healProgress));
+        const s = healProgress >= 0.88 ? 0.0 : item.scale * localDissolve;
+
+        dummy.position.set(pos.x, pos.y, pos.z);
+        dummy.rotation.set(item.rotX, item.rotY, item.rotZ);
+        dummy.scale.set(s, s, s);
+        dummy.updateMatrix();
+
+        mesh.setMatrixAt(i, dummy.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    };
+
+    updateInstances(bottleInstRef.current, bottleData);
+    updateInstances(bagInstRef.current,    bagData);
+    updateInstances(canInstRef.current,    canData);
+    updateInstances(crateInstRef.current,  crateData);
+    updateInstances(tireInstRef.current,   tireData);
+    updateInstances(cupInstRef.current,    cupData);
+    updateInstances(capInstRef.current,    capData);
   });
 
   function smoothstep(min, max, value) {
@@ -369,91 +395,82 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
 
   return (
     <group visible={healProgress < 0.99}>
-      {/* ── 1. BLUE INDUSTRIAL MILK CRATE (Hollow Frame + Lattice Ribs) ── */}
-      <group ref={crateRef}>
-        {/* Top Outer Rim Beams */}
-        <mesh geometry={new THREE.BoxGeometry(0.85, 0.07, 0.07)} material={matCrateSolid} position={[0, 0.32, 0.39]} />
-        <mesh geometry={new THREE.BoxGeometry(0.85, 0.07, 0.07)} material={matCrateSolid} position={[0, 0.32, -0.39]} />
-        <mesh geometry={new THREE.BoxGeometry(0.07, 0.07, 0.85)} material={matCrateSolid} position={[0.39, 0.32, 0]} />
-        <mesh geometry={new THREE.BoxGeometry(0.07, 0.07, 0.85)} material={matCrateSolid} position={[-0.39, 0.32, 0]} />
+      {/* 1. Small Transparent Water Bottles */}
+      <instancedMesh
+        ref={(m) => {
+          if (m) {
+            bottleInstRef.current = m;
+            initMesh(m, bottleData);
+          }
+        }}
+        args={[bottleGeom, matClearBottle, COUNT_BOTTLES]}
+      />
 
-        {/* Bottom Base Rim Beams */}
-        <mesh geometry={new THREE.BoxGeometry(0.85, 0.07, 0.07)} material={matCrateSolid} position={[0, -0.32, 0.39]} />
-        <mesh geometry={new THREE.BoxGeometry(0.85, 0.07, 0.07)} material={matCrateSolid} position={[0, -0.32, -0.39]} />
-        <mesh geometry={new THREE.BoxGeometry(0.07, 0.07, 0.85)} material={matCrateSolid} position={[0.39, -0.32, 0]} />
-        <mesh geometry={new THREE.BoxGeometry(0.07, 0.07, 0.85)} material={matCrateSolid} position={[-0.39, -0.32, 0]} />
+      {/* 2. Small Translucent Crumpled Bags & Sheets */}
+      <instancedMesh
+        ref={(m) => {
+          if (m) {
+            bagInstRef.current = m;
+            initMesh(m, bagData);
+          }
+        }}
+        args={[bagGeom, matTranslucentBag, COUNT_BAGS]}
+      />
 
-        {/* 4 Vertical Corner Posts */}
-        <mesh geometry={new THREE.BoxGeometry(0.08, 0.64, 0.08)} material={matCrateSolid} position={[0.38, 0, 0.38]} />
-        <mesh geometry={new THREE.BoxGeometry(0.08, 0.64, 0.08)} material={matCrateSolid} position={[-0.38, 0, 0.38]} />
-        <mesh geometry={new THREE.BoxGeometry(0.08, 0.64, 0.08)} material={matCrateSolid} position={[0.38, 0, -0.38]} />
-        <mesh geometry={new THREE.BoxGeometry(0.08, 0.64, 0.08)} material={matCrateSolid} position={[-0.38, 0, -0.38]} />
+      {/* 3. Small Dented Soda Cans */}
+      <instancedMesh
+        ref={(m) => {
+          if (m) {
+            canInstRef.current = m;
+            initMesh(m, canData);
+          }
+        }}
+        args={[canGeom, matSodaCan, COUNT_CANS]}
+      />
 
-        {/* 4 Diamond Lattice Side Panels (Open see-through grid) */}
-        <mesh geometry={new THREE.PlaneGeometry(0.78, 0.58)} material={matCrateLattice} position={[0, 0, 0.39]} />
-        <mesh geometry={new THREE.PlaneGeometry(0.78, 0.58)} material={matCrateLattice} position={[0, 0, -0.39]} rotation={[0, Math.PI, 0]} />
-        <mesh geometry={new THREE.PlaneGeometry(0.78, 0.58)} material={matCrateLattice} position={[0.39, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
-        <mesh geometry={new THREE.PlaneGeometry(0.78, 0.58)} material={matCrateLattice} position={[-0.39, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
+      {/* 4. Small Blue Milk Crates */}
+      <instancedMesh
+        ref={(m) => {
+          if (m) {
+            crateInstRef.current = m;
+            initMesh(m, crateData);
+          }
+        }}
+        args={[crateGeom, matBlueCrate, COUNT_CRATES]}
+      />
 
-        {/* Bottom Floor Slats */}
-        <mesh geometry={new THREE.BoxGeometry(0.76, 0.02, 0.06)} material={matCrateSolid} position={[0, -0.32, 0]} />
-        <mesh geometry={new THREE.BoxGeometry(0.76, 0.02, 0.06)} material={matCrateSolid} position={[0, -0.32, 0.18]} />
-        <mesh geometry={new THREE.BoxGeometry(0.76, 0.02, 0.06)} material={matCrateSolid} position={[0, -0.32, -0.18]} />
-      </group>
+      {/* 5. Small Rubber Tires */}
+      <instancedMesh
+        ref={(m) => {
+          if (m) {
+            tireInstRef.current = m;
+            initMesh(m, tireData);
+          }
+        }}
+        args={[tireGeom, matRubberTire, COUNT_TIRES]}
+      />
 
-      {/* ── 2. TRANSLUCENT PLASTIC SHOPPING BAG WITH HANDLES ── */}
-      <group ref={bagRef}>
-        <mesh geometry={bagGeom} material={matTranslucentBag} />
-        {/* Left Looped Handle */}
-        <mesh
-          geometry={new THREE.TorusGeometry(0.12, 0.03, 8, 16, Math.PI)}
-          material={matTranslucentBag}
-          position={[-0.15, 0.56, 0]}
-          rotation={[0, 0, 0]}
-        />
-        {/* Right Looped Handle */}
-        <mesh
-          geometry={new THREE.TorusGeometry(0.12, 0.03, 8, 16, Math.PI)}
-          material={matTranslucentBag}
-          position={[0.15, 0.56, 0]}
-          rotation={[0, 0, 0]}
-        />
-      </group>
+      {/* 6. Small Takeaway Coffee Cups */}
+      <instancedMesh
+        ref={(m) => {
+          if (m) {
+            cupInstRef.current = m;
+            initMesh(m, cupData);
+          }
+        }}
+        args={[cupGeom, matPaperCup, COUNT_CUPS]}
+      />
 
-      {/* ── 3. CLEAR PLASTIC WATER BOTTLE WITH BLUE CAP ── */}
-      <group ref={bottleRef}>
-        <mesh geometry={bottleGeom} material={matClearBottle} />
-        <mesh geometry={capGeom} material={matBlueCap} position={[0, 0.90, 0]} />
-      </group>
-
-      {/* ── 4. DENTED RED SODA CAN WITH SILVER TOP & PULL TAB ── */}
-      <group ref={canRef}>
-        <mesh geometry={canGeom} material={matSodaCan} />
-        {/* Silver Inset Top Rim */}
-        <mesh geometry={new THREE.CylinderGeometry(0.24, 0.24, 0.04, 28)} material={matSilverMetal} position={[0, 0.38, 0]} />
-        {/* Silver Pull Tab */}
-        <mesh geometry={pullTabGeom} material={matSilverMetal} position={[0.04, 0.40, 0.04]} rotation={[-0.1, 0.4, 0]} />
-        {/* Silver Chime Base */}
-        <mesh geometry={new THREE.CylinderGeometry(0.22, 0.24, 0.04, 28)} material={matSilverMetal} position={[0, -0.38, 0]} />
-      </group>
-
-      {/* ── 5. DETAILED RUBBER CAR TIRE ── */}
-      <mesh ref={tireRef} geometry={tireGeom} material={matRubberTire} />
-
-      {/* ── 6. TAKEAWAY COFFEE CUP WITH SIPPING LID ── */}
-      <group ref={cupRef}>
-        <mesh geometry={cupGeom} material={matPaperCup} />
-        <mesh geometry={lidGeom} material={matPlasticLid} position={[0, 0.26, 0]} />
-      </group>
-
-      {/* ── 7. DISTANT DRIFTING BOTTLE ── */}
-      <group ref={distBottleRef}>
-        <mesh geometry={bottleGeom} material={matClearBottle} scale={0.7} />
-        <mesh geometry={capGeom} material={matBlueCap} scale={0.7} position={[0, 0.63, 0]} />
-      </group>
-
-      {/* ── 8. DISTANT DRIFTING BOTTLE CAP ── */}
-      <mesh ref={distCapRef} geometry={capGeom} material={matBlueCap} />
+      {/* 7. Small Bottle Caps, Wrappers & Chips */}
+      <instancedMesh
+        ref={(m) => {
+          if (m) {
+            capInstRef.current = m;
+            initMesh(m, capData);
+          }
+        }}
+        args={[capGeom, matCap, COUNT_CAPS]}
+      />
     </group>
   );
 };
