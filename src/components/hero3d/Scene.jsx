@@ -60,8 +60,8 @@ const WorldController = ({
 
   return (
     <>
-      <SpaceBackground />
-      <Sun healProgress={healProgress} />
+      <SpaceBackground mousePos={mousePos} reducedMotion={reducedMotion} />
+      <Sun healProgress={healProgress} reducedMotion={reducedMotion} />
 
       <group ref={earthGroupRef} scale={EARTH_BASE_SCALE}>
         <Earth scrollRotation={scrollProgress * 1.5} healProgress={healProgress} />
@@ -171,7 +171,7 @@ export const Scene = ({ scrollProgress = 0, scrollVelocity = 0, onTelemetry }) =
       >
         <Canvas
           camera={{ position: [0, 0, CAMERA_START_Z], fov: CAMERA_FOV }}
-          dpr={[1, Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 2, 2)]}
+          dpr={[1, Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1.75, 1.75)]}
           gl={{
             antialias: true,
             alpha: true,

@@ -4,9 +4,9 @@ import { EffectComposer, Bloom, Vignette, DepthOfField, Noise } from '@react-thr
 // ═══════════════════════════════════════════════════════════════
 // TWEAKABLE CONSTANTS (Post-Processing Effects)
 // ═══════════════════════════════════════════════════════════════
-export const BLOOM_INTENSITY = 0.95;          // Cinematic glow on sun core, flare & atmosphere
-export const BLOOM_THRESHOLD = 0.80;          // Cutoff luminance for bloom trigger
-export const BLOOM_SMOOTHING = 0.20;
+export const BLOOM_INTENSITY = 1.10;          // Cinematic glow on sun core, flare & beacon stars
+export const BLOOM_THRESHOLD = 0.90;          // Cutoff luminance for bloom trigger (only sun & beacon stars bloom)
+export const BLOOM_SMOOTHING = 0.15;
 export const VIGNETTE_DARKNESS = 0.65;        // Subtle perimeter vignette
 export const VIGNETTE_OFFSET = 0.22;
 export const DOF_BOKEH_SCALE = 1.60;          // Soft bokeh blur on foreground bottle
