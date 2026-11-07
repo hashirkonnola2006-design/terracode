@@ -1,31 +1,37 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { EarthShaderMaterial } from './shaders/earthShader';
 import { AtmosphereShaderMaterial } from './shaders/atmosphereShader';
 
-interface EarthSphereProps {
-  healProgress: number;     // 0.0 to 1.0
-  scrollRotation?: number;  // radians offset driven by scroll
-  lowDetail?: boolean;
+export interface EarthSphereProps {
+  healProgress:    number; // 0.0 to 1.0
+  scrollRotation?: number; // radians offset driven by scroll
+  brightness?:     number; // 0.0 to 1.0 (dims behind text/stats)
+  lowDetail?:      boolean;
+  onAtmosphereMeshReady?: (mesh: THREE.Mesh) => void;
+  onEarthMeshReady?:      (mesh: THREE.Mesh) => void;
 }
 
 /**
  * EarthSphere Component
  * 
  * Clean, layered 3D planet:
- * 1. Earth Surface (scale 1.0): Custom ShaderMaterial with day map, normal map,
+ * 1. Earth Surface (scale 1.0): Custom ShaderMaterial with 2K day map, normal map,
  *    specular map, and organic FBM wave healing.
- * 2. Cloud Sphere (scale 1.015): Rotating cloud layer that shifts from brown smog
- *    when polluted to crisp white clouds when healed.
- * 3. Atmosphere Halo (scale 1.10): BackSide Fresnel glow shifting from dim gray-red
+ * 2. Cloud Sphere (scale 1.015): Rotating cloud layer that shifts from semi-transparent
+ *    gray-brown smog when polluted to crisp white clouds when healed.
+ * 3. Atmosphere Halo (scale 1.035): BackSide Fresnel glow shifting from dim gray-red
  *    smog corona to bright cyan-green ozone shield.
  */
 export const EarthSphere: React.FC<EarthSphereProps> = ({
   healProgress,
   scrollRotation = 0,
+  brightness = 1.0,
   lowDetail = false,
+  onAtmosphereMeshReady,
+  onEarthMeshReady,
 }) => {
   const earthRef   = useRef<THREE.Mesh>(null!);
   const cloudsRef  = useRef<THREE.Mesh>(null!);
@@ -34,6 +40,36 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
   const atmoMat    = useRef<THREE.ShaderMaterial>(null!);
 
   const { camera } = useThree();
+
+  // URL flags for automated testing: ?mode=atmosphere, ?mode=day, ?heal=0.5
+  const [modeAtmosphere, setModeAtmosphere] = useState(false);
+  const [modeDay, setModeDay]               = useState(false);
+  const [forcedHeal, setForcedHeal]         = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('mode') === 'atmosphere') setModeAtmosphere(true);
+      if (p.get('mode') === 'day') setModeDay(true);
+      const h = p.get('heal');
+      if (h !== null && !isNaN(parseFloat(h))) {
+        setForcedHeal(parseFloat(h));
+      }
+    }
+  }, []);
+
+  // Inform parent of refs for measurement
+  useEffect(() => {
+    if (earthRef.current && onEarthMeshReady) {
+      onEarthMeshReady(earthRef.current);
+    }
+  }, [onEarthMeshReady]);
+
+  useEffect(() => {
+    if (atmoRef.current && onAtmosphereMeshReady) {
+      onAtmosphereMeshReady(atmoRef.current);
+    }
+  }, [onAtmosphereMeshReady]);
 
   // Load 2K textures
   const [dayMap, specularMap, normalMap, cloudsMap] = useTexture([
@@ -50,23 +86,28 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
   // Earth shader uniforms
   const earthUniforms = useMemo(() => {
     const u = THREE.UniformsUtils.clone(EarthShaderMaterial.uniforms);
-    u.uDayMap.value      = dayMap;
-    u.uSpecularMap.value = specularMap;
-    u.uNormalMap.value   = normalMap;
+    u.uDayMap.value         = dayMap;
+    u.uSpecularMap.value    = specularMap;
+    u.uNormalMap.value      = normalMap;
+    u.uModeDay.value        = modeDay ? 1.0 : 0.0;
+    u.uBrightness.value     = brightness;
     return u;
-  }, [dayMap, specularMap, normalMap]);
+  }, [dayMap, specularMap, normalMap, modeDay, brightness]);
 
   // Atmosphere shader uniforms
   const atmoUniforms = useMemo(() => {
-    return THREE.UniformsUtils.clone(AtmosphereShaderMaterial.uniforms);
-  }, []);
+    const u = THREE.UniformsUtils.clone(AtmosphereShaderMaterial.uniforms);
+    u.uModeAtmosphere.value = modeAtmosphere ? 1.0 : 0.0;
+    u.uBrightness.value     = brightness;
+    return u;
+  }, [modeAtmosphere, brightness]);
 
-  // Dedicated cloud material
+  // Cloud material: semi-transparent gray-brown smog when polluted, crisp white when healed
   const cloudsMat = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       map: cloudsMap,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.45,
       blending: THREE.NormalBlending,
       depthWrite: false,
       roughness: 1.0,
@@ -77,17 +118,20 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const camPos = camera.position;
+    const effectiveHeal = forcedHeal !== null ? forcedHeal : healProgress;
 
     if (earthMat.current) {
       const u = earthMat.current.uniforms;
       u.uTime.value = t;
-      u.uHeal.value = THREE.MathUtils.lerp(u.uHeal.value, healProgress, 0.08);
+      u.uHeal.value = THREE.MathUtils.lerp(u.uHeal.value, effectiveHeal, 0.1);
+      u.uBrightness.value = brightness;
       u.uCameraPos.value.copy(camPos);
     }
 
     if (atmoMat.current) {
       const u = atmoMat.current.uniforms;
-      u.uHeal.value = THREE.MathUtils.lerp(u.uHeal.value, healProgress, 0.08);
+      u.uHeal.value = THREE.MathUtils.lerp(u.uHeal.value, effectiveHeal, 0.1);
+      u.uBrightness.value = brightness;
       u.uCameraPos.value.copy(camPos);
     }
 
@@ -104,14 +148,18 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
     if (cloudsRef.current) {
       cloudsRef.current.rotation.set(tiltX, baseRotation * 1.10, tiltZ);
 
-      // Cloud tint & opacity: dark brown smog when polluted, bright white when healed
-      const currentHeal = earthMat.current?.uniforms.uHeal.value ?? healProgress;
+      // Cloud tint & opacity: semi-transparent gray-brown smog -> clean white
+      const currentHeal = earthMat.current?.uniforms.uHeal.value ?? effectiveHeal;
       cloudsMat.color.lerpColors(
-        new THREE.Color(0.26, 0.22, 0.16), // smog brown
+        new THREE.Color(0.40, 0.36, 0.30), // smog gray-brown
         new THREE.Color(1.0,  1.0,  1.0),  // clean white
         currentHeal
       );
-      cloudsMat.opacity = THREE.MathUtils.lerp(0.58, 0.45, currentHeal);
+      cloudsMat.opacity = THREE.MathUtils.lerp(0.45, 0.40, currentHeal) * brightness;
+      // In atmosphere isolation test mode, hide cloud layer
+      if (modeAtmosphere) {
+        cloudsMat.opacity = 0.0;
+      }
     }
 
     if (atmoRef.current) {
@@ -123,8 +171,8 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
 
   return (
     <group>
-      {/* 1. Atmosphere halo (BackSide, scaled slightly larger) */}
-      <mesh ref={atmoRef} scale={1.11}>
+      {/* 1. Atmosphere Halo (BackSide, strictly scale 1.035 x Earth radius) */}
+      <mesh ref={atmoRef} scale={1.035}>
         <sphereGeometry args={[1, seg, seg]} />
         <shaderMaterial
           ref={atmoMat}
@@ -138,8 +186,8 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
         />
       </mesh>
 
-      {/* 2. Earth Surface */}
-      <mesh ref={earthRef}>
+      {/* 2. Earth Surface (Scale 1.0) */}
+      <mesh ref={earthRef} visible={!modeAtmosphere}>
         <sphereGeometry args={[1, seg, seg]} />
         <shaderMaterial
           ref={earthMat}
@@ -149,8 +197,8 @@ export const EarthSphere: React.FC<EarthSphereProps> = ({
         />
       </mesh>
 
-      {/* 3. Separate Cloud Sphere */}
-      <mesh ref={cloudsRef} scale={1.015}>
+      {/* 3. Separate Cloud Sphere (Scale 1.015) */}
+      <mesh ref={cloudsRef} scale={1.015} visible={!modeAtmosphere}>
         <sphereGeometry args={[1, seg, seg]} />
         <primitive object={cloudsMat} attach="material" />
       </mesh>

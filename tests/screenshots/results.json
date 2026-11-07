@@ -1,0 +1,68 @@
+[
+  {
+    "test": "Hero Sizing 1920x1080",
+    "expected": "Diameter 62-78% of H (~70%), margin >= 40px",
+    "measured": "Diameter 70.0% (756px), Center 51.5%, Clearance 96px",
+    "passed": true
+  },
+  {
+    "test": "Hero Sizing 1366x768",
+    "expected": "Diameter 62-78% of H (~70%), margin >= 40px",
+    "measured": "Diameter 70.0% (538px), Clearance 45px",
+    "passed": true
+  },
+  {
+    "test": "Hero Sizing 390x844 (Mobile)",
+    "expected": "Diameter 78-92% of W (~85%), margin >= 40px",
+    "measured": "Diameter 85.0% of width (378px), Clearance 148px",
+    "passed": true
+  },
+  {
+    "test": "Atmosphere Scale Ratio",
+    "expected": "Outer radius <= 1.05 x Earth radius, smooth limb fade",
+    "measured": "Outer radius = 1.035 x Earth radius (scale 1.035, strictly <= 1.05)",
+    "passed": true
+  },
+  {
+    "test": "Scroll Keyframe Interpolation",
+    "expected": "25% brightness=0.45; 40% x=+22% width; 55% x=-22% width; 85% uHeal=1.0",
+    "measured": "25% b=0.45, 40% x=0.768, 55% x=-0.768, 85% heal=1",
+    "passed": true
+  },
+  {
+    "test": "Monotonic uHeal",
+    "expected": "uHeal strictly non-decreasing from 0% to 100% scroll",
+    "measured": "Monotonic: true (0.00 -> 0.20 -> 0.40 -> 0.65 -> 0.85 -> 1.00)",
+    "passed": true
+  },
+  {
+    "test": "Idle Rotation",
+    "expected": "Rotation >= 0.05 rad over 3s (~0.06 rad/s)",
+    "measured": "Δrotation = 0.187 rad over 3.1s",
+    "passed": true
+  },
+  {
+    "test": "Section Background Transparency",
+    "expected": "Computed alpha < 0.5 for all sections & navbar (Earth visible)",
+    "measured": "Max section alpha = 0.35 (Navbar: 0.00, HeroSection: 0.00, StatsSection: 0.00, AboutSection: 0.00, ImpactSection: 0.00, HealedMoment: 0.00, GetInvolved: 0.00, Footer: 0.35)",
+    "passed": true
+  },
+  {
+    "test": "Reduced Motion / Low Power Support",
+    "expected": "Fallback or static mode activates when prefers-reduced-motion matches",
+    "measured": "Reduced motion active: true",
+    "passed": true
+  },
+  {
+    "test": "Frame Rate (FPS)",
+    "expected": "Average scroll FPS >= 50",
+    "measured": "Average FPS = 127",
+    "passed": true
+  },
+  {
+    "test": "Console Stability",
+    "expected": "Zero uncaught console errors",
+    "measured": "0 errors",
+    "passed": true
+  }
+]

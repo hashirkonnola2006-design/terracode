@@ -1,9 +1,27 @@
 import React, { Suspense, useRef, useState, useEffect, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { EarthSphere } from './EarthSphere';
 import { LeafParticles } from './LeafParticles';
 import { EarthFallback2D } from './EarthFallback2D';
+
+declare global {
+  interface Window {
+    __earth?: {
+      screenCenter:   { x: number; y: number };
+      screenRadiusPx: number;
+      uHeal:          number;
+      rotationY:      number;
+      scale:          number;
+      position:       { x: number; y: number; z: number };
+      brightness:     number;
+      fps:            number;
+      drawCalls:      number;
+      pixelRatio:     number;
+      activeSection?: string;
+    };
+  }
+}
 
 interface StarfieldLayer {
   count:  number;
@@ -13,9 +31,9 @@ interface StarfieldLayer {
 }
 
 const STAR_LAYERS: StarfieldLayer[] = [
-  { count: 1500, spread: 65, depth: -20, size: 0.055 }, // far stars
-  { count: 1000, spread: 48, depth: -13, size: 0.085 }, // mid stars
-  { count:  600, spread: 32, depth:  -7, size: 0.120 }, // foreground bright stars
+  { count: 1800, spread: 70, depth: -22, size: 0.055 }, // far stars
+  { count: 1200, spread: 50, depth: -14, size: 0.085 }, // mid stars
+  { count:  700, spread: 35, depth:  -7, size: 0.120 }, // bright foreground stars
 ];
 
 const StarLayer: React.FC<StarfieldLayer & { mobile: boolean; mousePos: { x: number; y: number } }> = ({
@@ -37,11 +55,9 @@ const StarLayer: React.FC<StarfieldLayer & { mobile: boolean; mousePos: { x: num
 
   useFrame(({ clock }) => {
     if (matRef.current) {
-      // Gentle sine twinkle
       matRef.current.opacity = 0.55 + 0.35 * Math.sin(clock.elapsedTime * 1.1 + depth);
     }
     if (pointsRef.current) {
-      // Subtle mouse parallax depth
       const parallaxFactor = 0.15 / Math.abs(depth);
       pointsRef.current.position.x = THREE.MathUtils.lerp(
         pointsRef.current.position.x,
@@ -64,9 +80,9 @@ const StarLayer: React.FC<StarfieldLayer & { mobile: boolean; mousePos: { x: num
       <pointsMaterial
         ref={matRef}
         size={size}
-        color="#e0eaff"
+        color="#e2ecff"
         transparent
-        opacity={0.65}
+        opacity={0.7}
         sizeAttenuation
         depthWrite={false}
       />
@@ -85,122 +101,223 @@ const NebulaGlow: React.FC = () => {
 
   return (
     <mesh position={[0, 0, -22]}>
-      <planeGeometry args={[90, 65]} />
+      <planeGeometry args={[95, 70]} />
       <primitive object={mat} attach="material" />
     </mesh>
   );
 };
 
+interface Keyframe {
+  progress:   number;
+  x:          number; // fraction of visibleWidth (+0.22, -0.22)
+  yOffset:    number; // fraction of visibleHeight
+  scale:      number; // multiplier relative to base radius
+  brightness: number; // 0 to 1
+  heal:       number; // 0 to 1
+  section:    string;
+}
+
+const KEYFRAMES: Keyframe[] = [
+  { progress: 0.00, x:  0.00, yOffset:  0.00, scale: 1.00, brightness: 1.00, heal: 0.00, section: 'Hero' },
+  { progress: 0.25, x:  0.00, yOffset:  0.02, scale: 0.70, brightness: 0.45, heal: 0.20, section: 'About / Stats' },
+  { progress: 0.40, x:  0.22, yOffset:  0.03, scale: 0.85, brightness: 0.80, heal: 0.40, section: 'Impact 1 (Energy)' },
+  { progress: 0.55, x: -0.22, yOffset:  0.03, scale: 0.85, brightness: 0.80, heal: 0.65, section: 'Impact 2 (Forests)' },
+  { progress: 0.70, x:  0.22, yOffset:  0.03, scale: 0.85, brightness: 0.80, heal: 0.85, section: 'Impact 3 (Water)' },
+  { progress: 0.85, x:  0.00, yOffset:  0.01, scale: 1.05, brightness: 1.00, heal: 1.00, section: 'Healed Moment' },
+  { progress: 1.00, x:  0.00, yOffset: -0.01, scale: 0.80, brightness: 0.60, heal: 1.00, section: 'Get Involved / Footer' },
+];
+
+function interpolateKeyframes(progress: number): Keyframe {
+  const p = Math.max(0, Math.min(1, progress));
+  if (p <= KEYFRAMES[0].progress) return KEYFRAMES[0];
+  if (p >= KEYFRAMES[KEYFRAMES.length - 1].progress) return KEYFRAMES[KEYFRAMES.length - 1];
+
+  let i = 0;
+  while (i < KEYFRAMES.length - 1 && KEYFRAMES[i + 1].progress < p) {
+    i++;
+  }
+
+  const k1 = KEYFRAMES[i];
+  const k2 = KEYFRAMES[i + 1];
+  const t = (p - k1.progress) / (k2.progress - k1.progress);
+  const smoothT = t * t * (3 - 2 * t);
+
+  return {
+    progress: p,
+    x: THREE.MathUtils.lerp(k1.x, k2.x, smoothT),
+    yOffset: THREE.MathUtils.lerp(k1.yOffset, k2.yOffset, smoothT),
+    scale: THREE.MathUtils.lerp(k1.scale, k2.scale, smoothT),
+    brightness: THREE.MathUtils.lerp(k1.brightness, k2.brightness, smoothT),
+    heal: THREE.MathUtils.lerp(k1.heal, k2.heal, t),
+    section: t < 0.5 ? k1.section : k2.section,
+  };
+}
+
 interface EarthControllerProps {
-  healProgress:   number;
   scrollProgress: number;
   scrollVelocity: number;
   mobile:         boolean;
   mousePos:       { x: number; y: number };
   reducedMotion:  boolean;
+  onTelemetry?:   (t: { activeSection: string; scale: number; brightness: number; uHeal: number; fps: number }) => void;
 }
 
-/**
- * EarthController
- * 
- * Smoothly interpolates the Earth's position and scale across story sections:
- * - Hero: Centered, large [0, -0.05, 0], scale 1.0
- * - Stats / About: Centered, slightly smaller [0, 0, 0], scale 0.82
- * - Impact Step 1 (Energy): Slides right [0.65, 0.02, 0], scale 0.90
- * - Impact Step 2 (Forests): Slides left [-0.65, 0.02, 0], scale 0.90
- * - Impact Step 3 (Water): Slides right [0.65, 0.02, 0], scale 0.90
- * - Healed moment: Centered, large, bright [0, 0, 0], scale 1.06
- * - Get Involved / Footer: Centered, calm [0, -0.06, 0], scale 0.85
- * 
- * Also drives idle rotation + scroll-velocity-proportional spin.
- */
 const EarthController: React.FC<EarthControllerProps> = ({
-  healProgress,
   scrollProgress,
   scrollVelocity,
   mobile,
   mousePos,
   reducedMotion,
+  onTelemetry,
 }) => {
-  const groupRef = useRef<THREE.Group>(null!);
-  const currentRotation = useRef(0);
+  const groupRef         = useRef<THREE.Group>(null!);
+  const earthMeshRef     = useRef<THREE.Mesh | null>(null);
+  const initializedRef   = useRef(false);
+  const currentRotation  = useRef(0);
   const smoothedVelocity = useRef(0);
+  const fpsRef           = useRef(60);
+  const frameCountRef    = useRef(0);
+  const lastTimeRef      = useRef(performance.now());
+
+  const { camera, size, gl } = useThree();
+
+  // Perspective camera geometry calculations
+  const cam = camera as THREE.PerspectiveCamera;
+  const d = cam.position.z; // 2.85
+  const visibleHeight = 2.0 * d * Math.tan((cam.fov * Math.PI / 180) / 2.0); // ~1.962667
+  const visibleWidth  = visibleHeight * (size.width / size.height);
+
+  // Directly check canvas width so mobile sizing applies immediately without state delay
+  const isMobile = mobile || size.width < 768;
+  const lastWidthRef = useRef(size.width);
+  if (Math.abs(size.width - lastWidthRef.current) > 50) {
+    initializedRef.current = false;
+    lastWidthRef.current = size.width;
+  }
+
+  // Exact base dimensions:
+  // Desktop: diameter = 70% of viewport height -> baseRadius = 0.35 * visibleHeight
+  // Centered at 51.5% of viewport height -> worldY = -0.015 * visibleHeight
+  const desktopBaseRadius = 0.35 * visibleHeight;
+  const desktopBaseWorldY = -0.015 * visibleHeight;
+
+  // Mobile: diameter = 85% of viewport width -> baseRadius = (0.85 / 2.0) * visibleWidth
+  // Centered in upper screen (~42% of height) -> worldY = 0.08 * visibleHeight
+  const mobileBaseRadius = (0.85 / 2.0) * visibleWidth;
+  const mobileBaseWorldY = 0.08 * visibleHeight;
+
+  const baseRadius = isMobile ? mobileBaseRadius : desktopBaseRadius;
+  const baseWorldY = isMobile ? mobileBaseWorldY : desktopBaseWorldY;
+
+  // Interpolate keyframe target values
+  const kf = useMemo(() => interpolateKeyframes(scrollProgress), [scrollProgress]);
+
+  const [currentBrightness, setCurrentBrightness] = useState(1.0);
+  const [currentHealVal,    setCurrentHealVal]    = useState(0.0);
 
   useFrame((_state, delta) => {
     if (!groupRef.current) return;
 
-    // 1. Calculate section-based target position and scale
-    let targetX = 0;
-    let targetY = -0.05;
-    let targetScale = 1.0;
-
-    if (scrollProgress < 0.16) {
-      // Hero: centered, large
-      targetX = 0;
-      targetY = mobile ? 0.08 : -0.05;
-      targetScale = mobile ? 0.82 : 1.0;
-    } else if (scrollProgress < 0.38) {
-      // Stats & About: centered, slightly smaller
-      targetX = 0;
-      targetY = mobile ? 0.12 : 0.0;
-      targetScale = mobile ? 0.70 : 0.82;
-    } else if (scrollProgress < 0.54) {
-      // Impact Step 1 (Clean Energy): card on left, Earth slides right
-      targetX = mobile ? 0.0 : 0.65;
-      targetY = mobile ? 0.16 : 0.02;
-      targetScale = mobile ? 0.68 : 0.90;
-    } else if (scrollProgress < 0.70) {
-      // Impact Step 2 (Forests): card on right, Earth slides left
-      targetX = mobile ? 0.0 : -0.65;
-      targetY = mobile ? 0.16 : 0.02;
-      targetScale = mobile ? 0.68 : 0.90;
-    } else if (scrollProgress < 0.84) {
-      // Impact Step 3 (Water & Waste): card on left, Earth slides right
-      targetX = mobile ? 0.0 : 0.65;
-      targetY = mobile ? 0.16 : 0.02;
-      targetScale = mobile ? 0.68 : 0.90;
-    } else if (scrollProgress < 0.94) {
-      // Healed Moment: back to center, large and glowing
-      targetX = 0;
-      targetY = mobile ? 0.06 : 0.0;
-      targetScale = mobile ? 0.85 : 1.06;
-    } else {
-      // Get Involved & Footer: centered and calm
-      targetX = 0;
-      targetY = mobile ? 0.05 : -0.05;
-      targetScale = mobile ? 0.72 : 0.86;
+    // 1. Calculate FPS
+    frameCountRef.current++;
+    const now = performance.now();
+    if (now - lastTimeRef.current >= 500) {
+      fpsRef.current = (frameCountRef.current * 1000) / (now - lastTimeRef.current);
+      frameCountRef.current = 0;
+      lastTimeRef.current = now;
     }
 
-    // Smoothly lerp position and scale
-    groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, targetX, 0.06);
-    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, targetY, 0.06);
-    const s = THREE.MathUtils.lerp(groupRef.current.scale.x, targetScale, 0.06);
-    groupRef.current.scale.set(s, s, s);
+    // 2. Position and Scale (initialize immediately on first frame, smooth lerp thereafter)
+    const targetWorldX = isMobile ? 0 : kf.x * visibleWidth;
+    const targetWorldY = baseWorldY + (isMobile ? kf.yOffset * 0.4 : kf.yOffset) * visibleHeight;
+    const targetWorldScale = baseRadius * kf.scale;
 
-    // 2. Mouse Parallax Tilt
+    if (!initializedRef.current) {
+      groupRef.current.position.x = targetWorldX;
+      groupRef.current.position.y = targetWorldY;
+      groupRef.current.scale.set(targetWorldScale, targetWorldScale, targetWorldScale);
+      setCurrentBrightness(kf.brightness);
+      setCurrentHealVal(kf.heal);
+      initializedRef.current = true;
+    } else {
+      groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, targetWorldX, 0.10);
+      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, targetWorldY, 0.10);
+      const s = THREE.MathUtils.lerp(groupRef.current.scale.x, targetWorldScale, 0.10);
+      groupRef.current.scale.set(s, s, s);
+    }
+
+    // 3. Mouse Parallax Tilt
     if (!reducedMotion) {
-      const tiltX = 0.16 + mousePos.y * 0.10;
-      const tiltZ = 0.04 - mousePos.x * 0.10;
+      const tiltX = 0.16 + mousePos.y * 0.08;
+      const tiltZ = 0.04 - mousePos.x * 0.08;
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, tiltX, 0.06);
       groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, tiltZ, 0.06);
     }
 
-    // 3. Dynamic Rotation: Idle spin + Scroll Velocity Spin
+    // 4. Planetary Rotation:
+    // Idle rotation (0.06 rad/s) + scroll velocity spin with easing; reverse on scroll up
     smoothedVelocity.current = THREE.MathUtils.lerp(smoothedVelocity.current, scrollVelocity, 0.1);
-    const idleSpin = delta * 0.05;
-    const scrollSpin = reducedMotion ? 0 : smoothedVelocity.current * 0.003;
-    currentRotation.current += idleSpin + scrollSpin;
+    const idleSpin = 0.06 * delta;
+    const scrollSpin = reducedMotion ? 0 : (smoothedVelocity.current * 0.0006) * delta;
+    currentRotation.current += (idleSpin + scrollSpin);
+
+    // 5. Brightness and uHeal
+    const nextBrightness = THREE.MathUtils.lerp(currentBrightness, kf.brightness, 0.08);
+    const nextHeal = THREE.MathUtils.lerp(currentHealVal, kf.heal, 0.08);
+    setCurrentBrightness(nextBrightness);
+    setCurrentHealVal(nextHeal);
+
+    // 6. Expose window.__earth for exact automated measurement every frame
+    const centerVec = new THREE.Vector3();
+    groupRef.current.getWorldPosition(centerVec);
+    const edgeVec = centerVec.clone().add(new THREE.Vector3(groupRef.current.scale.x, 0, 0));
+    centerVec.project(camera);
+    edgeVec.project(camera);
+
+    const screenCenterX = (centerVec.x * 0.5 + 0.5) * size.width;
+    const screenCenterY = (-centerVec.y * 0.5 + 0.5) * size.height;
+    const screenRadiusPx = Math.abs(edgeVec.x - centerVec.x) * 0.5 * size.width;
+
+    window.__earth = {
+      screenCenter:   { x: Math.round(screenCenterX), y: Math.round(screenCenterY) },
+      screenRadiusPx: Math.round(screenRadiusPx * 10) / 10,
+      uHeal:          Math.round(nextHeal * 1000) / 1000,
+      rotationY:      Math.round(currentRotation.current * 1000) / 1000,
+      scale:          Math.round(groupRef.current.scale.x * 1000) / 1000,
+      position: {
+        x: Math.round(groupRef.current.position.x * 1000) / 1000,
+        y: Math.round(groupRef.current.position.y * 1000) / 1000,
+        z: Math.round(groupRef.current.position.z * 1000) / 1000,
+      },
+      brightness:     Math.round(nextBrightness * 100) / 100,
+      fps:            Math.round(fpsRef.current),
+      drawCalls:      gl.info.render.calls,
+      pixelRatio:     gl.getPixelRatio(),
+      activeSection:  kf.section,
+    };
+
+    if (onTelemetry) {
+      onTelemetry({
+        activeSection: kf.section,
+        scale: kf.scale,
+        brightness: nextBrightness,
+        uHeal: nextHeal,
+        fps: Math.round(fpsRef.current),
+      });
+    }
   });
 
   return (
-    <group ref={groupRef} position={[0, -0.05, 0]}>
+    <group ref={groupRef} position={[0, baseWorldY, 0]}>
       <EarthSphere
-        healProgress={healProgress}
+        healProgress={kf.heal}
         scrollRotation={currentRotation.current}
+        brightness={currentBrightness}
         lowDetail={mobile}
+        onEarthMeshReady={(m) => { earthMeshRef.current = m; }}
       />
       <LeafParticles
-        healProgress={healProgress}
+        healProgress={kf.heal}
         count={mobile ? 75 : 200}
       />
     </group>
@@ -208,21 +325,21 @@ const EarthController: React.FC<EarthControllerProps> = ({
 };
 
 export interface EarthCanvasProps {
-  healProgress:   number;
   scrollProgress: number;
   scrollVelocity: number;
   isLowPower?:    boolean;
+  onTelemetry?:   (t: { activeSection: string; scale: number; brightness: number; uHeal: number; fps: number }) => void;
 }
 
 export const EarthCanvas: React.FC<EarthCanvasProps> = ({
-  healProgress,
   scrollProgress,
   scrollVelocity,
   isLowPower = false,
+  onTelemetry,
 }) => {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile]           = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [mousePos, setMousePos]           = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -247,9 +364,10 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
   }, []);
 
   if (isLowPower) {
+    const kf = interpolateKeyframes(scrollProgress);
     return (
       <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none">
-        <EarthFallback2D healProgress={healProgress} />
+        <EarthFallback2D healProgress={kf.heal} />
       </div>
     );
   }
@@ -280,22 +398,22 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
             />
           ))}
 
-          {/* Sun Directional Light matching uSunDir [-1.6, 1.2, 1.0] */}
-          <ambientLight intensity={0.20} />
+          {/* Directional Sun Light matching uSunDir [-1.6, 1.2, 1.0] */}
+          <ambientLight intensity={0.25} />
           <directionalLight
             position={[-4.5, 3.2, 2.5]}
-            intensity={2.5}
+            intensity={2.8}
             castShadow={false}
           />
 
-          {/* Section-Aware Scroll-Driven Earth */}
+          {/* Scroll-Driven Earth */}
           <EarthController
-            healProgress={healProgress}
             scrollProgress={scrollProgress}
             scrollVelocity={scrollVelocity}
             mobile={isMobile}
             mousePos={mousePos}
             reducedMotion={reducedMotion}
+            onTelemetry={onTelemetry}
           />
         </Suspense>
       </Canvas>

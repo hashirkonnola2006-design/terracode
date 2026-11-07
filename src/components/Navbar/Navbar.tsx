@@ -13,14 +13,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTakeActionClick,
 }) => {
   const [activeTab, setActiveTab] = useState('Home');
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -28,8 +28,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header
+      id="main-navbar"
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-[#040814]/80 backdrop-blur-md py-4 border-b border-white/5' : 'bg-transparent py-6'
+        scrolled
+          ? 'bg-[rgba(8,14,30,0.35)] backdrop-blur-xl py-3.5 border-b border-white/5'
+          : 'bg-transparent py-4 sm:py-5'
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 sm:px-8 flex items-center justify-between">
@@ -48,11 +51,20 @@ export const Navbar: React.FC<NavbarProps> = ({
         <nav className="hidden md:flex items-center bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 shadow-glass">
           {navLinks.map((link) => {
             const isActive = activeTab === link;
+            const targetId = link.toLowerCase().replace(/\s+/g, '-');
             return (
               <button
                 key={link}
-                onClick={() => setActiveTab(link)}
-                className={`relative px-4 py-1.5 text-xs font-medium transition-colors duration-200 ${
+                onClick={() => {
+                  setActiveTab(link);
+                  if (link === 'Home') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    const el = document.getElementById(targetId);
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className={`relative px-4 py-1.5 text-xs font-medium transition-colors duration-200 cursor-pointer ${
                   isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -70,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Subtle Eco / Low-Power toggle icon button */}
           <button
             onClick={onToggleLowPower}
-            className={`p-2 rounded-full border transition-all ${
+            className={`p-2 rounded-full border transition-all cursor-pointer ${
               isLowPower
                 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
                 : 'bg-slate-900/40 border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
@@ -83,10 +95,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Take Action Outline Button with Right Chevron */}
           <button
             onClick={onTakeActionClick || (() => {
-              const el = document.getElementById('take-action');
+              const el = document.getElementById('get-involved');
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             })}
-            className="group flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-medium text-white border border-white/25 hover:border-emerald-400/60 bg-white/[0.03] hover:bg-emerald-500/10 transition-all duration-300"
+            className="group flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-medium text-white border border-white/25 hover:border-emerald-400/60 bg-white/[0.03] hover:bg-emerald-500/10 transition-all duration-300 cursor-pointer"
           >
             <span>Take Action</span>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
@@ -98,13 +110,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onToggleLowPower}
             className="p-2 rounded-full border border-white/10 text-slate-400"
-            title="Toggle Eco Mode"
+            title={isLowPower ? 'Eco Mode Active' : 'Switch to Eco Mode'}
           >
-            {isLowPower ? <ZapOff className="w-3.5 h-3.5 text-emerald-400" /> : <Zap className="w-3.5 h-3.5" />}
+            {isLowPower ? <ZapOff className="w-4 h-4 text-emerald-400" /> : <Zap className="w-4 h-4" />}
           </button>
+
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-slate-300 hover:text-white"
+            onClick={() => setMobileMenuOpen(p => !p)}
+            className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+            aria-label="Toggle Navigation"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -112,31 +126,33 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden mt-3 mx-4 p-4 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-white/10 flex flex-col gap-3">
-          {navLinks.map((link) => (
-            <button
-              key={link}
-              onClick={() => {
-                setActiveTab(link);
-                setMobileMenuOpen(false);
-              }}
-              className="text-left px-3 py-2 text-sm text-slate-200 hover:text-emerald-400 rounded-lg"
-            >
-              {link}
-            </button>
-          ))}
-          <button
-            onClick={() => {
-              setMobileMenuOpen(false);
-              const el = document.getElementById('take-action');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="mt-2 w-full py-2.5 rounded-full text-xs font-semibold text-slate-950 bg-emerald-400 text-center"
-          >
-            Take Action
-          </button>
+        <div className="md:hidden border-b border-white/10 bg-[#040814]/95 backdrop-blur-2xl px-6 py-4 animate-in slide-in-from-top-2">
+          <nav className="flex flex-col gap-2">
+            {navLinks.map((link) => (
+              <button
+                key={link}
+                onClick={() => {
+                  setActiveTab(link);
+                  setMobileMenuOpen(false);
+                  if (link === 'Home') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    const el = document.getElementById(link.toLowerCase().replace(/\s+/g, '-'));
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className={`text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === link
+                    ? 'text-white bg-emerald-500/10 border-l-2 border-emerald-400'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {link}
+              </button>
+            ))}
+          </nav>
         </div>
       )}
     </header>

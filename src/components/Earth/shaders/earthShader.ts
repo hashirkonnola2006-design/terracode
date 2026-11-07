@@ -10,21 +10,25 @@ import * as THREE from 'three';
  * - Samples 2K ocean specular mask (uSpecularMap).
  * - Samples 2K normal/bump map (uNormalMap) with gentle perturbation.
  * - Directional sun from upper-left with soft terminator line.
- * - Polluted state: desaturated gray-brown continents with cracked soil,
- *   dark oily oceans with subtle rainbow sheen.
+ * - Polluted state: desaturated warm gray-brown continents with cracked soil,
+ *   olive-gray oily oceans with subtle sheen, luminance floor >= 0.25 (no black holes!).
  * - Healed state: vibrant emerald vegetation, sparkling blue-to-cyan oceans.
  * - Scroll-driven uHeal (0 to 1) spreads an organic FBM noise wave across
  *   the entire sphere, bounded by a thin glowing emerald green edge (#4ADE80).
+ * - uBrightness uniform dims Earth to 0.45 during text/stats sections.
+ * - uModeDay uniform renders standard lit day map when ?mode=day.
  */
 export const EarthShaderMaterial = {
   uniforms: {
     uHeal:        { value: 0.0 },
     uTime:        { value: 0.0 },
+    uBrightness:  { value: 1.0 },
+    uModeDay:     { value: 0.0 },
     uDayMap:      { value: null as THREE.Texture | null },
     uSpecularMap: { value: null as THREE.Texture | null },
     uNormalMap:   { value: null as THREE.Texture | null },
     uSunDir:      { value: new THREE.Vector3(-1.6, 1.2, 1.0).normalize() },
-    uCameraPos:   { value: new THREE.Vector3(0, 0, 3.0) },
+    uCameraPos:   { value: new THREE.Vector3(0, 0, 2.85) },
   },
 
   vertexShader: `
@@ -45,6 +49,8 @@ export const EarthShaderMaterial = {
   fragmentShader: `
     uniform float     uHeal;
     uniform float     uTime;
+    uniform float     uBrightness;
+    uniform float     uModeDay;
     uniform sampler2D uDayMap;
     uniform sampler2D uSpecularMap;
     uniform sampler2D uNormalMap;
@@ -143,11 +149,22 @@ export const EarthShaderMaterial = {
       // Texture samples: cloudless day map and ocean specular mask
       vec3 dayCol = texture2D(uDayMap, vUv).rgb;
       float isOcean = texture2D(uSpecularMap, vUv).r; // 1.0 for ocean, 0.0 for land
-      float isLand = 1.0 - isOcean;
+
+      // Lighting variables for specular calculation
+      vec3 viewDir = normalize(uCameraPos - vWorldPos);
+      vec3 halfH = normalize(sunDir + viewDir);
+      float NdotH = max(dot(perturbedNormal, halfH), 0.0);
+
+      // ── TEST MODE: ?mode=day ──
+      if (uModeDay > 0.5) {
+        float spec = pow(NdotH, 32.0) * isOcean * max(NdotL, 0.0);
+        vec3 lit = dayCol * (diffuse * 1.15 + 0.05) + vec3(0.9, 0.95, 1.0) * spec;
+        gl_FragColor = vec4(lit * uBrightness, 1.0);
+        return;
+      }
 
       // ── 1. HEALED EARTH (Lush emerald land & deep sparkling blue oceans) ──
       vec3 landHealed = dayCol;
-      // Gently boost healthy vegetation green on fertile areas
       landHealed.g = max(landHealed.g, landHealed.b * 1.15);
       landHealed = mix(landHealed, vec3(0.14, 0.52, 0.22), clamp(dayCol.g - dayCol.r, 0.0, 1.0) * 0.35);
 
@@ -156,22 +173,30 @@ export const EarthShaderMaterial = {
       vec3 oceanHealed = mix(deepOceanHealed, shallowOceanHealed, clamp(dayCol.b * 1.3 - dayCol.r * 0.5, 0.0, 1.0) * 0.6);
       vec3 colHealed = mix(landHealed, oceanHealed, isOcean);
 
-      // ── 2. POLLUTED EARTH (Same continents, desaturated gray-brown, oily oceans) ──
+      // ── 2. POLLUTED EARTH (Warm gray-brown land & olive-gray oily oceans) ──
       // Luminance-only desaturation preserves crisp continental coastlines
       float luma = dot(dayCol, vec3(0.299, 0.587, 0.114));
-      vec3 parchedLand = vec3(luma * 0.62 + 0.10, luma * 0.54 + 0.08, luma * 0.40 + 0.05);
+      vec3 parchedLand = mix(vec3(luma), vec3(0.48, 0.42, 0.34), 0.52);
 
-      // Fissured cracked ground on land
-      float crk = cracks(vUv * 64.0);
-      float crackLines = smoothstep(0.04, 0.16, crk);
-      parchedLand *= (crackLines * 0.45 + 0.55);
+      // Fissured cracked ground on land (subtle, never dropping below luminance floor)
+      float crk = cracks(vUv * 48.0);
+      float crackLines = smoothstep(0.04, 0.14, crk);
+      parchedLand *= (crackLines * 0.20 + 0.80);
 
-      // Toxic stagnant oil-slick ocean
-      vec3 oilOcean = vec3(0.06, 0.065, 0.05);
-      float oilSheen = sin(snoise(wn * 8.0 + vec3(uTime * 0.015, 0.0, 0.0)) * 6.28) * 0.5 + 0.5;
-      oilOcean += vec3(0.025, 0.02, 0.01) * oilSheen;
+      // Toxic stagnant olive-gray oily ocean (NOT black!)
+      vec3 oilOcean = vec3(0.20, 0.22, 0.18);
+      float oilSheen = sin(snoise(wn * 10.0 + vec3(uTime * 0.02, 0.0, 0.0)) * 6.28) * 0.5 + 0.5;
+      oilOcean += vec3(0.03, 0.025, 0.01) * oilSheen;
+
+      // Sparse small trash speckles on polluted oceans & coasts
+      float trashSeed = snoise(vec3(vUv * 180.0, 2.5));
+      float trashSpeckle = step(0.86, trashSeed) * isOcean;
+      oilOcean = mix(oilOcean, vec3(0.42, 0.38, 0.30), trashSpeckle * 0.35);
 
       vec3 colPolluted = mix(parchedLand, oilOcean, isOcean);
+
+      // Strict luminance floor: nothing darker than 25% brightness (0.25)
+      colPolluted = max(colPolluted, vec3(0.25));
 
       // ── 3. ORGANIC NOISE HEALING WAVE ──
       // FBM wave front progresses across the entire sphere with uHeal (0 to 1)
@@ -189,21 +214,18 @@ export const EarthShaderMaterial = {
       }
 
       // ── 4. LIGHTING & SPECULAR SHADING ──
-      vec3 viewDir = normalize(uCameraPos - vWorldPos);
-      vec3 halfH = normalize(sunDir + viewDir);
-      float NdotH = max(dot(perturbedNormal, halfH), 0.0);
-
       // Specular shine strictly on oceans (cleaner when healed, dull oily when polluted)
       float specPower = mix(14.0, 64.0, healFactor);
       float spec = pow(NdotH, specPower) * isOcean * max(NdotL, 0.0);
       vec3 specCol = mix(vec3(0.18, 0.15, 0.10), vec3(0.9, 0.95, 1.0), healFactor) * spec * 1.2;
 
       // Soft ambient space illumination
-      vec3 ambient = mix(vec3(0.03, 0.03, 0.04), vec3(0.04, 0.06, 0.09), healFactor);
+      vec3 ambient = mix(vec3(0.04, 0.04, 0.05), vec3(0.05, 0.07, 0.10), healFactor);
 
       vec3 finalColor = surfaceCol * (diffuse * 1.15 + ambient) + specCol;
 
-      gl_FragColor = vec4(finalColor, 1.0);
+      // Apply section brightness uniform (dims to 0.45 during text/stats)
+      gl_FragColor = vec4(finalColor * uBrightness, 1.0);
     }
   `
 };

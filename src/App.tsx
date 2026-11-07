@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Navbar }         from './components/Navbar/Navbar';
 import { HeroSection }    from './components/Hero/HeroSection';
 import { StatCard }       from './components/StatCard/StatCard';
@@ -11,6 +11,14 @@ import { EarthCanvas }    from './components/Earth/EarthCanvas';
 import { heroStats, storyStats, actionCards } from './data/stats';
 import { Sliders, X }     from 'lucide-react';
 
+interface TelemetryData {
+  activeSection: string;
+  scale:         number;
+  brightness:    number;
+  uHeal:         number;
+  fps:           number;
+}
+
 /**
  * App — Root Component
  *
@@ -18,21 +26,27 @@ import { Sliders, X }     from 'lucide-react';
  * - EarthCanvas is pinned in a fixed, full-screen background layer (z-0).
  * - All content sections sit on top with transparent backgrounds and glassmorphism cards.
  * - Scroll position smoothly drives Earth translation, scale, velocity rotation, and uHeal progress.
- * - Features dev-only debug panel (?debug=1).
+ * - Features dev-only debug telemetry overlay (?debug=1).
  */
 export function App() {
-  const [healProgress,   setHealProgress]   = useState(0.0);
   const [scrollProgress, setScrollProgress] = useState(0.0);
   const [scrollVelocity, setScrollVelocity] = useState(0.0);
   const [isLowPower,     setIsLowPower]     = useState(false);
 
   // Debug panel state
-  const [isDebug, setIsDebug]     = useState(false);
+  const [isDebug,   setIsDebug]   = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [telemetry, setTelemetry] = useState<TelemetryData>({
+    activeSection: 'Hero',
+    scale: 1.0,
+    brightness: 1.0,
+    uHeal: 0.0,
+    fps: 60,
+  });
 
-  const lastScrollY = useRef(0);
-  const lastScrollTime = useRef(Date.now());
-  const velocityRef = useRef(0);
+  const lastScrollY    = useRef(0);
+  const lastScrollTime = useRef(performance.now());
+  const velocityRef    = useRef(0);
 
   // Check URL for ?debug=1
   useEffect(() => {
@@ -60,7 +74,7 @@ export function App() {
 
     const onScroll = () => {
       const currentY = window.scrollY;
-      const now = Date.now();
+      const now = performance.now();
       const dt = Math.max(now - lastScrollTime.current, 8);
       const dy = currentY - lastScrollY.current;
 
@@ -71,7 +85,6 @@ export function App() {
       lastScrollY.current = currentY;
       lastScrollTime.current = now;
 
-      // Decay velocity when scrolling stops
       clearTimeout(timeoutId);
       timeoutId = window.setTimeout(() => {
         velocityRef.current = 0;
@@ -83,26 +96,20 @@ export function App() {
       if (maxScroll <= 0) return;
       const progress = Math.min(Math.max(currentY / maxScroll, 0), 1);
       setScrollProgress(progress);
-
-      // Map scroll progress to uHeal
-      // Fully healed (1.0) by the time the user reaches the Healed Moment section (~88%)
-      let targetHeal = 0.0;
-      if (progress < 0.15) {
-        targetHeal = 0.0; // Hero
-      } else if (progress < 0.88) {
-        targetHeal = (progress - 0.15) / (0.88 - 0.15);
-      } else {
-        targetHeal = 1.0; // Healed Moment & onwards
-      }
-
-      setHealProgress(targetHeal);
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
+    // Run once on mount to capture initial scroll position
+    onScroll();
+
     return () => {
       window.removeEventListener('scroll', onScroll);
       clearTimeout(timeoutId);
     };
+  }, []);
+
+  const handleTelemetry = useCallback((t: TelemetryData) => {
+    setTelemetry(t);
   }, []);
 
   const heroIcon = (id: string) => {
@@ -125,10 +132,10 @@ export function App() {
       
       {/* ── Fixed 3D Earth Canvas Layer (pinned across whole page) ── */}
       <EarthCanvas
-        healProgress={healProgress}
         scrollProgress={scrollProgress}
         scrollVelocity={scrollVelocity}
         isLowPower={isLowPower}
+        onTelemetry={handleTelemetry}
       />
 
       {/* ── Foreground Content Layer (transparent backgrounds, glass cards) ── */}
@@ -146,7 +153,7 @@ export function App() {
         {/* 2. Stats Strip */}
         <section
           id="stats-section"
-          className="relative bg-transparent border-t border-white/5 py-16 sm:py-20"
+          className="relative bg-transparent py-16 sm:py-20"
         >
           <div className="relative max-w-4xl mx-auto px-6 sm:px-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -196,11 +203,11 @@ export function App() {
 
       </div>
 
-      {/* ── Dev-Only Debug Readout & Slider (Only shown if ?debug=1) ── */}
+      {/* ── Dev-Only Debug Readout (?debug=1) ── */}
       {isDebug && (
         <div className="fixed bottom-6 right-6 z-50 pointer-events-auto">
           {showDebug ? (
-            <div className="p-4 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-slate-700 w-80 text-xs shadow-2xl">
+            <div className="p-4 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-emerald-500/30 w-84 text-xs shadow-2xl">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-mono text-emerald-400 flex items-center gap-1.5 font-semibold">
                   <Sliders className="w-3.5 h-3.5" /> Dev Mode: Telemetry
@@ -210,32 +217,68 @@ export function App() {
                 </button>
               </div>
 
-              <div className="space-y-2 text-[11px] font-mono text-slate-300">
+              <div className="space-y-1.5 text-[11px] font-mono text-slate-300">
                 <div className="flex justify-between">
                   <span>Scroll Progress:</span>
                   <span className="text-emerald-300 font-bold">{(scrollProgress * 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
+                  <span>Active Section:</span>
+                  <span className="text-cyan-300 font-bold">{telemetry.activeSection}</span>
+                </div>
+                <div className="flex justify-between">
                   <span>Planet uHeal:</span>
-                  <span className="text-emerald-300 font-bold">{healProgress.toFixed(3)}</span>
+                  <span className="text-emerald-300 font-bold">{telemetry.uHeal.toFixed(3)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Earth Scale:</span>
+                  <span className="text-slate-200 font-bold">{telemetry.scale.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Brightness:</span>
+                  <span className="text-slate-200 font-bold">{telemetry.brightness.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Scroll Velocity:</span>
                   <span className="text-cyan-300 font-bold">{Math.round(scrollVelocity)} px/s</span>
                 </div>
+                <div className="flex justify-between">
+                  <span>FPS:</span>
+                  <span className="text-emerald-400 font-bold">{telemetry.fps}</span>
+                </div>
+                {typeof window !== 'undefined' && window.__earth && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>DPR:</span>
+                      <span className="text-slate-200 font-bold">{window.__earth.pixelRatio}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Draw Calls:</span>
+                      <span className="text-slate-200 font-bold">{window.__earth.drawCalls}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Radius (px):</span>
+                      <span className="text-slate-200 font-bold">{window.__earth.screenRadiusPx}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="mt-3 pt-2 border-t border-slate-800">
                 <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1">
-                  Manual uHeal Override
+                  Manual Scroll Override
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.01"
-                  value={healProgress}
-                  onChange={e => setHealProgress(parseFloat(e.target.value))}
+                  value={scrollProgress}
+                  onChange={e => {
+                    const val = parseFloat(e.target.value);
+                    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+                    window.scrollTo({ top: val * maxScroll, behavior: 'auto' });
+                  }}
                   className="w-full accent-emerald-400 h-2 rounded-lg cursor-pointer bg-slate-800"
                 />
               </div>
@@ -243,7 +286,7 @@ export function App() {
           ) : (
             <button
               onClick={() => setShowDebug(true)}
-              className="p-2.5 rounded-full bg-slate-900/80 border border-slate-700 text-emerald-400 shadow-lg hover:scale-110 transition-transform"
+              className="p-2.5 rounded-full bg-slate-900/90 border border-emerald-500/40 text-emerald-400 shadow-lg hover:scale-110 transition-transform cursor-pointer"
               title="Open Dev Telemetry"
             >
               <Sliders className="w-4 h-4" />

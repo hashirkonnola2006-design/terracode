@@ -95,7 +95,7 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
   return (
     <section
       id="impact"
-      className="relative bg-transparent border-t border-white/5"
+      className="relative bg-transparent"
     >
       {/* Soft radial glow centre */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px]

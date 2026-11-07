@@ -17,7 +17,7 @@ export const Footer: React.FC<FooterProps> = ({ isLowPower, onToggleLowPower }) 
   const pageWeightKb = '~360';
 
   return (
-    <footer className="relative border-t border-white/5 bg-[#02070e] text-slate-400 text-xs">
+    <footer className="relative bg-[rgba(2,7,14,0.35)] backdrop-blur-md text-slate-400 text-xs">
       <div className="max-w-5xl mx-auto px-6 sm:px-8 py-10 sm:py-12">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
 

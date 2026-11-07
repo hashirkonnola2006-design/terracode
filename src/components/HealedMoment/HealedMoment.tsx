@@ -30,7 +30,7 @@ export const HealedMoment: React.FC<HealedMomentProps> = ({ onEnter }) => {
     <section
       ref={ref}
       className="relative min-h-screen flex items-center justify-center
-        bg-transparent border-t border-emerald-500/10 overflow-hidden"
+        bg-transparent overflow-hidden"
     >
       {/* Green radial glow — behind text */}
       <div
