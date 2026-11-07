@@ -46,7 +46,7 @@ export const AboutSection: React.FC = () => {
   return (
     <section
       id="about"
-      className="relative bg-gradient-to-b from-[#040a16] to-[#030b18] border-t border-white/5 py-24 sm:py-32"
+      className="relative bg-transparent border-t border-white/5 py-24 sm:py-32"
     >
       <div className="max-w-4xl mx-auto px-6 sm:px-8">
         <SectionFade>

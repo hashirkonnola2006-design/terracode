@@ -2,16 +2,9 @@ import React, { Suspense, useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { EarthSphere } from './EarthSphere';
-import { SmogLayer } from './SmogLayer';
 import { LeafParticles } from './LeafParticles';
 import { EarthFallback2D } from './EarthFallback2D';
 
-/* ═══════════════════════════════════════════════════════════
-   STARFIELD (3-layer, 3 000 points, procedural twinkle)
-   ═══════════════════════════════════════════════════════════
-   Three depth layers with different sizes simulate perspective.
-   Twinkle is a cheap sin(time + phase) on opacity inside the shader.
-*/
 interface StarfieldLayer {
   count:  number;
   spread: number;
@@ -20,54 +13,58 @@ interface StarfieldLayer {
 }
 
 const STAR_LAYERS: StarfieldLayer[] = [
-  { count: 1200, spread: 60, depth: -18, size: 0.055 }, // far stars, tiny
-  { count:  900, spread: 45, depth: -12, size: 0.090 }, // mid stars
-  { count:  600, spread: 30, depth:  -7, size: 0.130 }, // near stars, brighter
+  { count: 1500, spread: 65, depth: -20, size: 0.055 }, // far stars
+  { count: 1000, spread: 48, depth: -13, size: 0.085 }, // mid stars
+  { count:  600, spread: 32, depth:  -7, size: 0.120 }, // foreground bright stars
 ];
 
-// Vertex shader concept: add per-star phase for cheap twinkle (unused — using opacity lerp instead)
-
-const StarLayer: React.FC<StarfieldLayer & { mobile: boolean }> = ({
-  count, spread, depth, size, mobile,
+const StarLayer: React.FC<StarfieldLayer & { mobile: boolean; mousePos: { x: number; y: number } }> = ({
+  count, spread, depth, size, mobile, mousePos,
 }) => {
+  const pointsRef = useRef<THREE.Points>(null!);
   const matRef = useRef<THREE.PointsMaterial>(null!);
   const realCount = mobile ? Math.round(count * 0.45) : count;
 
   const positions = useMemo(() => {
     const a = new Float32Array(realCount * 3);
     for (let i = 0; i < realCount; i++) {
-      // Uniform distribution on a flat plane + slight Z scatter
-      a[i*3]   = (Math.random() - 0.5) * spread;
-      a[i*3+1] = (Math.random() - 0.5) * spread;
-      a[i*3+2] = depth - Math.random() * 5;
+      a[i * 3]     = (Math.random() - 0.5) * spread;
+      a[i * 3 + 1] = (Math.random() - 0.5) * spread;
+      a[i * 3 + 2] = depth - Math.random() * 5;
     }
     return a;
   }, [realCount, spread, depth]);
 
-  // Per-star twinkle phase stored as an attribute (0…2π)
-  const phases = useMemo(() => {
-    const a = new Float32Array(realCount);
-    for (let i = 0; i < realCount; i++) a[i] = Math.random() * Math.PI * 2;
-    return a;
-  }, [realCount]);
-
-  // Animate opacity with gentle sin to fake twinkling
   useFrame(({ clock }) => {
     if (matRef.current) {
-      matRef.current.opacity = 0.55 + 0.30 * Math.sin(clock.elapsedTime * 0.9);
+      // Gentle sine twinkle
+      matRef.current.opacity = 0.55 + 0.35 * Math.sin(clock.elapsedTime * 1.1 + depth);
+    }
+    if (pointsRef.current) {
+      // Subtle mouse parallax depth
+      const parallaxFactor = 0.15 / Math.abs(depth);
+      pointsRef.current.position.x = THREE.MathUtils.lerp(
+        pointsRef.current.position.x,
+        mousePos.x * parallaxFactor * 10,
+        0.05
+      );
+      pointsRef.current.position.y = THREE.MathUtils.lerp(
+        pointsRef.current.position.y,
+        mousePos.y * parallaxFactor * 10,
+        0.05
+      );
     }
   });
 
   return (
-    <points>
+    <points ref={pointsRef}>
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-aPhase"   args={[phases,    1]} />
       </bufferGeometry>
       <pointsMaterial
         ref={matRef}
         size={size}
-        color="#dde8ff"
+        color="#e0eaff"
         transparent
         opacity={0.65}
         sizeAttenuation
@@ -77,113 +74,231 @@ const StarLayer: React.FC<StarfieldLayer & { mobile: boolean }> = ({
   );
 };
 
-/* ═══════════════════════════════════════════════════════════
-   NEBULA GLOW (simple dark-blue plane with additive blending)
-   Sits behind the starfield to give a soft galactic atmosphere.
-   ═══════════════════════════════════════════════════════════ */
 const NebulaGlow: React.FC = () => {
   const mat = useMemo(() => new THREE.MeshBasicMaterial({
-    color: new THREE.Color(0.02, 0.06, 0.18),
+    color: new THREE.Color(0.015, 0.055, 0.14),
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.65,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   }), []);
 
   return (
-    <mesh position={[0, 0, -24]}>
-      <planeGeometry args={[80, 60]} />
+    <mesh position={[0, 0, -22]}>
+      <planeGeometry args={[90, 65]} />
       <primitive object={mat} attach="material" />
     </mesh>
   );
 };
 
-/* ═══════════════════════════════════════════════════════════
-   EARTH CANVAS
-   ═══════════════════════════════════════════════════════════ */
-interface EarthCanvasProps {
+interface EarthControllerProps {
   healProgress:   number;
-  scrollRotation?: number;
+  scrollProgress: number;
+  scrollVelocity: number;
+  mobile:         boolean;
+  mousePos:       { x: number; y: number };
+  reducedMotion:  boolean;
+}
+
+/**
+ * EarthController
+ * 
+ * Smoothly interpolates the Earth's position and scale across story sections:
+ * - Hero: Centered, large [0, -0.05, 0], scale 1.0
+ * - Stats / About: Centered, slightly smaller [0, 0, 0], scale 0.82
+ * - Impact Step 1 (Energy): Slides right [0.65, 0.02, 0], scale 0.90
+ * - Impact Step 2 (Forests): Slides left [-0.65, 0.02, 0], scale 0.90
+ * - Impact Step 3 (Water): Slides right [0.65, 0.02, 0], scale 0.90
+ * - Healed moment: Centered, large, bright [0, 0, 0], scale 1.06
+ * - Get Involved / Footer: Centered, calm [0, -0.06, 0], scale 0.85
+ * 
+ * Also drives idle rotation + scroll-velocity-proportional spin.
+ */
+const EarthController: React.FC<EarthControllerProps> = ({
+  healProgress,
+  scrollProgress,
+  scrollVelocity,
+  mobile,
+  mousePos,
+  reducedMotion,
+}) => {
+  const groupRef = useRef<THREE.Group>(null!);
+  const currentRotation = useRef(0);
+  const smoothedVelocity = useRef(0);
+
+  useFrame((_state, delta) => {
+    if (!groupRef.current) return;
+
+    // 1. Calculate section-based target position and scale
+    let targetX = 0;
+    let targetY = -0.05;
+    let targetScale = 1.0;
+
+    if (scrollProgress < 0.16) {
+      // Hero: centered, large
+      targetX = 0;
+      targetY = mobile ? 0.08 : -0.05;
+      targetScale = mobile ? 0.82 : 1.0;
+    } else if (scrollProgress < 0.38) {
+      // Stats & About: centered, slightly smaller
+      targetX = 0;
+      targetY = mobile ? 0.12 : 0.0;
+      targetScale = mobile ? 0.70 : 0.82;
+    } else if (scrollProgress < 0.54) {
+      // Impact Step 1 (Clean Energy): card on left, Earth slides right
+      targetX = mobile ? 0.0 : 0.65;
+      targetY = mobile ? 0.16 : 0.02;
+      targetScale = mobile ? 0.68 : 0.90;
+    } else if (scrollProgress < 0.70) {
+      // Impact Step 2 (Forests): card on right, Earth slides left
+      targetX = mobile ? 0.0 : -0.65;
+      targetY = mobile ? 0.16 : 0.02;
+      targetScale = mobile ? 0.68 : 0.90;
+    } else if (scrollProgress < 0.84) {
+      // Impact Step 3 (Water & Waste): card on left, Earth slides right
+      targetX = mobile ? 0.0 : 0.65;
+      targetY = mobile ? 0.16 : 0.02;
+      targetScale = mobile ? 0.68 : 0.90;
+    } else if (scrollProgress < 0.94) {
+      // Healed Moment: back to center, large and glowing
+      targetX = 0;
+      targetY = mobile ? 0.06 : 0.0;
+      targetScale = mobile ? 0.85 : 1.06;
+    } else {
+      // Get Involved & Footer: centered and calm
+      targetX = 0;
+      targetY = mobile ? 0.05 : -0.05;
+      targetScale = mobile ? 0.72 : 0.86;
+    }
+
+    // Smoothly lerp position and scale
+    groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, targetX, 0.06);
+    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, targetY, 0.06);
+    const s = THREE.MathUtils.lerp(groupRef.current.scale.x, targetScale, 0.06);
+    groupRef.current.scale.set(s, s, s);
+
+    // 2. Mouse Parallax Tilt
+    if (!reducedMotion) {
+      const tiltX = 0.16 + mousePos.y * 0.10;
+      const tiltZ = 0.04 - mousePos.x * 0.10;
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, tiltX, 0.06);
+      groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, tiltZ, 0.06);
+    }
+
+    // 3. Dynamic Rotation: Idle spin + Scroll Velocity Spin
+    smoothedVelocity.current = THREE.MathUtils.lerp(smoothedVelocity.current, scrollVelocity, 0.1);
+    const idleSpin = delta * 0.05;
+    const scrollSpin = reducedMotion ? 0 : smoothedVelocity.current * 0.003;
+    currentRotation.current += idleSpin + scrollSpin;
+  });
+
+  return (
+    <group ref={groupRef} position={[0, -0.05, 0]}>
+      <EarthSphere
+        healProgress={healProgress}
+        scrollRotation={currentRotation.current}
+        lowDetail={mobile}
+      />
+      <LeafParticles
+        healProgress={healProgress}
+        count={mobile ? 75 : 200}
+      />
+    </group>
+  );
+};
+
+export interface EarthCanvasProps {
+  healProgress:   number;
+  scrollProgress: number;
+  scrollVelocity: number;
   isLowPower?:    boolean;
 }
 
 export const EarthCanvas: React.FC<EarthCanvasProps> = ({
   healProgress,
-  scrollRotation = 0,
+  scrollProgress,
+  scrollVelocity,
   isLowPower = false,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mq.matches);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({
+        x: (e.clientX / window.innerWidth) * 2 - 1,
+        y: -(e.clientY / window.innerHeight) * 2 + 1,
+      });
+    };
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+
+    return () => {
+      window.removeEventListener('resize', check);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
   }, []);
 
   if (isLowPower) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
+      <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none">
         <EarthFallback2D healProgress={healProgress} />
       </div>
     );
   }
 
   return (
-    /*
-     * The <Canvas> must be TRANSPARENT (alpha:true + no background colour)
-     * so the CSS nebula gradient behind it shows through.
-     * The outer div has NO background colour – the page bg (#030712)
-     * and the CSS nebula gradient provide the space environment.
-     */
-    <Canvas
-      camera={{ position: [0, 0, 2.75], fov: 38 }}
-      dpr={[1, Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 2, 2)]}
-      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-      style={{ background: 'transparent' }}
-    >
-      <Suspense fallback={null}>
-        {/* ── Nebula plane (deepest background) ── */}
-        <NebulaGlow />
+    <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden">
+      <Canvas
+        camera={{ position: [0, 0, 2.85], fov: 38 }}
+        dpr={[1, Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 2, 2)]}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance',
+        }}
+        style={{ background: 'transparent' }}
+      >
+        <Suspense fallback={null}>
+          {/* Deep space nebula */}
+          <NebulaGlow />
 
-        {/* ── Starfield (3 depth layers) ── */}
-        {STAR_LAYERS.map((layer, i) => (
-          <StarLayer key={i} {...layer} mobile={isMobile} />
-        ))}
+          {/* 3-Depth Starfield */}
+          {STAR_LAYERS.map((layer, i) => (
+            <StarLayer
+              key={i}
+              {...layer}
+              mobile={isMobile}
+              mousePos={mousePos}
+            />
+          ))}
 
-        {/*
-          Sun light from upper-left matches the uSunDir uniform in
-          earthShader.ts so built-in cloud lighting is consistent.
-          Position: [ -4, 3, 2 ] → normalises to roughly [-1.6, 1.2, 0.8]
-        */}
-        <ambientLight    intensity={0.18} />
-        <directionalLight
-          position={[-4, 3, 2]}
-          intensity={2.4}
-          castShadow={false}
-        />
+          {/* Sun Directional Light matching uSunDir [-1.6, 1.2, 1.0] */}
+          <ambientLight intensity={0.20} />
+          <directionalLight
+            position={[-4.5, 3.2, 2.5]}
+            intensity={2.5}
+            castShadow={false}
+          />
 
-        {/*
-          Earth group positioned slightly below center so the top of
-          the sphere clears the navbar (navbar is ~72px ≈ 0.08 world units).
-          Negative Y shifts the sphere DOWN in view space.
-        */}
-        <group position={[0, -0.05, 0]}>
-          <EarthSphere
+          {/* Section-Aware Scroll-Driven Earth */}
+          <EarthController
             healProgress={healProgress}
-            scrollRotation={scrollRotation}
-            lowDetail={isMobile}
+            scrollProgress={scrollProgress}
+            scrollVelocity={scrollVelocity}
+            mobile={isMobile}
+            mousePos={mousePos}
+            reducedMotion={reducedMotion}
           />
-          <SmogLayer
-            healProgress={healProgress}
-            lowDetail={isMobile}
-          />
-          <LeafParticles
-            healProgress={healProgress}
-            count={isMobile ? 80 : 220}
-          />
-        </group>
-      </Suspense>
-    </Canvas>
+        </Suspense>
+      </Canvas>
+    </div>
   );
 };

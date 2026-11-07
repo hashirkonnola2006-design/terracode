@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navbar }         from './components/Navbar/Navbar';
 import { HeroSection }    from './components/Hero/HeroSection';
 import { StatCard }       from './components/StatCard/StatCard';
@@ -7,31 +7,45 @@ import { ImpactSection }  from './components/Impact/ImpactSection';
 import { HealedMoment }   from './components/HealedMoment/HealedMoment';
 import { GetInvolved }    from './components/GetInvolved/GetInvolved';
 import { Footer }         from './components/Footer/Footer';
+import { EarthCanvas }    from './components/Earth/EarthCanvas';
 import { heroStats, storyStats, actionCards } from './data/stats';
+import { Sliders, X }     from 'lucide-react';
 
 /**
- * App — Root component
+ * App — Root Component
  *
- * State:
- *   healProgress  – 0.0 (polluted) to 1.0 (healed), driven by scroll
- *   scrollRotation – extra Y-rotation passed to Earth (one full turn across page)
- *   isLowPower    – swaps 3-D canvas for static 2-D fallback
- *
- * Scroll binding:
- *   A single scroll listener maps window.scrollY / totalScrollableHeight
- *   to both healProgress and scrollRotation.
- *   This keeps the Earth synced without GSAP ScrollTrigger so we
- *   avoid adding yet another library for one feature.
+ * Architecture:
+ * - EarthCanvas is pinned in a fixed, full-screen background layer (z-0).
+ * - All content sections sit on top with transparent backgrounds and glassmorphism cards.
+ * - Scroll position smoothly drives Earth translation, scale, velocity rotation, and uHeal progress.
+ * - Features dev-only debug panel (?debug=1).
  */
-function App() {
+export function App() {
   const [healProgress,   setHealProgress]   = useState(0.0);
-  const [scrollRotation, setScrollRotation] = useState(0.0);
+  const [scrollProgress, setScrollProgress] = useState(0.0);
+  const [scrollVelocity, setScrollVelocity] = useState(0.0);
   const [isLowPower,     setIsLowPower]     = useState(false);
 
-  /* Smooth heal value that lags behind the target (lerped in rAF) */
-  const targetHealRef = useRef(0.0);
+  // Debug panel state
+  const [isDebug, setIsDebug]     = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
-  // ── Respect prefers-reduced-motion ─────────────────────────
+  const lastScrollY = useRef(0);
+  const lastScrollTime = useRef(Date.now());
+  const velocityRef = useRef(0);
+
+  // Check URL for ?debug=1
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('debug') === '1') {
+        setIsDebug(true);
+        setShowDebug(true);
+      }
+    }
+  }, []);
+
+  // Respect prefers-reduced-motion
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (mq.matches) setIsLowPower(true);
@@ -40,137 +54,204 @@ function App() {
     return () => mq.removeEventListener('change', cb);
   }, []);
 
-  // ── Scroll → healProgress + scrollRotation ─────────────────
+  // Unified scroll listener: calculates progress & velocity
   useEffect(() => {
+    let timeoutId: number;
+
     const onScroll = () => {
-      const scrollY = window.scrollY;
-      // Total scrollable distance
-      const maxScroll = document.body.scrollHeight - window.innerHeight;
+      const currentY = window.scrollY;
+      const now = Date.now();
+      const dt = Math.max(now - lastScrollTime.current, 8);
+      const dy = currentY - lastScrollY.current;
+
+      // Scroll velocity in pixels per second
+      velocityRef.current = (dy / dt) * 1000;
+      setScrollVelocity(velocityRef.current);
+
+      lastScrollY.current = currentY;
+      lastScrollTime.current = now;
+
+      // Decay velocity when scrolling stops
+      clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        velocityRef.current = 0;
+        setScrollVelocity(0);
+      }, 100);
+
+      // Total scroll progress 0.0 to 1.0
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       if (maxScroll <= 0) return;
+      const progress = Math.min(Math.max(currentY / maxScroll, 0), 1);
+      setScrollProgress(progress);
 
-      const progress = Math.min(scrollY / maxScroll, 1);
-      targetHealRef.current = progress;
+      // Map scroll progress to uHeal
+      // Fully healed (1.0) by the time the user reaches the Healed Moment section (~88%)
+      let targetHeal = 0.0;
+      if (progress < 0.15) {
+        targetHeal = 0.0; // Hero
+      } else if (progress < 0.88) {
+        targetHeal = (progress - 0.15) / (0.88 - 0.15);
+      } else {
+        targetHeal = 1.0; // Healed Moment & onwards
+      }
 
-      // One full sphere rotation across the whole page (~2π radians)
-      setScrollRotation(progress * Math.PI * 2);
+      setHealProgress(targetHeal);
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // ── rAF loop: lerp healProgress toward target ───────────────
-  useEffect(() => {
-    let rafId: number;
-    const tick = () => {
-      setHealProgress(prev => {
-        const next = prev + (targetHealRef.current - prev) * 0.06;
-        return Math.abs(next - targetHealRef.current) < 0.001
-          ? targetHealRef.current
-          : next;
-      });
-      rafId = requestAnimationFrame(tick);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      clearTimeout(timeoutId);
     };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
   }, []);
 
-  // ── Callback for Impact steps to advance heal manually ──────
-  // (IntersectionObserver in ImpactSection calls this per step)
-  const handleHealUpdate = useCallback((v: number) => {
-    // Only advance, never go backwards via section triggers
-    targetHealRef.current = Math.max(targetHealRef.current, v);
-  }, []);
-
-  // ── Icon helpers for heroStats ──────────────────────────────
   const heroIcon = (id: string) => {
-    if (id === 'co2-reduction') return (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-3A4.5 4.5 0 0 0 10.5 20c2.49 0 4.5-2.01 4.5-4.5 0-1.44-.68-2.72-1.73-3.56C15.77 11.41 17 8 17 8z"
-          strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    );
+    if (id === 'co2-reduction') {
+      return (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-3A4.5 4.5 0 0 0 10.5 20c2.49 0 4.5-2.01 4.5-4.5 0-1.44-.68-2.72-1.73-3.56C15.77 11.41 17 8 17 8z" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      );
+    }
     return (
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M17 12h-2l2-4h-3l3-5H3l3 5H3l2 4H3l3 5 2.11-3.5a4.97 4.97 0 0 0 1.17.42L10.72 17h2.56l1.44-3.08c.41-.09.8-.23 1.17-.42L18 17l3-5h-4z"
-          strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M17 12h-2l2-4h-3l3-5H3l3 5H3l2 4H3l3 5 2.11-3.5a4.97 4.97 0 0 0 1.17.42L10.72 17h2.56l1.44-3.08c.41-.09.8-.23 1.17-.42L18 17l3-5h-4z" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     );
   };
 
   return (
-    <div className="bg-[#030712] text-white min-h-screen overflow-x-hidden
-      selection:bg-emerald-500 selection:text-black">
-
-      {/* ── Fixed navigation ── */}
-      <Navbar
-        isLowPower={isLowPower}
-        onToggleLowPower={() => setIsLowPower(p => !p)}
-      />
-
-      {/* ── HERO: full-screen Earth ── */}
-      <HeroSection
+    <div className="relative bg-[#030712] text-white min-h-screen selection:bg-emerald-500 selection:text-black">
+      
+      {/* ── Fixed 3D Earth Canvas Layer (pinned across whole page) ── */}
+      <EarthCanvas
         healProgress={healProgress}
-        setHealProgress={(v) => { targetHealRef.current = v; }}
+        scrollProgress={scrollProgress}
+        scrollVelocity={scrollVelocity}
         isLowPower={isLowPower}
-        scrollRotation={scrollRotation}
       />
 
-      {/* ── STATS STRIP ── */}
-      <section
-        id="stats-section"
-        className="relative bg-gradient-to-b from-[#030712] to-[#040a16] border-t border-white/5"
-      >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-32
-          bg-emerald-900/15 rounded-full filter blur-[80px] pointer-events-none" />
+      {/* ── Foreground Content Layer (transparent backgrounds, glass cards) ── */}
+      <div className="relative z-10">
+        
+        {/* Navigation */}
+        <Navbar
+          isLowPower={isLowPower}
+          onToggleLowPower={() => setIsLowPower(p => !p)}
+        />
 
-        <div className="relative max-w-4xl mx-auto px-6 sm:px-8 py-16 sm:py-20">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {heroStats.map(stat => (
-              <StatCard
-                key={stat.id}
-                title={stat.title}
-                value={stat.value}
-                prefix={stat.prefix}
-                suffix={stat.suffix}
-                label={stat.label}
-                changeType={stat.changeType as 'positive' | 'negative'}
-                source={stat.source}
-                sourceUrl={stat.sourceUrl}
-                year={stat.year}
-                sparkline={stat.sparkline}
-                icon={heroIcon(stat.id)}
-              />
-            ))}
+        {/* 1. Hero Section */}
+        <HeroSection />
+
+        {/* 2. Stats Strip */}
+        <section
+          id="stats-section"
+          className="relative bg-transparent border-t border-white/5 py-16 sm:py-20"
+        >
+          <div className="relative max-w-4xl mx-auto px-6 sm:px-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {heroStats.map(stat => (
+                <StatCard
+                  key={stat.id}
+                  title={stat.title}
+                  value={stat.value}
+                  prefix={stat.prefix}
+                  suffix={stat.suffix}
+                  label={stat.label}
+                  changeType={stat.changeType as 'positive' | 'negative'}
+                  source={stat.source}
+                  sourceUrl={stat.sourceUrl}
+                  year={stat.year}
+                  sparkline={stat.sparkline}
+                  icon={heroIcon(stat.id)}
+                />
+              ))}
+            </div>
+            <p className="mt-7 text-center text-[11px] text-slate-500">
+              Verified climate benchmarks sourced from open international databases.
+            </p>
           </div>
-          <p className="mt-7 text-center text-[11px] text-slate-500">
-            All figures from open international databases. Placeholders labelled.
-          </p>
+        </section>
+
+        {/* 3. About Section */}
+        <AboutSection />
+
+        {/* 4. Impact Section (3 Scroll-Driven Healing Steps) */}
+        <ImpactSection
+          steps={storyStats}
+          onHealUpdate={() => {}}
+        />
+
+        {/* 5. Healed Earth Moment (Earth reaches 100% restoration) */}
+        <HealedMoment />
+
+        {/* 6. Get Involved Action Cards */}
+        <GetInvolved cards={actionCards} />
+
+        {/* 7. Footer */}
+        <Footer
+          isLowPower={isLowPower}
+          onToggleLowPower={() => setIsLowPower(p => !p)}
+        />
+
+      </div>
+
+      {/* ── Dev-Only Debug Readout & Slider (Only shown if ?debug=1) ── */}
+      {isDebug && (
+        <div className="fixed bottom-6 right-6 z-50 pointer-events-auto">
+          {showDebug ? (
+            <div className="p-4 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-slate-700 w-80 text-xs shadow-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-emerald-400 flex items-center gap-1.5 font-semibold">
+                  <Sliders className="w-3.5 h-3.5" /> Dev Mode: Telemetry
+                </span>
+                <button onClick={() => setShowDebug(false)} className="text-slate-400 hover:text-white">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="space-y-2 text-[11px] font-mono text-slate-300">
+                <div className="flex justify-between">
+                  <span>Scroll Progress:</span>
+                  <span className="text-emerald-300 font-bold">{(scrollProgress * 100).toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Planet uHeal:</span>
+                  <span className="text-emerald-300 font-bold">{healProgress.toFixed(3)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Scroll Velocity:</span>
+                  <span className="text-cyan-300 font-bold">{Math.round(scrollVelocity)} px/s</span>
+                </div>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-slate-800">
+                <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1">
+                  Manual uHeal Override
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={healProgress}
+                  onChange={e => setHealProgress(parseFloat(e.target.value))}
+                  className="w-full accent-emerald-400 h-2 rounded-lg cursor-pointer bg-slate-800"
+                />
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowDebug(true)}
+              className="p-2.5 rounded-full bg-slate-900/80 border border-slate-700 text-emerald-400 shadow-lg hover:scale-110 transition-transform"
+              title="Open Dev Telemetry"
+            >
+              <Sliders className="w-4 h-4" />
+            </button>
+          )}
         </div>
-      </section>
+      )}
 
-      {/* ── ABOUT ── */}
-      <AboutSection />
-
-      {/* ── IMPACT (3 scroll-driven steps) ── */}
-      <ImpactSection
-        steps={storyStats}
-        onHealUpdate={handleHealUpdate}
-      />
-
-      {/* ── HEALED EARTH MOMENT ── */}
-      <HealedMoment
-        onEnter={() => { targetHealRef.current = 1.0; }}
-      />
-
-      {/* ── GET INVOLVED ── */}
-      <GetInvolved cards={actionCards} />
-
-      {/* ── FOOTER ── */}
-      <Footer
-        isLowPower={isLowPower}
-        onToggleLowPower={() => setIsLowPower(p => !p)}
-      />
     </div>
   );
 }

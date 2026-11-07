@@ -55,8 +55,7 @@ export const GetInvolved: React.FC<GetInvolvedProps> = ({ cards }) => {
   return (
     <section
       id="get-involved"
-      className="relative bg-gradient-to-b from-[#030712] to-[#02070e]
-        border-t border-white/5 py-24 sm:py-32"
+      className="relative bg-transparent border-t border-white/5 py-24 sm:py-32"
     >
       {/* Soft top glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-32
