@@ -4,8 +4,8 @@ import * as THREE from 'three';
  * ═══════════════════════════════════════════════════════════════
  * SURFACE CLUTTER INSTANCED PBR SHADER
  * ═══════════════════════════════════════════════════════════════
- * Handles:
- * - Real 3D PBR surface lighting from the upper-left sun with terminator
+ * Fully-lit PBR surface clutter matching Earth's illumination:
+ * - Camera-relative key light with wrap diffuse (no dark shadow terminator)
  * - Per-instance aThreshold driving 3-stage scroll healing:
  *   Stage A: Oxidation & Rust (0.0 -> 0.5)
  *   Stage B: Noise Dissolve with Ember Burn Edges (0.5 -> 0.85)
@@ -15,8 +15,7 @@ import * as THREE from 'three';
 export const ClutterShaderMaterial = {
   uniforms: {
     uHeal:      { value: 0.0 },
-    uSunDir:    { value: new THREE.Vector3(-1.95, 1.10, 0.55).normalize() },
-    uCameraPos: { value: new THREE.Vector3(0, 0, 3.2) },
+    uCameraPos: { value: new THREE.Vector3(0, 0, 3.65) },
     uTime:      { value: 0.0 },
   },
 
@@ -26,7 +25,6 @@ export const ClutterShaderMaterial = {
     attribute vec3  aBaseColor;
 
     uniform float uHeal;
-    uniform vec3  uSunDir;
     uniform vec3  uCameraPos;
     uniform float uTime;
 
@@ -70,7 +68,6 @@ export const ClutterShaderMaterial = {
 
   fragmentShader: `
     uniform float uHeal;
-    uniform vec3  uSunDir;
     uniform vec3  uCameraPos;
     uniform float uTime;
 
@@ -133,11 +130,10 @@ export const ClutterShaderMaterial = {
       // Stage B: NOISE DISSOLVE WITH GLOWING EMBER EDGES (p: 0.5 to 0.85)
       float emberGlow = 0.0;
       if (p > 0.5) {
-        float decayT = (p - 0.5) / 0.35; // 0.0 to 1.0
+        float decayT = (p - 0.5) / 0.35;
         float dNoise = snoise(vWorldPos * 38.0 + vec3(1.2, 3.4, 5.6)) * 0.5 + 0.5;
         if (dNoise < decayT * 1.08) discard;
 
-        // Glowing orange-ember edge right at dissolve boundary
         float edgeDist = dNoise - decayT * 1.08;
         if (edgeDist < 0.12) {
           emberGlow = (1.0 - edgeDist / 0.12) * 1.8;
@@ -162,12 +158,10 @@ export const ClutterShaderMaterial = {
       else if (vType < 1.5) {
         float rustNoise = snoise(vObjectPos * 8.0) * 0.5 + 0.5;
         float rustSpread = smoothstep(0.1, 0.8, oxT * 1.3 - (1.0 - rustNoise) * 0.4);
-        vec3 rustCol = vec3(0.72, 0.28, 0.08); // rich rust orange-brown
+        vec3 rustCol = vec3(0.72, 0.28, 0.08);
         col = mix(vBaseColor, rustCol, rustSpread);
         roughness = mix(0.18, 0.95, rustSpread);
         metalness = mix(0.92, 0.08, rustSpread);
-
-        // Subtle warm orange emissive pulse so rusting reads from distance
         rustPulse = rustSpread * (sin(uTime * 2.8 + vObjectPos.x * 6.0) * 0.5 + 0.5) * (1.0 - oxT * 0.45);
       }
       // Type 2: Rubber (tires)
@@ -194,26 +188,25 @@ export const ClutterShaderMaterial = {
         roughness = 0.85;
       }
 
-      // ── LIGHTING ──
+      // ── FULLY-LIT DIFFUSE LIGHTING (No black underside) ──
       vec3 normal = normalize(vWorldNormal);
-      vec3 sunDir = normalize(uSunDir);
       vec3 viewDir = normalize(uCameraPos - vWorldPos);
+      vec3 keyDir = normalize(viewDir + vec3(-0.30, 0.40, 0.35));
 
-      float NdotL = dot(normal, sunDir);
-      float diffuse = smoothstep(-0.08, 0.42, NdotL);
+      float NdotL = dot(normal, keyDir);
+      float diffuse = 0.62 + 0.38 * clamp(NdotL, 0.0, 1.0);
 
-      vec3 halfH = normalize(sunDir + viewDir);
+      vec3 halfH = normalize(keyDir + viewDir);
       float NdotH = max(dot(normal, halfH), 0.0);
       float spec = pow(NdotH, mix(32.0, 4.0, roughness)) * (1.0 - roughness * 0.8) * max(NdotL, 0.0);
 
-      vec3 sunCol = vec3(1.0, 0.98, 0.92) * (diffuse * 1.55 + spec * (0.35 + metalness * 1.3));
-      vec3 ambientCol = vec3(0.04, 0.06, 0.10);
+      vec3 lightCol = vec3(1.0, 0.98, 0.94) * (diffuse * 1.45 + spec * (0.35 + metalness * 1.2));
+      vec3 ambientCol = vec3(0.10, 0.12, 0.18);
 
       vec3 emberCol = vec3(1.0, 0.45, 0.05);
-      vec3 finalCol = col * (sunCol + ambientCol) + emberCol * (rustPulse * 0.65 + emberGlow * 1.4);
+      vec3 finalCol = col * (lightCol + ambientCol) + emberCol * (rustPulse * 0.65 + emberGlow * 1.4);
 
       gl_FragColor = vec4(finalCol, 1.0);
     }
   `
 };
-

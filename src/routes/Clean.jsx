@@ -34,10 +34,10 @@ export const Clean = () => {
         
         {/* Brand / Logo on Left */}
         <div className="flex items-center gap-2 pointer-events-auto">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-500/30">
-            <Leaf className="w-4 h-4 fill-slate-950" />
+          <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <Leaf className="w-4 h-4 text-[#4ade80]" />
           </div>
-          <span className="font-extrabold text-sm sm:text-base tracking-tight text-white hidden sm:inline-block">
+          <span className="font-display font-extrabold text-sm sm:text-base tracking-tight text-white hidden sm:inline-block">
             EcoFuture
           </span>
         </div>
@@ -53,20 +53,20 @@ export const Clean = () => {
           {/* Skip / Auto-Heal (Accessibility & Demonstration) */}
           <button
             onClick={skipAndHealAll}
-            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 border border-slate-700/60 text-xs font-medium tracking-wide transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.10] text-white/80 hover:text-white border border-white/20 font-label uppercase text-[11px] font-semibold tracking-[0.14em] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
             title="Skip game and heal Earth automatically"
           >
-            <FastForward className="w-3.5 h-3.5" />
+            <FastForward className="w-3.5 h-3.5 text-emerald-400" />
             <span>Skip, just heal it</span>
           </button>
 
           {/* Sound Toggle */}
           <button
             onClick={toggleMute}
-            className={`p-2 rounded-xl backdrop-blur-md border text-xs transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
+            className={`p-2 rounded-lg backdrop-blur-md border text-xs transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 ${
               muted
-                ? 'bg-slate-900/80 border-slate-700 text-slate-500'
-                : 'bg-slate-900/80 border-slate-700 text-emerald-400 hover:bg-slate-800'
+                ? 'bg-slate-900/80 border-white/10 text-slate-500'
+                : 'bg-slate-900/80 border-white/20 text-emerald-400 hover:bg-white/[0.08]'
             }`}
             title={muted ? 'Unmute audio' : 'Mute audio'}
             aria-label={muted ? 'Unmute audio' : 'Mute audio'}
@@ -77,10 +77,10 @@ export const Clean = () => {
           {/* Lite Mode Toggle */}
           <button
             onClick={toggleLiteMode}
-            className={`p-2 rounded-xl backdrop-blur-md border text-xs transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
+            className={`p-2 rounded-lg backdrop-blur-md border text-xs transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 ${
               liteMode
                 ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                : 'bg-slate-900/80 border-slate-700 text-slate-300 hover:text-white'
+                : 'bg-slate-900/80 border-white/10 text-slate-300 hover:text-white hover:bg-white/[0.08]'
             }`}
             title={liteMode ? 'Switch to Cinematic High-DPI' : 'Switch to Eco/Lite Mode'}
             aria-label="Toggle Lite Mode"
@@ -91,7 +91,7 @@ export const Clean = () => {
           {/* Reset / Restart */}
           <button
             onClick={restartGame}
-            className="p-2 rounded-xl bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="p-2 rounded-lg bg-slate-900/80 border border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
             title="Restart Cleaning"
             aria-label="Restart Cleaning"
           >

@@ -70,20 +70,20 @@ export const MissionPanel = () => {
 
   return (
     <div className="fixed bottom-4 left-4 z-30 w-72 sm:w-80 max-w-[calc(100vw-2rem)] select-none pointer-events-auto">
-      <div className="rounded-2xl bg-slate-900/85 backdrop-blur-xl border border-slate-800 shadow-2xl overflow-hidden transition-all duration-300">
+      <div className="rounded-xl bg-slate-950/85 backdrop-blur-xl border border-white/10 overflow-hidden transition-all duration-200">
         {/* Header Toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-slate-800/40 hover:bg-slate-800/70 text-left transition-colors cursor-pointer border-b border-slate-800/60"
+          className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] text-left transition-colors duration-200 cursor-pointer border-b border-white/10"
         >
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-semibold tracking-wider uppercase text-slate-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80]" />
+            <span className="font-label uppercase text-[12px] tracking-[0.22em] text-white/80 font-semibold">
               Restoration Missions
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <span>
+          <div className="flex items-center gap-1.5 font-mono text-xs text-white/50">
+            <span className="tabular-nums">
               {missions.filter((m) => m.completed).length}/4 Done
             </span>
             {collapsed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -104,31 +104,31 @@ export const MissionPanel = () => {
                   onClick={() => {
                     if (!isLocked) setActiveMission(m.id);
                   }}
-                  className={`relative p-2.5 rounded-xl transition-all cursor-pointer border ${
+                  className={`relative p-2.5 rounded-lg transition-all duration-200 cursor-pointer border ${
                     isActive
-                      ? 'bg-emerald-950/40 border-emerald-500/50 shadow-md ring-1 ring-emerald-500/30'
+                      ? 'bg-emerald-950/30 border-emerald-500/40 ring-1 ring-emerald-500/20'
                       : m.completed
-                      ? 'bg-slate-800/30 border-slate-700/40 hover:bg-slate-800/50'
-                      : 'bg-slate-900/40 border-slate-800 hover:bg-slate-800/30'
+                      ? 'bg-white/[0.03] border-white/10 hover:border-white/20'
+                      : 'bg-white/[0.015] border-white/5 hover:border-white/15'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <div className={`p-1.5 rounded-lg bg-slate-800/80 ${m.accent}`}>
+                      <div className={`p-1.5 rounded-md bg-white/[0.05] ${m.accent}`}>
                         <Icon className="w-3.5 h-3.5" />
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-xs font-medium ${isActive ? 'text-white' : 'text-slate-300'}`}>
+                          <span className={`font-label uppercase text-[12px] tracking-[0.08em] font-semibold ${isActive ? 'text-white' : 'text-white/80'}`}>
                             {m.title}
                           </span>
                           {m.tag && (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-[#4ade80] font-mono tabular-nums">
                               {m.tag}
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-slate-400 leading-tight">
+                        <p className="font-body font-light text-[12px] text-white/60 leading-tight">
                           {m.description}
                         </p>
                       </div>
@@ -136,9 +136,9 @@ export const MissionPanel = () => {
 
                     <div className="text-right">
                       {m.completed ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
                       ) : (
-                        <span className="font-mono text-[11px] font-semibold text-slate-300">
+                        <span className="font-mono tabular-nums text-[12px] font-semibold text-white/80">
                           {m.countLabel}
                         </span>
                       )}
@@ -146,10 +146,10 @@ export const MissionPanel = () => {
                   </div>
 
                   {/* Mini Progress Bar */}
-                  <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                  <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
-                        m.completed ? 'bg-emerald-400' : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                        m.completed ? 'bg-[#4ade80]' : 'bg-gradient-to-r from-emerald-500 to-[#4ade80]'
                       }`}
                       style={{ width: `${m.progress}%` }}
                     />

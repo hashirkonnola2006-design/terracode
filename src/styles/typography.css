@@ -1,0 +1,217 @@
+/* src/styles/typography.css */
+
+/* ── Aveton Custom Font (Local Self-Hosted) ── */
+@font-face {
+  font-family: 'Aveton';
+  src: url('/fonts/Aveton.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Global Font Custom Properties ── */
+:root {
+  /* Option A (Default): Aveton with automatic Outfit fallback, Barlow body, JetBrains Mono numbers */
+  --font-display: 'Aveton', 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-body: 'Barlow', 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-label: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Option B (SpaceX Style): Michroma for labels & tracked caps, Outfit 800 for headlines, Barlow for body */
+:root.theme-spacex,
+body.theme-spacex,
+[data-theme='spacex'] {
+  --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-body: 'Barlow', system-ui, -apple-system, sans-serif;
+  --font-label: 'Michroma', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ── Base Utility Font Classes ── */
+.font-display {
+  font-family: var(--font-display) !important;
+}
+
+.font-body {
+  font-family: var(--font-body) !important;
+}
+
+.font-label {
+  font-family: var(--font-label) !important;
+}
+
+.font-mono {
+  font-family: var(--font-mono) !important;
+  font-feature-settings: 'tnum' on, 'lnum' on;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Aerospace Typography Rules ── */
+
+/* Hero Headline: Display font, weight 800, clamp(3rem, 9vw, 8rem), line-height 0.95, -0.02em */
+.aerospace-headline {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(3rem, 9vw, 8rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+/* Eyebrows and Section Labels: Uppercase, 12-13px, tracking 0.3em, 70% opacity */
+.aerospace-label {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Body Text: Barlow/Outfit 300/400, 18-20px, line-height 1.6, 70% opacity, max-width 46ch */
+.aerospace-body {
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-size: 18px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 46ch;
+}
+
+@media (min-width: 640px) {
+  .aerospace-body {
+    font-size: 20px;
+  }
+}
+
+/* Primary Button: Uppercase 600, 14px, 0.12em spacing, green pill */
+.btn-aerospace-primary {
+  font-family: var(--font-label);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background-color: #4ade80;
+  color: #030712;
+  border-radius: 9999px;
+  padding: 0.875rem 2rem;
+  border: 1px solid transparent;
+  transition: all 200ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  box-shadow: 0 0 30px rgba(74, 222, 128, 0.35);
+}
+
+.btn-aerospace-primary:hover {
+  background-color: #3ecb74;
+  letter-spacing: 0.14em;
+  box-shadow: 0 0 45px rgba(74, 222, 128, 0.6);
+  transform: scale(1.02);
+}
+
+.btn-aerospace-primary:active {
+  transform: scale(0.98);
+}
+
+/* Secondary Button: Uppercase 600, 14px, 0.12em spacing, 1px 40% white border, no fill */
+.btn-aerospace-secondary {
+  font-family: var(--font-label);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background-color: transparent;
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 0.625rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 200ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.btn-aerospace-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.14em;
+}
+
+/* ── Flatter Aerospace Glass Panels ── */
+.glass-panel-flat {
+  background: rgba(8, 14, 28, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  transition: all 200ms ease;
+}
+
+.glass-panel-flat:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Hairline 1px Divider */
+.hairline-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.10);
+  border: none;
+}
+
+/* SpaceX Sharp Corner Override */
+.theme-spacex .glass-panel-flat,
+.theme-spacex .glass-panel,
+.theme-spacex .btn-aerospace-primary,
+.theme-spacex .btn-aerospace-secondary {
+  border-radius: 2px !important;
+}
+
+/* ── Snap Scrolling for Landing Intro ── */
+html.intro-snap,
+body.intro-snap {
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
+
+.snap-beat-section {
+  height: 100vh;
+  height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* ── Stepped Beat Unit Quick Switch Animation ── */
+@keyframes beatSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.beat-unit {
+  animation: beatSlideIn 140ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beat-unit {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+

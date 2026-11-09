@@ -74,38 +74,38 @@ export const EndingScreen = () => {
         
         {/* ── 1. Victory Headline & Subtext ── */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold tracking-widest uppercase">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[#4ade80] font-label text-[11px] font-semibold tracking-[0.25em] uppercase">
             <Globe2 className="w-3.5 h-3.5" /> Planet Earth Fully Restored
           </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
+          <h2 className="font-display font-extrabold text-3xl sm:text-5xl text-white tracking-tight leading-[1.05]">
             This is the Tomorrow We Can Build
           </h2>
-          <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto leading-relaxed">
-            You cleaned <span className="text-emerald-400 font-bold">{itemsCollected}</span> orbital debris items and restored{' '}
-            <span className="text-emerald-400 font-bold">{m3.plantedPatches.length}</span> native forest biomes. Imagine what we can achieve together.
+          <p className="font-body font-light text-sm sm:text-base text-white/70 max-w-xl mx-auto leading-relaxed">
+            You cleaned <span className="text-[#4ade80] font-semibold font-mono tabular-nums">{itemsCollected}</span> orbital debris items and restored{' '}
+            <span className="text-[#4ade80] font-semibold font-mono tabular-nums">{m3.plantedPatches.length}</span> native forest biomes. Imagine what we can achieve together.
           </p>
         </div>
 
         {/* ── 2. Results & Action Bar ── */}
-        <div className="p-6 rounded-3xl bg-slate-900/80 backdrop-blur-2xl border border-slate-700/60 shadow-2xl">
+        <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-white/10">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center mb-6">
-            <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-800">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Global Health</span>
-              <span className="text-xl sm:text-2xl font-mono font-bold text-emerald-400">100%</span>
+            <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
+              <span className="font-label uppercase text-[11px] tracking-[0.2em] text-white/60 block mb-1">Global Health</span>
+              <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-[#4ade80]">100%</span>
             </div>
-            <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-800">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Items Collected</span>
-              <span className="text-xl sm:text-2xl font-mono font-bold text-white">{itemsCollected}</span>
+            <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
+              <span className="font-label uppercase text-[11px] tracking-[0.2em] text-white/60 block mb-1">Items Collected</span>
+              <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-white">{itemsCollected}</span>
             </div>
-            <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-800">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">CO2 Sequestered</span>
-              <span className="text-xl sm:text-2xl font-mono font-bold text-teal-300">
+            <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
+              <span className="font-label uppercase text-[11px] tracking-[0.2em] text-white/60 block mb-1">CO2 Sequestered</span>
+              <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-teal-300">
                 {(co2Absorbed / 1000).toFixed(1)}t
               </span>
             </div>
-            <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-800">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Your Pledges</span>
-              <span className="text-xl sm:text-2xl font-mono font-bold text-amber-300">
+            <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
+              <span className="font-label uppercase text-[11px] tracking-[0.2em] text-white/60 block mb-1">Your Pledges</span>
+              <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-amber-300">
                 {pledges.length}/3
               </span>
             </div>
@@ -116,7 +116,7 @@ export const EndingScreen = () => {
             <button
               onClick={handleDownloadScreenshot}
               disabled={downloading}
-              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all hover:scale-[1.02] cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+              className="btn-aerospace-primary text-[12px] py-2.5 px-5"
             >
               <Download className="w-4 h-4" />
               {downloading ? 'Capturing...' : 'Download My Clean Earth'}
@@ -124,7 +124,7 @@ export const EndingScreen = () => {
 
             <button
               onClick={handleShare}
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs uppercase tracking-wider transition-all hover:scale-[1.02] cursor-pointer flex items-center gap-2 border border-slate-700"
+              className="btn-aerospace-secondary text-[12px] py-2.5 px-5"
             >
               <Share2 className="w-4 h-4" />
               {copied ? 'Link Copied!' : 'Share Impact'}
@@ -132,7 +132,7 @@ export const EndingScreen = () => {
 
             <button
               onClick={restartGame}
-              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white font-medium text-xs tracking-wider transition-all cursor-pointer flex items-center gap-2 border border-slate-800"
+              className="px-5 py-2.5 rounded-full bg-transparent hover:bg-white/[0.06] text-white/60 hover:text-white font-label text-[12px] font-semibold tracking-[0.12em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-2 border border-white/20"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Play Again
             </button>
@@ -142,7 +142,7 @@ export const EndingScreen = () => {
         {/* ── 3. Real-World Action Cards with Pledges ── */}
         <div className="space-y-3">
           <div className="text-center">
-            <span className="text-xs font-semibold text-emerald-400 tracking-wider uppercase">
+            <span className="font-label uppercase text-[12px] tracking-[0.25em] text-[#4ade80] font-semibold">
               Take Real-World Action Today
             </span>
           </div>
@@ -154,30 +154,30 @@ export const EndingScreen = () => {
               return (
                 <div
                   key={item.id}
-                  className={`p-5 rounded-3xl backdrop-blur-xl border transition-all ${
+                  className={`p-5 rounded-2xl backdrop-blur-xl border transition-all duration-200 ${
                     isPledged
-                      ? 'bg-emerald-950/40 border-emerald-500/50 ring-1 ring-emerald-500/30'
-                      : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                      ? 'bg-emerald-950/30 border-emerald-500/40 ring-1 ring-emerald-500/20'
+                      : 'bg-slate-950/70 border-white/10 hover:border-white/20'
                   }`}
                 >
-                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">
+                  <span className="font-label uppercase text-[11px] tracking-[0.2em] text-[#4ade80] font-semibold block mb-1">
                     {item.category}
                   </span>
-                  <h4 className="text-base font-bold text-white mb-2">{item.action}</h4>
-                  <p className="text-xs text-slate-300 leading-relaxed mb-3">
+                  <h4 className="font-display font-bold text-base text-white mb-2">{item.action}</h4>
+                  <p className="font-body font-light text-xs text-white/70 leading-relaxed mb-3">
                     {item.description}
                   </p>
-                  <span className="text-[10px] text-slate-400 block mb-4 font-mono">
+                  <span className="font-mono tabular-nums text-[11px] text-white/50 block mb-4">
                     Impact: {item.impact}
                   </span>
 
                   <button
                     onClick={() => addPledge(item.id)}
                     disabled={isPledged}
-                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`w-full py-2 px-3 rounded-full font-label text-[12px] font-semibold tracking-[0.12em] uppercase transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
                       isPledged
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 cursor-default'
-                        : 'bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-slate-200 border border-slate-700'
+                        ? 'bg-emerald-500/20 text-[#4ade80] border border-emerald-500/40 cursor-default'
+                        : 'bg-white/[0.05] hover:bg-[#4ade80] hover:text-slate-950 text-white border border-white/20'
                     }`}
                   >
                     {isPledged ? (
@@ -197,31 +197,31 @@ export const EndingScreen = () => {
         </div>
 
         {/* ── 4. Competition Footer (Only displayed at game completion) ── */}
-        <footer className="pt-8 border-t border-slate-800/80 text-center space-y-4 text-xs text-slate-400">
+        <footer className="pt-8 border-t border-white/10 text-center space-y-4 text-xs text-white/50">
           <div className="flex flex-wrap items-center justify-center gap-6">
             <a
               href="https://github.com/hashirkonnola2006-design/terracode"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 hover:text-emerald-400 transition-colors"
+              className="font-label uppercase text-[11px] tracking-[0.14em] inline-flex items-center gap-1.5 hover:text-[#4ade80] transition-colors"
             >
               <Code2 className="w-4 h-4" /> GitHub Repository
             </a>
-            <span className="inline-flex items-center gap-1.5 text-slate-300 font-semibold">
-              <Zap className="w-3.5 h-3.5 text-emerald-400" /> Built for TerraCode 2026
+            <span className="font-label uppercase text-[11px] tracking-[0.14em] inline-flex items-center gap-1.5 text-white/80 font-semibold">
+              <Zap className="w-3.5 h-3.5 text-[#4ade80]" /> Built for TerraCode 2026
             </span>
             <button
               onClick={toggleLiteMode}
-              className="hover:text-emerald-400 transition-colors cursor-pointer"
+              className="font-label uppercase text-[11px] tracking-[0.14em] hover:text-[#4ade80] transition-colors cursor-pointer"
             >
               Display: {liteMode ? 'Lite Mode' : 'Cinematic High-DPI'}
             </button>
           </div>
 
-          <p className="text-[11px] text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            Data & scientific benchmarks sourced from <span className="text-slate-300">UNEP</span>, <span className="text-slate-300">IRENA</span>,{' '}
-            <span className="text-slate-300">Ember Energy Review 2024</span>, <span className="text-slate-300">FAO FRA 2024</span>, and{' '}
-            <span className="text-slate-300">IUCN</span>. Earth textures courtesy of NASA Blue Marble and Visible Earth. Procedural shaders powered by Three.js & Ashima simplex noise.
+          <p className="font-mono text-[11px] text-white/40 max-w-2xl mx-auto leading-relaxed">
+            Data & scientific benchmarks sourced from <span className="text-white/60">UNEP</span>, <span className="text-white/60">IRENA</span>,{' '}
+            <span className="text-white/60">Ember Energy Review 2024</span>, <span className="text-white/60">FAO FRA 2024</span>, and{' '}
+            <span className="text-white/60">IUCN</span>. Earth textures courtesy of NASA Blue Marble and Visible Earth. Procedural shaders powered by Three.js & Ashima simplex noise.
           </p>
         </footer>
 

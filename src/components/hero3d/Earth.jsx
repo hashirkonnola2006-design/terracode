@@ -1,64 +1,75 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { EarthShader } from './shaders/EarthShader';
 
 // ═══════════════════════════════════════════════════════════════
-// TWEAKABLE CONSTANTS (Earth Geometry & Orientation)
+// CONSTANTS (Earth Geometry & Orientation)
 // ═══════════════════════════════════════════════════════════════
 export const EARTH_RADIUS = 1.0;            // Base sphere radius
-export const EARTH_SEGMENTS = 128;          // 128x128 SphereGeometry
+export const EARTH_SEGMENTS = 128;          // 128x128 SphereGeometry for smooth curvature
 export const BASE_ROTATION_SPEED = 0.016;   // Initial slow spin
 export const HEALED_ROTATION_SPEED = 0.010; // Slows slightly as Earth heals
 export const AXIAL_TILT_X = 0.20;           // North hemisphere tilted gently towards camera
 export const AXIAL_TILT_Z = -0.10;          // Subtle natural axial tilt
-export const INITIAL_ROTATION_Y = 2.94;     // Centers India & the Indian Ocean matching 3d_earth.png
+export const INITIAL_ROTATION_Y = 2.94;     // Centers India & the Indian Ocean
 export const HEAL_SCALE_EXPANSION = 0.035;  // Expands ~3.5% as biosphere restores
 
-export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0 }) => {
-  const { viewport } = useThree();
+export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0, isLowEnd = false }) => {
+  const { gl } = useThree();
   const earthRef = useRef(null);
   const shaderMatRef = useRef(null);
 
-  // Compute direction matching Sun.jsx viewport coordinates
-  const isPortrait = viewport.width < viewport.height;
-  const anchorX = isPortrait ? 0.36 : 0.41;
-  const anchorY = isPortrait ? 0.40 : 0.36;
-  const sunDir = useMemo(() => {
-    return new THREE.Vector3(-viewport.width * anchorX, viewport.height * anchorY, 0.15).normalize();
-  }, [viewport.width, viewport.height, anchorX, anchorY]);
-
-  // Load NASA 2K Blue Marble textures with linear mipmap filtering
-  const [dayMap, atmosMap, normalMap, specularMap, lightsMap] = useTexture([
-    '/textures/earth_day_2048.jpg',
-    '/textures/earth_atmos_2048.jpg',
+  // Progressive Loading: Load lightweight 2K maps instantly (<100ms)
+  const [dayMap2k, normalMap, specularMap] = useTexture([
+    '/textures/earth_day_2k.jpg',
     '/textures/earth_normal_2048.jpg',
     '/textures/earth_specular_2048.jpg',
-    '/textures/earth_lights_2048.png',
   ]);
 
-  useMemo(() => {
-    [dayMap, atmosMap, normalMap, specularMap, lightsMap].forEach((t) => {
+  // Configure high-resolution mipmaps and maximum hardware anisotropy
+  useEffect(() => {
+    const maxAnisotropy = gl.capabilities ? gl.capabilities.getMaxAnisotropy() : 8;
+
+    dayMap2k.colorSpace = THREE.SRGBColorSpace;
+    normalMap.colorSpace = THREE.NoColorSpace;
+    specularMap.colorSpace = THREE.NoColorSpace;
+
+    [dayMap2k, normalMap, specularMap].forEach((t) => {
       t.minFilter = THREE.LinearMipmapLinearFilter;
       t.magFilter = THREE.LinearFilter;
       t.generateMipmaps = true;
-      t.anisotropy = 8;
+      t.anisotropy = maxAnisotropy;
       t.needsUpdate = true;
     });
-  }, [dayMap, atmosMap, normalMap, specularMap, lightsMap]);
+
+    // Progressive upgrade: If desktop / high-end mode, load 8K daymap in background
+    // if (!isLowEnd) {
+    //   const loader = new THREE.TextureLoader();
+    //   loader.load('/textures/earth_day_8k.jpg', (tex8k) => {
+    //     tex8k.colorSpace = THREE.SRGBColorSpace;
+    //     tex8k.minFilter = THREE.LinearMipmapLinearFilter;
+    //     tex8k.magFilter = THREE.LinearFilter;
+    //     tex8k.generateMipmaps = true;
+    //     tex8k.anisotropy = maxAnisotropy;
+    //     tex8k.needsUpdate = true;
+    //     if (shaderMatRef.current) {
+    //       shaderMatRef.current.uniforms.uDayMap.value = tex8k;
+    //       shaderMatRef.current.uniformsNeedUpdate = true;
+    //     }
+    //   });
+    // }
+  }, [dayMap2k, normalMap, specularMap, gl, isLowEnd]);
 
   const earthUniforms = useMemo(() => {
     const u = THREE.UniformsUtils.clone(EarthShader.uniforms);
-    u.uDayMap.value = dayMap;
-    u.uAtmosMap.value = atmosMap;
+    u.uDayMap.value = dayMap2k;
     u.uNormalMap.value = normalMap;
     u.uSpecularMap.value = specularMap;
-    u.uLightsMap.value = lightsMap;
-    u.uSunDir.value.copy(sunDir);
     u.uHeal.value = healProgress;
     return u;
-  }, [dayMap, atmosMap, normalMap, specularMap, lightsMap, sunDir]);
+  }, [dayMap2k, normalMap, specularMap]);
 
   const smoothHealRef = useRef(healProgress);
 
@@ -68,16 +79,13 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0 }) => 
 
     if (shaderMatRef.current) {
       shaderMatRef.current.uniforms.uHeal.value = smoothHealRef.current;
-      shaderMatRef.current.uniforms.uSunDir.value.copy(sunDir);
       shaderMatRef.current.uniforms.uTime.value = t;
     }
 
     if (earthRef.current) {
-      // Rotation slows slightly as Earth recovers
       const currentSpeed = THREE.MathUtils.lerp(BASE_ROTATION_SPEED, HEALED_ROTATION_SPEED, smoothHealRef.current);
       earthRef.current.rotation.y = INITIAL_ROTATION_Y + t * currentSpeed + scrollRotation;
 
-      // Gentle scale expansion as biosphere recovers
       const s = 1.0 + smoothHealRef.current * HEAL_SCALE_EXPANSION;
       earthRef.current.scale.set(s, s, s);
     }
@@ -92,8 +100,8 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0 }) => 
             if (onEarthMesh) onEarthMesh(m);
           }
         }}
-        castShadow
-        receiveShadow
+        castShadow={!isLowEnd}
+        receiveShadow={!isLowEnd}
       >
         <sphereGeometry args={[EARTH_RADIUS, EARTH_SEGMENTS, EARTH_SEGMENTS]} />
         <shaderMaterial
@@ -106,3 +114,5 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0 }) => 
     </group>
   );
 };
+
+export default Earth;

@@ -41,31 +41,31 @@ export const Tutorial = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm select-none pointer-events-auto animate-in fade-in duration-300">
-      <div className="relative w-full max-w-sm p-6 rounded-3xl bg-slate-900/95 border border-slate-700/70 shadow-2xl text-center">
+      <div className="relative w-full max-w-sm p-6 rounded-2xl bg-slate-950/95 border border-white/10 text-center">
         {/* Dismiss Button */}
         <button
           onClick={dismissTutorial}
-          className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
           title="Skip tutorial"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Step Indicator */}
-        <span className="text-[10px] font-mono tracking-widest text-emerald-400 uppercase block mb-3">
+        <span className="text-[11px] font-mono tracking-[0.2em] text-[#4ade80] uppercase block mb-3">
           How to Play ({step + 1} of 3)
         </span>
 
         {/* Step Icon */}
-        <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-md">
+        <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-[#4ade80]">
           <Icon className="w-7 h-7" />
         </div>
 
-        <h3 className="text-base font-bold text-white mb-2">
+        <h3 className="font-display font-bold text-base text-white mb-2">
           {current.title}
         </h3>
 
-        <p className="text-xs text-slate-300 mb-6 leading-relaxed">
+        <p className="font-body font-light text-xs text-white/70 mb-6 leading-relaxed">
           {current.desc}
         </p>
 
@@ -75,7 +75,7 @@ export const Tutorial = () => {
             <div
               key={idx}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                idx === step ? 'w-6 bg-emerald-400' : 'w-1.5 bg-slate-700'
+                idx === step ? 'w-6 bg-[#4ade80]' : 'w-1.5 bg-white/20'
               }`}
             />
           ))}
@@ -84,7 +84,7 @@ export const Tutorial = () => {
         {/* Action Button */}
         <button
           onClick={handleNext}
-          className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs tracking-wider uppercase transition-transform hover:scale-[1.02] cursor-pointer flex items-center justify-center gap-1.5"
+          className="btn-aerospace-primary w-full py-2.5 px-4 text-xs"
         >
           {step < steps.length - 1 ? (
             <>

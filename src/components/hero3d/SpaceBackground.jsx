@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   StarShaderMaterial,
@@ -8,23 +9,23 @@ import {
 } from './shaders/starShader';
 
 // ═══════════════════════════════════════════════════════════════
-// TWEAKABLE CONSTANTS (Space Background & Celestial Vault)
+// CONSTANTS (Deep Space Panorama & Celestial Starfield)
 // ═══════════════════════════════════════════════════════════════
 export const QUALITY_TIER = 'AUTO'; // 'HIGH' | 'MEDIUM' | 'LOW' | 'AUTO'
 
-export const STARS_COUNT_HIGH   = 6500;
-export const STARS_COUNT_MEDIUM = 3800;
-export const STARS_COUNT_LOW    = 1800;
+export const STARS_COUNT_HIGH   = 5500;
+export const STARS_COUNT_MEDIUM = 3200;
+export const STARS_COUNT_LOW    = 1500;
 
-export const NEBULA_OPACITY = 0.36;    // Subtle deep indigo/violet cosmic dust
-export const STAR_BASE_SIZE = 1.15;    // Crisp celestial pinpricks
+export const NEBULA_OPACITY = 0.22;    // Faint, soft indigo/violet cosmic dust
+export const STAR_BASE_SIZE = 1.05;    // Crisp celestial pinpricks
 
-export const PARALLAX_STARS_STRENGTH  = 0.035;
-export const PARALLAX_NEBULA_STRENGTH = 0.016;
+export const PARALLAX_STARS_STRENGTH  = 0.038;
+export const PARALLAX_NEBULA_STRENGTH = 0.018;
 
-export const SHOOTING_STAR_INTERVAL_MIN = 9.0;  // Seconds between shooting stars
-export const SHOOTING_STAR_INTERVAL_MAX = 15.0;
-export const SHOOTING_STAR_DURATION     = 1.15; // Flight duration in seconds
+export const SHOOTING_STAR_INTERVAL_MIN = 10.0;
+export const SHOOTING_STAR_INTERVAL_MAX = 18.0;
+export const SHOOTING_STAR_DURATION     = 1.15;
 
 export const SpaceBackground = ({
   mousePos = { x: 0, y: 0 },
@@ -33,15 +34,16 @@ export const SpaceBackground = ({
 }) => {
   const { gl } = useThree();
 
-  const starsGroupRef   = useRef(null);
-  const nebulaMeshRef   = useRef(null);
-  const shootingStarRef = useRef(null);
+  const celestialSphereRef = useRef(null);
+  const starsGroupRef      = useRef(null);
+  const nebulaMeshRef      = useRef(null);
+  const shootingStarRef    = useRef(null);
 
   const starMatRef     = useRef(null);
   const nebulaMatRef   = useRef(null);
   const shootMatRef    = useRef(null);
 
-  // Pre-allocated vectors for shooting star flight path (Zero GC allocations in useFrame)
+  // Pre-allocated vectors for shooting star flight path
   const shootStartPosRef = useRef(new THREE.Vector3());
   const shootEndPosRef   = useRef(new THREE.Vector3());
   const shootCurPosRef   = useRef(new THREE.Vector3());
@@ -71,6 +73,33 @@ export const SpaceBackground = ({
     return STARS_COUNT_HIGH;
   }, [activeTier]);
 
+  // Progressive Loading: Load lightweight 2K Milky Way map immediately
+  const milkyWayTexture = useTexture('/textures/milkyway_2k.jpg');
+
+  useEffect(() => {
+    milkyWayTexture.colorSpace = THREE.SRGBColorSpace;
+    milkyWayTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    milkyWayTexture.magFilter = THREE.LinearFilter;
+    milkyWayTexture.generateMipmaps = true;
+    milkyWayTexture.needsUpdate = true;
+
+    // Progressive upgrade: If high tier, load 8K Milky Way panorama in background
+    if (activeTier !== 'LOW') {
+      const loader = new THREE.TextureLoader();
+      loader.load('/textures/milkyway_8k.jpg', (tex8k) => {
+        tex8k.colorSpace = THREE.SRGBColorSpace;
+        tex8k.minFilter = THREE.LinearMipmapLinearFilter;
+        tex8k.magFilter = THREE.LinearFilter;
+        tex8k.generateMipmaps = true;
+        tex8k.needsUpdate = true;
+        if (celestialSphereRef.current && celestialSphereRef.current.material) {
+          celestialSphereRef.current.material.map = tex8k;
+          celestialSphereRef.current.material.needsUpdate = true;
+        }
+      });
+    }
+  }, [milkyWayTexture, activeTier]);
+
   // ── 1. PROCEDURAL FORWARD-WEIGHTED CELESTIAL STARS ──
   const [positions, sizes, colors, twkSpeeds, twkAmps, twkPhases, beacons] = useMemo(() => {
     const total = starCount;
@@ -82,7 +111,6 @@ export const SpaceBackground = ({
     const phs = new Float32Array(total);
     const bcn = new Float32Array(total);
 
-    // Natural stellar spectral types
     const palettes = [
       new THREE.Color('#ffffff'), // O/B-type Diamond White (45%)
       new THREE.Color('#ffffff'),
@@ -98,16 +126,13 @@ export const SpaceBackground = ({
     };
 
     for (let i = 0; i < total; i++) {
-      // Forward-weighted distribution: all stars placed in front hemispherical frustum (-Z)
-      // Generous field of view so stars fill screen even during parallax
       let x, y, z;
-      const isMilkyWay = rand() < 0.28;
+      const isMilkyWayStream = rand() < 0.28;
 
-      if (isMilkyWay) {
-        // Dense subtle galactic stream drifting from top-right to center
+      if (isMilkyWayStream) {
         const t = (rand() - 0.5) * 2.0;
-        x = 10.0 + t * 24.0 + (rand() - 0.5) * 8.0;
-        y =  6.0 - t * 18.0 + (rand() - 0.5) * 6.0;
+        x =  9.0 + t * 24.0 + (rand() - 0.5) * 8.0;
+        y =  5.0 - t * 18.0 + (rand() - 0.5) * 6.0;
         z = -35.0 - rand() * 25.0;
       } else {
         const spreadX = 42.0;
@@ -121,17 +146,15 @@ export const SpaceBackground = ({
       pos[i * 3 + 1] = y;
       pos[i * 3 + 2] = z;
 
-      // Varied magnitudes: 96% subtle pinpricks, ~4% brighter beacon stars with diffraction spikes
-      const isBeacon = rand() < 0.035;
+      const isBeacon = rand() < 0.032;
       bcn[i] = isBeacon ? 1.0 : 0.0;
-      siz[i] = STAR_BASE_SIZE * (isBeacon ? (1.6 + rand() * 0.9) : (0.55 + rand() * 0.65));
+      siz[i] = STAR_BASE_SIZE * (isBeacon ? (1.5 + rand() * 0.8) : (0.55 + rand() * 0.65));
 
       const c = palettes[Math.floor(rand() * palettes.length)];
       col[i * 3]     = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
 
-      // Varied twinkle rates & phases
       spd[i] = 1.0 + rand() * 2.4;
       amp[i] = 0.15 + rand() * 0.25;
       phs[i] = rand() * Math.PI * 2;
@@ -159,26 +182,42 @@ export const SpaceBackground = ({
   }, []);
 
   // Update loop
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
+    const parallaxFactor = reducedMotion ? 0.0 : 1.0;
 
-    // 1. Stars twinkle
+    // 1. Slow cosmic drift and subtle parallax of the Milky Way celestial sphere
+    if (celestialSphereRef.current) {
+      celestialSphereRef.current.rotation.y += delta * 0.0014;
+      const targetSphereX = mousePos.x * 0.012 * parallaxFactor;
+      const targetSphereY = mousePos.y * 0.012 * parallaxFactor;
+      celestialSphereRef.current.position.x = THREE.MathUtils.lerp(
+        celestialSphereRef.current.position.x,
+        targetSphereX,
+        0.05
+      );
+      celestialSphereRef.current.position.y = THREE.MathUtils.lerp(
+        celestialSphereRef.current.position.y,
+        targetSphereY,
+        0.05
+      );
+    }
+
+    // 2. Stars twinkle & parallax
     if (starMatRef.current) {
       starMatRef.current.uniforms.uTime.value = t;
     }
 
-    // 2. Nebula slow drift
-    if (nebulaMatRef.current) {
-      nebulaMatRef.current.uniforms.uTime.value = t;
-    }
-
-    // 3. Subtle mouse parallax (reduced/disabled for touch or reduced-motion)
-    const parallaxFactor = reducedMotion ? 0.0 : 1.0;
     if (starsGroupRef.current) {
       const targetX = mousePos.x * PARALLAX_STARS_STRENGTH * parallaxFactor;
       const targetY = mousePos.y * PARALLAX_STARS_STRENGTH * parallaxFactor;
       starsGroupRef.current.position.x = THREE.MathUtils.lerp(starsGroupRef.current.position.x, targetX, 0.05);
       starsGroupRef.current.position.y = THREE.MathUtils.lerp(starsGroupRef.current.position.y, targetY, 0.05);
+    }
+
+    // 3. Nebula slow drift
+    if (nebulaMatRef.current) {
+      nebulaMatRef.current.uniforms.uTime.value = t;
     }
 
     if (nebulaMeshRef.current) {
@@ -188,12 +227,11 @@ export const SpaceBackground = ({
       nebulaMeshRef.current.position.y = THREE.MathUtils.lerp(nebulaMeshRef.current.position.y, targetY, 0.05);
     }
 
-    // 4. Tasteful Shooting Star (Active on MEDIUM & HIGH tiers, skipped on reduced-motion)
+    // 4. Tasteful Shooting Star
     if (activeTier !== 'LOW' && !reducedMotion && shootingStarRef.current) {
       const timer = shootTimerRef.current;
 
       if (!timer.active && t > timer.nextTriggerTime) {
-        // Launch a new shooting star across upper/mid sky
         timer.active = true;
         timer.startTime = t;
         const startX = -12.0 + Math.random() * 8.0;
@@ -201,7 +239,7 @@ export const SpaceBackground = ({
         const startZ = -28.0;
 
         const distance = 14.0 + Math.random() * 6.0;
-        const angle = -0.55 - Math.random() * 0.25; // Diagonal streak heading down-right
+        const angle = -0.55 - Math.random() * 0.25;
 
         shootStartPosRef.current.set(startX, startY, startZ);
         shootEndPosRef.current.set(
@@ -217,11 +255,9 @@ export const SpaceBackground = ({
         const elapsed = t - timer.startTime;
         const progress = Math.min(1.0, elapsed / SHOOTING_STAR_DURATION);
 
-        // Move position along streak
         shootCurPosRef.current.copy(shootStartPosRef.current).lerp(shootEndPosRef.current, progress);
         shootingStarRef.current.position.copy(shootCurPosRef.current);
 
-        // Fade in rapidly, then fade out
         const alpha = Math.sin(progress * Math.PI) * 0.85;
         shootUniforms.uAlpha.value = alpha;
         shootUniforms.uProgress.value = progress;
@@ -237,13 +273,22 @@ export const SpaceBackground = ({
 
   return (
     <group>
-      {/* ── Deep Space Dark Void ── */}
-      <mesh position={[0, 0, -48]}>
-        <planeGeometry args={[120, 120]} />
-        <meshBasicMaterial color="#02040b" depthWrite={false} />
+      {/* ── 1. High-Resolution Milky Way Celestial Sphere Panorama ── */}
+      <mesh
+        ref={celestialSphereRef}
+        rotation={[0.12, -0.70, 0.08]}
+        renderOrder={0}
+      >
+        <sphereGeometry args={[92, 64, 32]} />
+        <meshBasicMaterial
+          map={milkyWayTexture}
+          side={THREE.BackSide}
+          depthWrite={false}
+          toneMapped={false}
+        />
       </mesh>
 
-      {/* ── Procedural Domain-Warped Cosmic Nebula (Right side balance) ── */}
+      {/* ── 2. Procedural Domain-Warped Cosmic Nebula (Right side balance) ── */}
       <mesh
         ref={nebulaMeshRef}
         position={[14, 1, -30]}
@@ -262,7 +307,7 @@ export const SpaceBackground = ({
         />
       </mesh>
 
-      {/* ── 6,500 Crisp Forward-Weighted Stars ── */}
+      {/* ── 3. Crisp Multilayer Stars with Parallax ── */}
       <points ref={starsGroupRef} renderOrder={2}>
         <bufferGeometry>
           <bufferAttribute
@@ -305,7 +350,7 @@ export const SpaceBackground = ({
         />
       </points>
 
-      {/* ── Rare Tasteful Shooting Star ── */}
+      {/* ── 4. Rare Tasteful Shooting Star ── */}
       <mesh
         ref={shootingStarRef}
         scale={[3.2, 0.08, 1]}

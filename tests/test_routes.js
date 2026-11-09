@@ -92,7 +92,7 @@ async function main() {
     // ── 1. TEST ROUTE 1: LANDING PAGE ("/") ──
     console.log('Testing Route 1: http://localhost:5173/ ...');
     await send('Page.navigate', { url: 'http://localhost:5173/' });
-    await new Promise((r) => setTimeout(r, 4000));
+    await new Promise((r) => setTimeout(r, 6500));
 
     // Capture Landing Hero (Scroll 0)
     let res = await send('Page.captureScreenshot', { format: 'png' });

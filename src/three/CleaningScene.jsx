@@ -43,11 +43,11 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
         enableDamping
       />
 
-      <SpaceBackground reducedMotion={false} />
+      <SpaceBackground reducedMotion={false} qualityOverride={liteMode ? 'LOW' : 'HIGH'} />
       <Sun healProgress={cleanliness / 100} isLowEnd={liteMode} />
 
       <group ref={earthGroupRef} scale={1.0}>
-        <Earth healProgress={cleanliness / 100} />
+        <Earth healProgress={cleanliness / 100} isLowEnd={liteMode} />
         <Clouds healProgress={cleanliness / 100} />
         <Atmosphere healProgress={cleanliness / 100} />
 

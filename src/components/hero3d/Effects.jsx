@@ -1,47 +1,40 @@
 import React from 'react';
-import { EffectComposer, Bloom, Vignette, DepthOfField, Noise } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
 
 // ═══════════════════════════════════════════════════════════════
-// TWEAKABLE CONSTANTS (Post-Processing Effects)
+// CONSTANTS (Post-Processing Effects)
 // ═══════════════════════════════════════════════════════════════
-export const BLOOM_INTENSITY = 0.32;          // Subtle glow on sun core & brightest stars (no big white disc)
-export const BLOOM_THRESHOLD = 0.95;          // Strict cutoff so only tiny white-hot core blooms
-export const BLOOM_SMOOTHING = 0.08;
-export const VIGNETTE_DARKNESS = 0.65;        // Subtle perimeter vignette
-export const VIGNETTE_OFFSET = 0.22;
-export const DOF_BOKEH_SCALE = 1.60;          // Soft bokeh blur on foreground bottle
-export const NOISE_OPACITY = 0.014;           // Micro film grain
+export const BLOOM_INTENSITY = 0.22;          // Gentle bloom on atmosphere rim & bright stars only
+export const BLOOM_THRESHOLD = 0.92;          // High cutoff so Earth terrain stays razor sharp
+export const BLOOM_SMOOTHING = 0.10;
+export const VIGNETTE_DARKNESS = 0.58;        // Soft edge vignette
+export const VIGNETTE_OFFSET = 0.25;
+export const NOISE_OPACITY = 0.012;           // Subtle film grain
 
 export const Effects = ({ isLowEnd = false }) => {
+  if (isLowEnd) return null;
+
   return (
-    <EffectComposer multisampling={isLowEnd ? 0 : 4}>
-      {/* 1. Cinematic Bloom for Sun, Flares, and Ozone Rim */}
+    <EffectComposer multisampling={4}>
+      {/* 1. Gentle Bloom: atmosphere rim and bright star beacons only */}
       <Bloom
-        intensity={isLowEnd ? BLOOM_INTENSITY * 0.5 : BLOOM_INTENSITY}
+        intensity={BLOOM_INTENSITY}
         luminanceThreshold={BLOOM_THRESHOLD}
         luminanceSmoothing={BLOOM_SMOOTHING}
         mipmapBlur
       />
 
-      {/* 2. Depth of field (Earth at origin stays razor sharp, foreground objects blur) */}
-      {!isLowEnd && (
-        <DepthOfField
-          target={[0, 0, 0]}
-          focalLength={0.042}
-          bokehScale={DOF_BOKEH_SCALE}
-          height={480}
-        />
-      )}
-
-      {/* 3. Outer Edge Vignette Falloff */}
+      {/* 2. Outer Edge Vignette */}
       <Vignette
         eskil={false}
         offset={VIGNETTE_OFFSET}
         darkness={VIGNETTE_DARKNESS}
       />
 
-      {/* 4. Cinematic film grain */}
+      {/* 3. Subtle Film Grain */}
       <Noise opacity={NOISE_OPACITY} />
     </EffectComposer>
   );
 };
+
+export default Effects;

@@ -8,62 +8,156 @@ import { Earth } from '../components/hero3d/Earth';
 import { Clouds } from '../components/hero3d/Clouds';
 import { Atmosphere } from '../components/hero3d/Atmosphere';
 import { FloatingDebris } from '../components/hero3d/FloatingDebris';
-import { SurfaceClutter } from '../components/hero3d/SurfaceClutter';
 import { Effects } from '../components/hero3d/Effects';
 import { ArrowRight, Leaf, Sparkles } from 'lucide-react';
 
-const LandingSceneController = ({ scrollProgress, isTransitioning, mousePos }) => {
+// Camera & Earth target values per discrete beat
+const BEAT_CAMERA_TARGETS = [
+  { camZ: 3.65, earthFactor: 1.0 },   // Beat 0: Hero (Earth on right x=1.35, camZ=3.65)
+  { camZ: 3.25, earthFactor: 0.7 },   // Beat 1: Plastic Crisis (camZ=3.25, earth moves slightly inward)
+  { camZ: 2.85, earthFactor: 0.35 },  // Beat 2: Forests & Air (camZ=2.85, earth moves more inward)
+  { camZ: 2.45, earthFactor: 0.0 },   // Beat 3: Restoration Call (camZ=2.45, earth centered x=0)
+];
+
+// Discrete story beats configuration
+const BEATS_DATA = [
+  {
+    id: 0,
+    eyebrow: 'A CLEANER PLANET. A BRIGHTER TOMORROW.',
+    eyebrowColor: 'text-white/70',
+    headline: (
+      <>
+        Our <span className="text-[#4ade80]">Earth</span>
+        <br />
+        is Drowning
+      </>
+    ),
+    body: "Plastic, pollution and human waste are choking our home. It's time to act.",
+    button: {
+      label: 'Start Cleaning',
+      primary: true,
+      large: false,
+    },
+  },
+  {
+    id: 1,
+    eyebrow: 'GLOBAL CRISIS REPORT',
+    eyebrowColor: 'text-red-400',
+    headline: 'Millions of tonnes of plastic reach our oceans every year.',
+    source: 'Over 14 million tonnes per year — IUCN 2024',
+  },
+  {
+    id: 2,
+    eyebrow: 'ATMOSPHERE & FORESTS',
+    eyebrowColor: 'text-amber-400',
+    headline: 'Forests shrink. The air gets heavier.',
+    body: 'Over 10 million hectares of forest are destroyed every year. Carbon suffocates our atmosphere and natural ecosystems teeter on the brink.',
+    source: 'Global Forest Resources Assessment — FAO 2024',
+  },
+  {
+    id: 3,
+    eyebrow: 'CALL TO RESTORATION',
+    eyebrowColor: 'text-[#4ade80]',
+    headline: 'The planet is asking for help.',
+    body: 'Every piece of debris removed brings life back to our oceans and continents. You have the power to turn back the tide.',
+    button: {
+      label: 'Start Cleaning',
+      primary: true,
+      large: true,
+      badge: 'Interactive Restoration Simulator',
+    },
+  },
+];
+
+// Compute activeBeat with 2% hysteresis to eliminate edge flicker
+const computeActiveBeat = (progress, prevBeat) => {
+  const H = 0.02; // 2% hysteresis
+
+  // Direct jumps if more than 1 beat away
+  if (progress >= 0.80 + H) return 3;
+  if (progress < 0.25 - H) return 0;
+
+  // Single step transitions with hysteresis
+  if (prevBeat === 0) {
+    return progress >= 0.25 + H ? 1 : 0;
+  }
+  if (prevBeat === 1) {
+    if (progress < 0.25 - H) return 0;
+    if (progress >= 0.55 + H) return 2;
+    return 1;
+  }
+  if (prevBeat === 2) {
+    if (progress < 0.55 - H) return 1;
+    if (progress >= 0.80 + H) return 3;
+    return 2;
+  }
+  if (prevBeat === 3) {
+    return progress < 0.80 - H ? 2 : 3;
+  }
+  return 0;
+};
+
+const LandingSceneController = ({ activeBeat, isTransitioning, mousePos }) => {
   const earthGroupRef = useRef(null);
-  const targetCamZ = useRef(3.65);
+  const currentCamZ = useRef(3.65);
+  const currentEarthPos = useRef(new THREE.Vector3(1.35, 0, 0));
+  const currentLookAt = useRef(new THREE.Vector3(0, 0, 0));
   const { viewport, size } = useThree();
   const isPortrait = viewport.width < viewport.height;
   const isMobile = size.width < 768 || isPortrait;
 
-  // Responsive Earth starting position (on the right ~55-60% width on desktop, centered on mobile)
   const baseEarthX = isMobile ? 0.0 : 1.35;
-  const currentEarthX = THREE.MathUtils.lerp(baseEarthX, 0.0, scrollProgress);
-  const currentEarthY = isMobile ? THREE.MathUtils.lerp(-0.45, 0.0, scrollProgress) : 0.0;
+  const baseEarthY = isMobile ? -0.45 : 0.0;
 
   useFrame((state, delta) => {
-    // Scroll drives slow camera push-in toward polluted Earth (from 3.65 down to 2.45)
-    let desiredZ = THREE.MathUtils.lerp(3.65, 2.45, scrollProgress);
+    const targetConfig = BEAT_CAMERA_TARGETS[activeBeat] || BEAT_CAMERA_TARGETS[0];
 
-    // Zoom into Earth on button click transition
+    // Desired camera Z: either transitioning (1.45) or the active beat's target
+    let targetZ = targetConfig.camZ;
     if (isTransitioning) {
-      desiredZ = 1.45;
+      targetZ = 1.45;
     }
 
-    targetCamZ.current = THREE.MathUtils.lerp(targetCamZ.current, desiredZ, delta * 3.5);
-    state.camera.position.z = targetCamZ.current;
+    // 600-800ms eased tween (exponential ease-out, independent of scroll speed)
+    const easeFactor = Math.min(delta * 4.5, 1.0);
+    currentCamZ.current = THREE.MathUtils.lerp(currentCamZ.current, targetZ, easeFactor);
+    state.camera.position.z = currentCamZ.current;
 
-    // Slight camera look offset to balance Earth composition on the right
-    const lookTargetX = THREE.MathUtils.lerp(currentEarthX * 0.15, 0.0, scrollProgress);
-    state.camera.lookAt(lookTargetX, currentEarthY * 0.2, 0);
+    // Target Earth position for this beat
+    const targetEarthX = baseEarthX * targetConfig.earthFactor;
+    const targetEarthY = baseEarthY * targetConfig.earthFactor;
 
-    // Earth slow spin (polluted state, never heals on landing page)
+    currentEarthPos.current.x = THREE.MathUtils.lerp(currentEarthPos.current.x, targetEarthX, easeFactor);
+    currentEarthPos.current.y = THREE.MathUtils.lerp(currentEarthPos.current.y, targetEarthY, easeFactor);
+
     if (earthGroupRef.current) {
-      earthGroupRef.current.position.set(currentEarthX, currentEarthY, 0);
+      earthGroupRef.current.position.set(currentEarthPos.current.x, currentEarthPos.current.y, 0);
       earthGroupRef.current.rotation.y += delta * 0.015;
     }
+
+    // Gentle camera look offset to balance Earth composition
+    const targetLookX = currentEarthPos.current.x * 0.15;
+    const targetLookY = currentEarthPos.current.y * 0.2;
+    currentLookAt.current.x = THREE.MathUtils.lerp(currentLookAt.current.x, targetLookX, easeFactor);
+    currentLookAt.current.y = THREE.MathUtils.lerp(currentLookAt.current.y, targetLookY, easeFactor);
+    state.camera.lookAt(currentLookAt.current.x, currentLookAt.current.y, 0);
   });
 
   return (
     <>
       <SpaceBackground mousePos={mousePos} reducedMotion={false} />
-      {/* Sun stays in polluted mood (healProgress = 0) with rays and flare */}
+      {/* Sun key lighting (healProgress = 0, camera following) */}
       <Sun healProgress={0} isLowEnd={false} />
 
       <group ref={earthGroupRef} scale={0.72}>
-        {/* Earth stays 100% polluted (healProgress = 0) */}
         <Earth healProgress={0} />
-        <SurfaceClutter healProgress={0} isLowEnd={false} />
         <Clouds healProgress={0} />
         <Atmosphere healProgress={0} />
       </group>
 
-      {/* Floating trash: medium orbital pieces centered on Earth + large hero pieces in foreground */}
+      {/* Floating debris follows Earth center position */}
       <FloatingDebris
-        center={[currentEarthX, currentEarthY, 0]}
+        center={[currentEarthPos.current.x, currentEarthPos.current.y, 0]}
         mousePos={mousePos}
         healProgress={0}
       />
@@ -73,10 +167,20 @@ const LandingSceneController = ({ scrollProgress, isTransitioning, mousePos }) =
 
 export const Landing = () => {
   const navigate = useNavigate();
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeBeat, setActiveBeat] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [screenFlash, setScreenFlash] = useState(false);
+
+  // Enable snap scrolling on html / body while on the Landing intro
+  useEffect(() => {
+    document.documentElement.classList.add('intro-snap');
+    document.body.classList.add('intro-snap');
+    return () => {
+      document.documentElement.classList.remove('intro-snap');
+      document.body.classList.remove('intro-snap');
+    };
+  }, []);
 
   // Mouse parallax listener
   useEffect(() => {
@@ -89,13 +193,13 @@ export const Landing = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Scroll listener tracking 0.0 to 1.0 progress across ~250vh
+  // Scroll listener computing discrete activeBeat with hysteresis
   useEffect(() => {
     const handleScroll = () => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       if (maxScroll <= 0) return;
       const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
-      setScrollProgress(progress);
+      setActiveBeat((prevBeat) => computeActiveBeat(progress, prevBeat));
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -103,72 +207,110 @@ export const Landing = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Smooth jump to any discrete beat
+  const goToBeat = (beatIndex) => {
+    const index = Math.max(0, Math.min(3, beatIndex));
+    const targetY = index * window.innerHeight;
+    window.scrollTo({
+      top: targetY,
+      behavior: 'smooth',
+    });
+  };
+
+  // Keyboard navigation: ArrowDown / PageDown / Space (next beat), ArrowUp / PageUp (prev beat)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      if (['ArrowDown', 'PageDown', ' '].includes(e.key)) {
+        e.preventDefault();
+        setActiveBeat((curr) => {
+          const next = Math.min(curr + 1, 3);
+          goToBeat(next);
+          return curr;
+        });
+      } else if (['ArrowUp', 'PageUp'].includes(e.key)) {
+        e.preventDefault();
+        setActiveBeat((curr) => {
+          const prev = Math.max(curr - 1, 0);
+          goToBeat(prev);
+          return curr;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleStartCleaning = () => {
     setIsTransitioning(true);
     setScreenFlash(true);
 
-    // Camera zooms into Earth, quick flash, seamless navigate to /clean
+    // Camera zooms into Earth, brief flash, seamless navigate to /clean
     setTimeout(() => {
       navigate('/clean');
     }, 700);
   };
 
-  // Hero text opacity (initial screen: visible 0.0 -> 0.22, fades out completely by 0.28)
-  const heroOpacity = Math.max(0, Math.min(1, (0.24 - scrollProgress) / 0.12));
-
-  // Beat 1: "Millions of tonnes of plastic reach our oceans every year." (0.28 to 0.58)
-  const beat1Opacity = Math.max(0, Math.min(1, (scrollProgress - 0.26) / 0.10)) *
-                       Math.max(0, Math.min(1, (0.58 - scrollProgress) / 0.10));
-
-  // Beat 2: "The planet is asking for help." (0.60 to 0.86)
-  const beat2Opacity = Math.max(0, Math.min(1, (scrollProgress - 0.60) / 0.10)) *
-                       Math.max(0, Math.min(1, (0.86 - scrollProgress) / 0.08));
-
-  // Final Centered Action Button: 0.86 to 1.00
-  const finalButtonOpacity = Math.max(0, Math.min(1, (scrollProgress - 0.86) / 0.08));
-
-  // Subtle vignette that intensifies gently as camera gets closer to debris
-  const vignetteDarkness = 0.52 + scrollProgress * 0.25;
+  const currentBeatData = BEATS_DATA[activeBeat] || BEATS_DATA[0];
+  const VIGNETTE_DENSITY = [0.52, 0.58, 0.64, 0.72];
+  const vignetteDarkness = VIGNETTE_DENSITY[activeBeat] || 0.52;
 
   return (
-    <div className="relative min-h-[250vh] bg-[#030712] text-white selection:bg-emerald-500 selection:text-black">
+    <div className="relative bg-[#030712] text-white selection:bg-emerald-500 selection:text-black">
       
-      {/* ── Transparent Header (Hides once game phase starts) ── */}
+      {/* ── 4 Snap Sections (Total length = 4 x 100vh) ── */}
+      <section className="snap-beat-section pointer-events-none" />
+      <section className="snap-beat-section pointer-events-none" />
+      <section className="snap-beat-section pointer-events-none" />
+      <section className="snap-beat-section pointer-events-none" />
+
+      {/* ── Transparent Fixed Header (Hides on game transition) ── */}
       <header
-        className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-6 sm:px-12 py-6 transition-all duration-500 pointer-events-auto"
+        className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-6 sm:px-12 py-6 transition-all duration-300 pointer-events-auto"
         style={{
           opacity: isTransitioning ? 0 : 1,
           transform: isTransitioning ? 'translateY(-20px)' : 'translateY(0)',
         }}
       >
         {/* Left: Leaf Logo + EcoFuture */}
-        <div className="flex items-center gap-2.5 select-none">
-          <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[0_0_15px_rgba(74,222,128,0.2)]">
-            <Leaf className="w-5 h-5 text-[#4ade80]" />
+        <div
+          onClick={() => goToBeat(0)}
+          className="flex items-center gap-2.5 select-none cursor-pointer"
+        >
+          <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <Leaf className="w-4 h-4 text-[#4ade80]" />
           </div>
-          <span className="text-xl sm:text-2xl font-bold tracking-tight text-white font-sans">
+          <span className="font-display font-extrabold text-xl tracking-tight text-white">
             EcoFuture
           </span>
         </div>
 
         {/* Right: Nav items (About, Impact, Solutions) + Take Action pill */}
         <div className="flex items-center gap-6 sm:gap-8">
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300">
+          <nav className="hidden md:flex items-center gap-7">
             <button
-              onClick={() => window.scrollTo({ top: window.innerHeight * 0.7, behavior: 'smooth' })}
-              className="hover:text-[#4ade80] transition-colors cursor-pointer"
+              onClick={() => goToBeat(1)}
+              className={`font-label uppercase text-[12px] tracking-[0.2em] transition-all duration-200 cursor-pointer ${
+                activeBeat === 1 ? 'text-[#4ade80]' : 'text-white/70 hover:text-[#4ade80]'
+              }`}
             >
               About
             </button>
             <button
-              onClick={() => window.scrollTo({ top: window.innerHeight * 1.3, behavior: 'smooth' })}
-              className="hover:text-[#4ade80] transition-colors cursor-pointer"
+              onClick={() => goToBeat(2)}
+              className={`font-label uppercase text-[12px] tracking-[0.2em] transition-all duration-200 cursor-pointer ${
+                activeBeat === 2 ? 'text-[#4ade80]' : 'text-white/70 hover:text-[#4ade80]'
+              }`}
             >
               Impact
             </button>
             <button
-              onClick={() => window.scrollTo({ top: window.innerHeight * 2.0, behavior: 'smooth' })}
-              className="hover:text-[#4ade80] transition-colors cursor-pointer"
+              onClick={() => goToBeat(3)}
+              className={`font-label uppercase text-[12px] tracking-[0.2em] transition-all duration-200 cursor-pointer ${
+                activeBeat === 3 ? 'text-[#4ade80]' : 'text-white/70 hover:text-[#4ade80]'
+              }`}
             >
               Solutions
             </button>
@@ -176,7 +318,7 @@ export const Landing = () => {
           
           <button
             onClick={handleStartCleaning}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#4ade80] hover:bg-[#3ecb74] text-slate-950 font-bold text-xs sm:text-sm tracking-wide shadow-[0_0_25px_rgba(74,222,128,0.4)] transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            className="btn-aerospace-secondary text-[12px] py-2 px-4"
           >
             <span>Take Action</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -200,7 +342,7 @@ export const Landing = () => {
         >
           <Suspense fallback={null}>
             <LandingSceneController
-              scrollProgress={scrollProgress}
+              activeBeat={activeBeat}
               isTransitioning={isTransitioning}
               mousePos={mousePos}
             />
@@ -208,17 +350,17 @@ export const Landing = () => {
           </Suspense>
         </Canvas>
 
-        {/* Left-to-Right Dark Gradient Scrim (Protects text contrast from Earth / bright space) */}
+        {/* Left-to-Right Dark Gradient Scrim (Protects text contrast from Earth) */}
         <div
-          className="absolute inset-y-0 left-0 w-full md:w-3/5 pointer-events-none transition-opacity duration-300"
+          className="absolute inset-y-0 left-0 w-full md:w-3/5 pointer-events-none"
           style={{
             background: 'linear-gradient(to right, rgba(3, 7, 18, 0.94) 0%, rgba(3, 7, 18, 0.82) 45%, rgba(3, 7, 18, 0.25) 80%, transparent 100%)',
           }}
         />
 
-        {/* Dynamic Pollution Vignette & Contrast Overlay */}
+        {/* Dynamic Pollution Vignette & Contrast Overlay (Smooth 600ms transition) */}
         <div
-          className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+          className="absolute inset-0 pointer-events-none transition-opacity duration-700 ease-out"
           style={{
             background: `radial-gradient(circle at 50% 50%, transparent 40%, rgba(3, 7, 18, ${vignetteDarkness}) 100%)`,
           }}
@@ -236,138 +378,102 @@ export const Landing = () => {
         {/* Spacer for fixed header */}
         <div className="h-16" />
 
-        {/* ── Left Column Stage: Hero Screen & Scroll Beats ── */}
-        <div className="relative w-full max-w-xl md:max-w-2xl my-auto text-left">
-          
-          {/* 1. Hero First Screen (Visible at top) */}
-          <div
-            className="transition-all duration-500"
-            style={{
-              opacity: heroOpacity,
-              pointerEvents: heroOpacity > 0.1 ? 'auto' : 'none',
-              transform: `translateY(${(1 - heroOpacity) * -20}px)`,
-              display: heroOpacity <= 0 ? 'none' : 'block',
-            }}
-          >
-            {/* Small letter-spaced eyebrow */}
-            <p className="text-xs uppercase tracking-[0.22em] text-[#4ade80] font-mono font-bold mb-4">
-              A CLEANER PLANET. A BRIGHTER TOMORROW.
+        {/* ── Left Column Stage: Stepped Beats (Only active beat rendered) ── */}
+        <div className="relative w-full max-w-xl md:max-w-2xl my-auto text-left pointer-events-auto">
+          <div key={activeBeat} className="beat-unit">
+            
+            {/* Eyebrow */}
+            <p className={`font-label uppercase text-[12px] sm:text-[13px] tracking-[0.3em] ${currentBeatData.eyebrowColor} mb-4 block`}>
+              {currentBeatData.eyebrow}
             </p>
 
-            {/* Huge headline with Earth in green accent */}
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.06] mb-6 drop-shadow-2xl font-sans">
-              Our <span className="text-[#4ade80]">Earth</span>
-              <br />
-              is Drowning
+            {/* Headline */}
+            <h1 className="font-display font-extrabold text-[clamp(2.5rem,7vw,6.5rem)] leading-[0.95] tracking-[-0.02em] text-white mb-6 drop-shadow-2xl">
+              {currentBeatData.headline}
             </h1>
 
-            {/* Muted paragraph */}
-            <p className="text-base sm:text-lg text-slate-300 font-normal leading-relaxed mb-8 max-w-md">
-              Plastic, pollution and human waste are choking our home. It's time to act.
-            </p>
+            {/* Body Text */}
+            {currentBeatData.body && (
+              <p className="font-body font-light text-[18px] sm:text-[20px] leading-[1.6] text-white/70 mb-8 max-w-[46ch]">
+                {currentBeatData.body}
+              </p>
+            )}
 
-            {/* Green pill button */}
-            <button
-              onClick={handleStartCleaning}
-              disabled={isTransitioning}
-              className="group inline-flex items-center gap-3 px-8 py-4 rounded-full bg-[#4ade80] hover:bg-[#3ecb74] text-slate-950 font-extrabold text-base tracking-wide shadow-[0_0_35px_rgba(74,222,128,0.5)] hover:shadow-[0_0_50px_rgba(74,222,128,0.8)] transition-all hover:scale-105 active:scale-95 cursor-pointer"
-            >
-              <span>Start Cleaning</span>
-              <ArrowRight className="w-5 h-5 text-slate-950 group-hover:translate-x-1.5 transition-transform" />
-            </button>
+            {/* Sourced Data Line */}
+            {currentBeatData.source && (
+              <p className="font-mono text-xs sm:text-sm text-white/50 tracking-wider mb-8">
+                {currentBeatData.source}
+              </p>
+            )}
+
+            {/* Action Button (Beat 0 and Beat 3) */}
+            {currentBeatData.button && (
+              <div>
+                <button
+                  onClick={handleStartCleaning}
+                  disabled={isTransitioning}
+                  className={`btn-aerospace-primary group ${
+                    currentBeatData.button.large ? 'text-base sm:text-lg px-9 py-4 shadow-[0_0_50px_rgba(74,222,128,0.5)]' : ''
+                  }`}
+                >
+                  {currentBeatData.button.large && (
+                    <Sparkles className="w-5 h-5 text-slate-950 group-hover:rotate-12 transition-transform duration-200" />
+                  )}
+                  <span>{currentBeatData.button.label}</span>
+                  <ArrowRight className="w-4 h-4 text-slate-950 group-hover:translate-x-1.5 transition-transform duration-200" />
+                </button>
+
+                {currentBeatData.button.badge && (
+                  <p className="mt-4 font-mono text-xs text-white/50 uppercase tracking-[0.25em]">
+                    {currentBeatData.button.badge}
+                  </p>
+                )}
+              </div>
+            )}
+
           </div>
-
-          {/* 2. Scroll Beat 1 (Left aligned in same spot) */}
-          <div
-            className="transition-all duration-500"
-            style={{
-              opacity: beat1Opacity,
-              transform: `translateY(${(1 - beat1Opacity) * 20}px)`,
-              display: beat1Opacity <= 0 ? 'none' : 'block',
-            }}
-          >
-            <p className="text-xs uppercase tracking-[0.20em] text-red-400 font-mono font-semibold mb-3">
-              GLOBAL CRISIS REPORT
-            </p>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white mb-4 leading-tight drop-shadow-2xl">
-              Millions of tonnes of plastic reach our oceans every year.
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-400 font-mono tracking-wide">
-              Over 14 million tonnes per year — IUCN 2024
-            </p>
-          </div>
-
-          {/* 3. Scroll Beat 2 (Left aligned in same spot) */}
-          <div
-            className="transition-all duration-500"
-            style={{
-              opacity: beat2Opacity,
-              transform: `translateY(${(1 - beat2Opacity) * 20}px)`,
-              display: beat2Opacity <= 0 ? 'none' : 'block',
-            }}
-          >
-            <p className="text-xs uppercase tracking-[0.20em] text-[#4ade80] font-mono font-semibold mb-3">
-              CALL TO RESTORATION
-            </p>
-            <h2 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white mb-4 leading-tight drop-shadow-2xl">
-              The planet is asking for help.
-            </h2>
-            <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed max-w-lg">
-              Forests shrink, carbon suffocates the atmosphere, and ecosystems teeter on the brink. You have the power to turn back the tide.
-            </p>
-          </div>
-
         </div>
 
-        {/* ── Centered Action Button at Scroll End ── */}
-        {finalButtonOpacity > 0.05 && (
-          <div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none transition-all duration-500"
-            style={{
-              opacity: finalButtonOpacity,
-              transform: `scale(${0.92 + finalButtonOpacity * 0.08})`,
-            }}
-          >
-            <div className="pointer-events-auto text-center">
-              <button
-                onClick={handleStartCleaning}
-                disabled={isTransitioning}
-                className="group relative inline-flex items-center gap-3.5 px-10 py-5 rounded-full bg-gradient-to-r from-emerald-500 to-[#4ade80] hover:from-emerald-400 hover:to-green-300 text-slate-950 font-black text-lg sm:text-xl tracking-wider uppercase shadow-[0_0_50px_rgba(74,222,128,0.7)] hover:shadow-[0_0_75px_rgba(74,222,128,0.95)] transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                <Sparkles className="w-6 h-6 text-slate-950 group-hover:rotate-12 transition-transform" />
-                <span>Start Cleaning</span>
-                <ArrowRight className="w-6 h-6 text-slate-950 group-hover:translate-x-1.5 transition-transform" />
-              </button>
-              <p className="mt-3 text-xs font-mono text-slate-400 uppercase tracking-widest">
-                Interactive Restoration Simulator
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Bottom Bar: Mouse Scroll Indicator (Center) & Skip Intro (Right) ── */}
+        {/* ── Bottom Bar: Beat Dots / Mouse Indicator (Center) & Skip Intro (Right) ── */}
         <div className="relative w-full flex items-center justify-between pointer-events-auto">
           
-          {/* Empty left placeholder to balance layout */}
-          <div className="w-24 hidden sm:block" />
+          {/* Bottom Left: Beat Pagination Dots */}
+          <div className="flex items-center gap-2">
+            {[0, 1, 2, 3].map((b) => (
+              <button
+                key={b}
+                onClick={() => goToBeat(b)}
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                  b === activeBeat ? 'w-6 bg-[#4ade80]' : 'w-1.5 bg-white/20 hover:bg-white/50'
+                }`}
+                aria-label={`Jump to story beat ${b + 1}`}
+              />
+            ))}
+            <span className="font-mono text-xs text-white/40 ml-1.5 tracking-wider">
+              0{activeBeat + 1} / 04
+            </span>
+          </div>
 
-          {/* Bottom Center: Minimal Mouse Scroll Indicator with thin flanking lines */}
+          {/* Bottom Center: Minimal Mouse Scroll Indicator (visible on beats 0-2) */}
           <div
-            className="flex items-center justify-center gap-3 sm:gap-4 transition-opacity duration-500 mx-auto"
-            style={{ opacity: Math.max(0, 1 - scrollProgress * 6) }}
+            onClick={() => goToBeat(Math.min(activeBeat + 1, 3))}
+            className={`hidden sm:flex items-center justify-center gap-3 transition-opacity duration-300 cursor-pointer ${
+              activeBeat < 3 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            title="Scroll or click to advance"
           >
-            <div className="w-12 sm:w-24 h-px bg-gradient-to-r from-transparent to-slate-500/40" />
-            <div className="w-5 h-8 rounded-full border border-slate-500/50 flex items-start justify-center p-1.5 shadow-[0_0_12px_rgba(255,255,255,0.06)]">
-              <div className="w-1 h-2 rounded-full bg-slate-300 animate-bounce" />
+            <div className="w-12 h-px bg-white/15" />
+            <div className="w-5 h-8 rounded-full border border-white/25 flex items-start justify-center p-1.5">
+              <div className="w-1 h-2 rounded-full bg-white/70 animate-bounce" />
             </div>
-            <div className="w-12 sm:w-24 h-px bg-gradient-to-l from-transparent to-slate-500/40" />
+            <div className="w-12 h-px bg-white/15" />
           </div>
 
           {/* Bottom Right: Skip Intro Link */}
           <div className="w-24 text-right">
             <button
               onClick={() => navigate('/clean')}
-              className="text-xs font-mono text-slate-400 hover:text-[#4ade80] transition-colors p-2 cursor-pointer uppercase tracking-wider"
+              className="font-label uppercase text-[12px] tracking-[0.2em] text-white/50 hover:text-[#4ade80] transition-colors duration-200 p-2 cursor-pointer"
             >
               Skip intro &rarr;
             </button>
