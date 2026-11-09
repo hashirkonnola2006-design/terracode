@@ -30,22 +30,23 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0 }) => 
   }, [viewport.width, viewport.height, anchorX, anchorY]);
 
   // Load NASA 2K Blue Marble textures with linear mipmap filtering
-  const [dayMap, atmosMap, normalMap, specularMap] = useTexture([
+  const [dayMap, atmosMap, normalMap, specularMap, lightsMap] = useTexture([
     '/textures/earth_day_2048.jpg',
     '/textures/earth_atmos_2048.jpg',
     '/textures/earth_normal_2048.jpg',
     '/textures/earth_specular_2048.jpg',
+    '/textures/earth_lights_2048.png',
   ]);
 
   useMemo(() => {
-    [dayMap, atmosMap, normalMap, specularMap].forEach((t) => {
+    [dayMap, atmosMap, normalMap, specularMap, lightsMap].forEach((t) => {
       t.minFilter = THREE.LinearMipmapLinearFilter;
       t.magFilter = THREE.LinearFilter;
       t.generateMipmaps = true;
       t.anisotropy = 8;
       t.needsUpdate = true;
     });
-  }, [dayMap, atmosMap, normalMap, specularMap]);
+  }, [dayMap, atmosMap, normalMap, specularMap, lightsMap]);
 
   const earthUniforms = useMemo(() => {
     const u = THREE.UniformsUtils.clone(EarthShader.uniforms);
@@ -53,26 +54,31 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0 }) => 
     u.uAtmosMap.value = atmosMap;
     u.uNormalMap.value = normalMap;
     u.uSpecularMap.value = specularMap;
+    u.uLightsMap.value = lightsMap;
     u.uSunDir.value.copy(sunDir);
     u.uHeal.value = healProgress;
     return u;
-  }, [dayMap, atmosMap, normalMap, specularMap, sunDir]);
+  }, [dayMap, atmosMap, normalMap, specularMap, lightsMap, sunDir]);
 
-  useFrame((state) => {
+  const smoothHealRef = useRef(healProgress);
+
+  useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
+    smoothHealRef.current = THREE.MathUtils.lerp(smoothHealRef.current, healProgress, Math.min(delta * 4.0, 1.0));
 
     if (shaderMatRef.current) {
-      shaderMatRef.current.uniforms.uHeal.value = healProgress;
+      shaderMatRef.current.uniforms.uHeal.value = smoothHealRef.current;
       shaderMatRef.current.uniforms.uSunDir.value.copy(sunDir);
+      shaderMatRef.current.uniforms.uTime.value = t;
     }
 
     if (earthRef.current) {
       // Rotation slows slightly as Earth recovers
-      const currentSpeed = THREE.MathUtils.lerp(BASE_ROTATION_SPEED, HEALED_ROTATION_SPEED, healProgress);
+      const currentSpeed = THREE.MathUtils.lerp(BASE_ROTATION_SPEED, HEALED_ROTATION_SPEED, smoothHealRef.current);
       earthRef.current.rotation.y = INITIAL_ROTATION_Y + t * currentSpeed + scrollRotation;
 
       // Gentle scale expansion as biosphere recovers
-      const s = 1.0 + healProgress * HEAL_SCALE_EXPANSION;
+      const s = 1.0 + smoothHealRef.current * HEAL_SCALE_EXPANSION;
       earthRef.current.scale.set(s, s, s);
     }
   });

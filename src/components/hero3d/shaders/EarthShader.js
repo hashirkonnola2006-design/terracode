@@ -14,6 +14,8 @@ export const EarthShader = {
     uAtmosMap:    { value: null },
     uNormalMap:   { value: null },
     uSpecularMap: { value: null },
+    uLightsMap:   { value: null },
+    uTime:        { value: 0.0 },
     uHeal:        { value: 0.0 },
     uSunDir:      { value: new THREE.Vector3(-1.95, 1.10, 0.55).normalize() },
     uCameraPos:   { value: new THREE.Vector3(0, 0, 3.2) },
@@ -39,6 +41,8 @@ export const EarthShader = {
     uniform sampler2D uAtmosMap;
     uniform sampler2D uNormalMap;
     uniform sampler2D uSpecularMap;
+    uniform sampler2D uLightsMap;
+    uniform float     uTime;
     uniform float     uHeal;
     uniform vec3      uSunDir;
     uniform vec3      uCameraPos;
@@ -135,7 +139,7 @@ export const EarthShader = {
       pollutedLand = mix(pollutedLand, darkForest, isVeg * 0.75);
 
       // Grimy micro-dirt overlay on continents
-      float microMud = snoise(wn * 32.0);
+      float microMud = fbm(wn * 6.0);
       pollutedLand = mix(pollutedLand, vec3(0.14, 0.11, 0.08), smoothstep(0.40, 0.80, microMud) * 0.24);
 
       // Deep navy ocean matching reference image exactly
@@ -205,6 +209,19 @@ export const EarthShader = {
       vec3 finalCol = surfaceColor * (uSunColor * sunDiffuse * ${SUN_LIGHT_BOOST.toFixed(2)} + uAmbientColor)
                     + vec3(oceanSpec) * uSunColor
                     + frontColor * frontGlow * 1.55 * sunDiffuse;
+
+      // ── 5. POLLUTED EMBER GLOWS (Few sparse slow embers on damaged continents) ──
+      float fireNoise = fbm(wn * 5.0 + vec3(uTime * 0.03, 0.0, 0.0));
+      float fireSpot = smoothstep(0.78, 0.88, fireNoise) * (1.0 - oceanMask) * (1.0 - smoothstep(0.0, 0.35, uHeal));
+      vec3 fireColor = vec3(1.0, 0.35, 0.05) * (0.6 + 0.4 * sin(uTime * 3.0));
+      finalCol += fireColor * fireSpot * 0.7;
+
+      // ── 6. RENEWABLE CITY LIGHTS ON NIGHT SIDE (Appears at 70%+ Cleanliness) ──
+      float nightMask = smoothstep(0.08, -0.25, NdotL);
+      vec3 cityLights = texture2D(uLightsMap, vUv).rgb;
+      float lightsFade = smoothstep(0.70, 0.98, uHeal);
+      vec3 cleanCityGlow = cityLights * vec3(1.0, 0.88, 0.62) * lightsFade * nightMask * 2.6;
+      finalCol += cleanCityGlow;
 
       gl_FragColor = vec4(finalCol, 1.0);
     }

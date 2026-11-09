@@ -72,16 +72,17 @@ const CloudShader = {
       vec3 wn = normalize(vWorldNormal);
       float sunDiffuse = smoothstep(-0.06, 0.44, dot(wn, normalize(uSunDir)));
 
-      // ── COLOR SHIFT DRIVEN BY uHeal ──
-      // Polluted: subtle smoky tone with warm highlights
-      // Healed: pure brilliant white clouds
+      // ── COLOR SHIFT & FADE-IN DRIVEN BY uHeal (Fades in after 50%) ──
+      // Polluted: smoky smoggy clouds at low opacity
+      // Healed: pure brilliant white clouds that emerge cleanly
+      float cloudFade = smoothstep(0.35, 0.80, uHeal);
       vec3 pollutedCloud = mix(vec3(0.48, 0.44, 0.38), vec3(0.92, 0.88, 0.82), sunDiffuse);
       vec3 healedCloud   = mix(vec3(0.08, 0.12, 0.18), vec3(1.00, 1.00, 1.00), sunDiffuse);
 
       vec3 cloudCol = mix(pollutedCloud, healedCloud, uHeal);
 
-      float opacity = mix(${CLOUD_OPACITY_POLLUTED.toFixed(2)}, ${CLOUD_OPACITY_HEALED.toFixed(2)}, uHeal);
-      float alpha = cloudDensity * (sunDiffuse * 0.88 + 0.12) * opacity;
+      float baseOpacity = mix(${CLOUD_OPACITY_POLLUTED.toFixed(2)} * 0.3, ${CLOUD_OPACITY_HEALED.toFixed(2)}, cloudFade);
+      float alpha = cloudDensity * (sunDiffuse * 0.88 + 0.12) * baseOpacity;
 
       gl_FragColor = vec4(cloudCol, alpha);
     }
