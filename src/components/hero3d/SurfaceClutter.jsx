@@ -21,8 +21,8 @@ export const CRATES_COUNT_DESKTOP   = 16;   // Wooden pallets & crates
 export const CANS_COUNT_DESKTOP     = 28;   // Metal cans & oil drums
 export const BOTTLES_COUNT_DESKTOP  = 24;   // Plastic bottles with caps
 export const NETS_COUNT_DESKTOP     = 12;   // Fishing net tangles
-export const MEDIUM_COUNT_DESKTOP   = 950;  // Bottle caps, cups, shards
-export const TINY_COUNT_DESKTOP     = 3400; // Dense crusted micro-speckles
+export const MEDIUM_COUNT_DESKTOP   = 420;  // Bottle caps, cups, shards
+export const TINY_COUNT_DESKTOP     = 1600; // Dense crusted micro-speckles
 
 // Geometries for surface clutter objects
 function createCrumpledBagGeom() {
@@ -219,69 +219,69 @@ export const SurfaceClutter = ({ scrollRotation = 0, healProgress = 0, isLowEnd 
     };
 
     // 1. Bags & Tarps (White sacks, Royal blue tarps, Black garbage bags)
-    const bags = buildGroup(bagCount, 0.065, 0.40, 0.95, 0, (i, r) => {
+    const bags = buildGroup(bagCount, 0.026, 0.40, 0.95, 0, (i, r) => {
       const p = r();
       const col = new THREE.Color();
-      if (p < 0.45) col.set('#f4f6fa');      // Crisp white sack
-      else if (p < 0.75) col.set('#0d5cd4'); // Bright royal blue plastic tarp
-      else col.set('#1a1c20');               // Black/charcoal trash bag
+      if (p < 0.45) col.set('#b0b8c4');      // Grimy white sack
+      else if (p < 0.75) col.set('#1e3a8a'); // Muted plastic tarp
+      else col.set('#14171d');               // Black/charcoal trash bag
       return { type: 0, col };
     });
 
     // 2. Tires (Dark rubber with cracks)
-    const tires = buildGroup(tireCount, 0.052, 0.45, 0.95, 2, () => ({
+    const tires = buildGroup(tireCount, 0.022, 0.45, 0.95, 2, () => ({
       type: 2,
       col: new THREE.Color('#141417')
     }));
 
     // 3. Wooden Crates / Pallets (Wood brown)
-    const crates = buildGroup(crateCount, 0.048, 0.35, 0.90, 3, (i, r) => ({
+    const crates = buildGroup(crateCount, 0.020, 0.35, 0.90, 3, (i, r) => ({
       type: 3,
-      col: new THREE.Color(r() > 0.5 ? '#8b6238' : '#6b4b28')
+      col: new THREE.Color(r() > 0.5 ? '#6b4c2b' : '#4d3419')
     }));
 
     // 4. Metal Cans & Drums (Red soda cans, Silver cans, White/Rust drums)
-    const cans = buildGroup(canCount, 0.040, 0.30, 0.88, 1, (i, r) => {
+    const cans = buildGroup(canCount, 0.016, 0.30, 0.88, 1, (i, r) => {
       const p = r();
       const col = new THREE.Color();
-      if (p < 0.38) col.set('#d50000');      // Red soda can
-      else if (p < 0.75) col.set('#c8cdd6'); // Silver metal
-      else col.set('#f5f0e8');               // White oil drum
+      if (p < 0.38) col.set('#991b1b');      // Dark red soda can
+      else if (p < 0.75) col.set('#94a3b8'); // Silver/slate metal
+      else col.set('#c4b5a0');               // Weathered drum
       return { type: 1, col };
     });
 
     // 5. Plastic Bottles (Translucent bottle + blue/green caps)
-    const bottles = buildGroup(bottleCount, 0.044, 0.25, 0.85, 0, (i, r) => ({
+    const bottles = buildGroup(bottleCount, 0.018, 0.25, 0.85, 0, (i, r) => ({
       type: 0,
-      col: new THREE.Color(r() > 0.4 ? '#e2f0fc' : '#228be6')
+      col: new THREE.Color(r() > 0.4 ? '#b9d2e6' : '#1d4ed8')
     }));
 
     // 6. Fishing Nets (Emerald/olive tangled mesh)
-    const nets = buildGroup(netCount, 0.056, 0.40, 0.92, 4, () => ({
+    const nets = buildGroup(netCount, 0.024, 0.40, 0.92, 4, () => ({
       type: 4,
-      col: new THREE.Color('#165e2a')
+      col: new THREE.Color('#144820')
     }));
 
     // 7. Medium Debris (Caps, Shards, Cups - staggered 0.20 -> 0.75)
-    const medium = buildGroup(mediumCount, 0.022, 0.20, 0.75, 0, (i, r) => {
+    const medium = buildGroup(mediumCount, 0.013, 0.20, 0.75, 0, (i, r) => {
       const p = r();
       const col = new THREE.Color();
-      if (p < 0.30) col.set('#f8fafc');      // White
-      else if (p < 0.55) col.set('#2563eb'); // Blue
-      else if (p < 0.75) col.set('#dc2626'); // Red
-      else if (p < 0.88) col.set('#f59e0b'); // Yellow/orange
-      else col.set('#16a34a');               // Green
+      if (p < 0.40) col.set('#d8dde6');      // Grimy white
+      else if (p < 0.65) col.set('#2055a5'); // Muted plastic blue
+      else if (p < 0.80) col.set('#a83232'); // Rusted red
+      else if (p < 0.90) col.set('#c27d1a'); // Dirty yellow/ochre
+      else col.set('#283038');               // Charcoal
       return { type: p < 0.55 ? 0 : 1, col };
     });
 
-    // 8. Tiny Micro-Debris (3,000+ Speckles - clears early 0.05 -> 0.55)
-    const tiny = buildGroup(tinyCount, 0.010, 0.05, 0.55, 5, (i, r) => {
+    // 8. Tiny Micro-Debris (Speckles - clears early 0.05 -> 0.55)
+    const tiny = buildGroup(tinyCount, 0.0055, 0.05, 0.55, 5, (i, r) => {
       const p = r();
       const col = new THREE.Color();
-      if (p < 0.40) col.set('#f1f5f9');      // White micro-plastic
-      else if (p < 0.65) col.set('#3b82f6'); // Blue micro-fragment
-      else if (p < 0.85) col.set('#b45309'); // Rust/ochre speckle
-      else col.set('#ef4444');               // Red shard
+      if (p < 0.45) col.set('#cbd5e1');      // White/grey micro-plastic
+      else if (p < 0.70) col.set('#475569'); // Slate grime
+      else if (p < 0.85) col.set('#854d0e'); // Brown/mud sediment
+      else col.set('#1e3a8a');               // Deep blue speckle
       return { type: 5, col };
     });
 

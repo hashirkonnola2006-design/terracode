@@ -145,7 +145,7 @@ export const Clouds = ({ scrollRotation = 0, healProgress = 0 }) => {
           transparent={true}
           depthWrite={false}
           blending={THREE.NormalBlending}
-          side={THREE.DoubleSide}
+          side={THREE.FrontSide}
         />
       </mesh>
     </group>

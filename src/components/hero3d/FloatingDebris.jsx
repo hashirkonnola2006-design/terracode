@@ -50,7 +50,6 @@ function createWaterBottleGeometry() {
 function createShoppingBagGeometry() {
   const geom = new THREE.CylinderGeometry(0.28, 0.38, 1.10, 12, 8, true);
   const pos = geom.attributes.position;
-  // Subtle organic crumpled deformations
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
@@ -66,7 +65,6 @@ function createShoppingBagGeometry() {
 function createDentedCanGeometry() {
   const geom = new THREE.CylinderGeometry(0.26, 0.26, 0.75, 16);
   const pos = geom.attributes.position;
-  // Subtle realistic dent on one side
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
@@ -147,7 +145,7 @@ function createCrateTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
-export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) => {
+export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, healProgress = 0 }) => {
   // Instanced mesh refs
   const bottleInstRef = useRef(null);
   const bagInstRef    = useRef(null);
@@ -156,6 +154,7 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
   const tireInstRef   = useRef(null);
   const cupInstRef    = useRef(null);
   const capInstRef    = useRef(null);
+  const heroGroupRef  = useRef(null);
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
@@ -225,30 +224,40 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
 
   // Multi-color palette for varied colorful clutter
   const capPalette = useMemo(() => [
-    new THREE.Color('#2563eb'), // electric blue
-    new THREE.Color('#dc2626'), // red
-    new THREE.Color('#16a34a'), // bright green
-    new THREE.Color('#eab308'), // yellow
-    new THREE.Color('#f97316'), // orange
-    new THREE.Color('#e2e8f0'), // silver/white
-    new THREE.Color('#9333ea'), // purple
+    new THREE.Color('#2563eb'),
+    new THREE.Color('#dc2626'),
+    new THREE.Color('#16a34a'),
+    new THREE.Color('#eab308'),
+    new THREE.Color('#f97316'),
+    new THREE.Color('#e2e8f0'),
+    new THREE.Color('#9333ea'),
   ], []);
 
   const bottlePalette = useMemo(() => [
-    new THREE.Color('#d4eaf7'), // clear cyan
-    new THREE.Color('#c6f6d5'), // eco green tint
-    new THREE.Color('#e2e8f0'), // crisp clear
-    new THREE.Color('#bee3f8'), // sky blue tint
+    new THREE.Color('#d4eaf7'),
+    new THREE.Color('#c6f6d5'),
+    new THREE.Color('#e2e8f0'),
+    new THREE.Color('#bee3f8'),
   ], []);
 
   const bagPalette = useMemo(() => [
-    new THREE.Color('#f7fafc'), // white grocery bag
-    new THREE.Color('#bee3f8'), // blue shopping bag
-    new THREE.Color('#feebc8'), // tan biodegradable bag
-    new THREE.Color('#e2e8f0'), // smoky translucent bag
+    new THREE.Color('#f7fafc'),
+    new THREE.Color('#bee3f8'),
+    new THREE.Color('#feebc8'),
+    new THREE.Color('#e2e8f0'),
   ], []);
 
-  // Generate true orbital shell parameters for clutter particles
+  // 6 Large Hero pieces close to camera for extreme depth of field
+  const heroItems = useMemo(() => [
+    { geom: bottleGeom, mat: matClearBottle, pos: [1.8, -1.0, 2.2], scale: 0.26, rot: [0.4, 0.2, 0.6], speed: [0.12, 0.08, 0.05] },
+    { geom: bagGeom, mat: matTranslucentBag, pos: [1.9, 1.1, 2.0], scale: 0.30, rot: [-0.3, 0.5, 0.2], speed: [-0.08, 0.10, 0.04] },
+    { geom: cupGeom, mat: matPaperCup, pos: [1.1, -1.3, 2.1], scale: 0.24, rot: [0.6, -0.4, 0.3], speed: [0.06, -0.09, 0.07] },
+    { geom: canGeom, mat: matSodaCan, pos: [-1.8, -1.1, 2.1], scale: 0.22, rot: [0.2, 0.6, -0.5], speed: [0.10, 0.05, -0.06] },
+    { geom: tireGeom, mat: matRubberTire, pos: [-1.9, 0.5, 2.2], scale: 0.20, rot: [0.5, 0.3, -0.2], speed: [-0.05, 0.08, 0.05] },
+    { geom: crateGeom, mat: matBlueCrate, pos: [2.1, 0.2, 2.1], scale: 0.22, rot: [0.1, -0.3, 0.4], speed: [0.07, -0.06, 0.04] },
+  ], [bottleGeom, bagGeom, cupGeom, canGeom, tireGeom, crateGeom, matClearBottle, matTranslucentBag, matPaperCup, matSodaCan, matRubberTire, matBlueCrate]);
+
+  // Generate orbital shell parameters for clutter particles
   const generateClutterData = (count, baseScale, minRadius, maxRadius, colorPalette = null) => {
     const list = [];
     let seed = 789123 + count * 13;
@@ -259,14 +268,13 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
 
     for (let i = 0; i < count; i++) {
       const radius = minRadius + rand() * (maxRadius - minRadius);
-      // Realistic orbital plane angles
-      const inclination = (rand() - 0.5) * Math.PI * 0.70; // -63° to +63°
+      const inclination = (rand() - 0.5) * Math.PI * 0.70;
       const nodeAngle   = rand() * Math.PI * 2;
       const baseAngle   = rand() * Math.PI * 2;
       const orbitSpeed  = (rand() > 0.45 ? 1 : -1) * (0.012 + rand() * 0.024) * DRIFT_SPEED_MULT;
 
       const scale = baseScale * (0.75 + rand() * 0.50);
-      const threshold = 0.10 + rand() * 0.72; // Dissolve stagger
+      const threshold = 0.10 + rand() * 0.72;
 
       const color = colorPalette
         ? colorPalette[Math.floor(rand() * colorPalette.length)]
@@ -306,16 +314,13 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
     const a = item.currentAngle;
     const r = item.radius;
 
-    // Position in orbital plane
     const x0 = r * Math.cos(a);
     const z0 = r * Math.sin(a);
 
-    // Tilt by orbital inclination
     const x1 = x0;
     const y1 = -z0 * Math.sin(item.inclination);
     const z1 = z0 * Math.cos(item.inclination);
 
-    // Rotate by ascending node angle around Y
     const cosN = Math.cos(item.nodeAngle);
     const sinN = Math.sin(item.nodeAngle);
 
@@ -326,7 +331,6 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
     return { x, y, z };
   };
 
-  // Synchronously initialize instance matrices and colors
   const initMesh = (mesh, data) => {
     if (!mesh || !data) return;
     for (let i = 0; i < data.length; i++) {
@@ -365,7 +369,6 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
 
         const pos = computeOrbitalPos(item);
 
-        // Smooth dissolution as Earth heals on scroll
         const localDissolve = Math.max(0.0, 1.0 - smoothstep(item.threshold * 0.45, item.threshold * 0.45 + 0.38, healProgress));
         const s = healProgress >= 0.88 ? 0.0 : item.scale * localDissolve;
 
@@ -386,6 +389,21 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
     updateInstances(tireInstRef.current,   tireData);
     updateInstances(cupInstRef.current,    cupData);
     updateInstances(capInstRef.current,    capData);
+
+    // Animate large foreground hero pieces
+    if (heroGroupRef.current) {
+      heroGroupRef.current.children.forEach((child, i) => {
+        const item = heroItems[i];
+        if (!item) return;
+        child.rotation.x += item.speed[0] * clampedDelta;
+        child.rotation.y += item.speed[1] * clampedDelta;
+        child.rotation.z += item.speed[2] * clampedDelta;
+        child.position.y = item.pos[1] + Math.sin(state.clock.elapsedTime * 0.8 + i) * 0.04 + mousePos.y * 0.02;
+        child.position.x = item.pos[0] + mousePos.x * 0.03;
+        const s = Math.max(0, 1 - healProgress * 1.5) * item.scale;
+        child.scale.set(s, s, s);
+      });
+    }
   });
 
   function smoothstep(min, max, value) {
@@ -395,96 +413,115 @@ export const FloatingDebris = ({ mousePos = { x: 0, y: 0 }, healProgress = 0 }) 
 
   return (
     <group visible={healProgress < 0.99}>
-      {/* 1. Small Transparent Water Bottles */}
-      <instancedMesh
-        ref={(m) => {
-          if (m) {
-            bottleInstRef.current = m;
-            initMesh(m, bottleData);
-          }
-        }}
-        castShadow
-        receiveShadow
-        args={[bottleGeom, matClearBottle, COUNT_BOTTLES]}
-      />
+      {/* ── Foreground Hero Debris (Close to Camera for Depth of Field) ── */}
+      <group ref={heroGroupRef}>
+        {heroItems.map((item, idx) => (
+          <mesh
+            key={idx}
+            geometry={item.geom}
+            material={item.mat}
+            position={item.pos}
+            rotation={item.rot}
+            scale={item.scale}
+            castShadow
+            receiveShadow
+          />
+        ))}
+      </group>
 
-      {/* 2. Small Translucent Crumpled Bags & Sheets */}
-      <instancedMesh
-        ref={(m) => {
-          if (m) {
-            bagInstRef.current = m;
-            initMesh(m, bagData);
-          }
-        }}
-        castShadow
-        receiveShadow
-        args={[bagGeom, matTranslucentBag, COUNT_BAGS]}
-      />
+      {/* ── Medium Orbital Pieces (Centered on Earth) ── */}
+      <group position={center}>
+        {/* 1. Small Transparent Water Bottles */}
+        <instancedMesh
+          ref={(m) => {
+            if (m) {
+              bottleInstRef.current = m;
+              initMesh(m, bottleData);
+            }
+          }}
+          castShadow
+          receiveShadow
+          args={[bottleGeom, matClearBottle, COUNT_BOTTLES]}
+        />
 
-      {/* 3. Small Dented Soda Cans */}
-      <instancedMesh
-        ref={(m) => {
-          if (m) {
-            canInstRef.current = m;
-            initMesh(m, canData);
-          }
-        }}
-        castShadow
-        receiveShadow
-        args={[canGeom, matSodaCan, COUNT_CANS]}
-      />
+        {/* 2. Small Translucent Crumpled Bags */}
+        <instancedMesh
+          ref={(m) => {
+            if (m) {
+              bagInstRef.current = m;
+              initMesh(m, bagData);
+            }
+          }}
+          castShadow
+          receiveShadow
+          args={[bagGeom, matTranslucentBag, COUNT_BAGS]}
+        />
 
-      {/* 4. Small Blue Milk Crates */}
-      <instancedMesh
-        ref={(m) => {
-          if (m) {
-            crateInstRef.current = m;
-            initMesh(m, crateData);
-          }
-        }}
-        castShadow
-        receiveShadow
-        args={[crateGeom, matBlueCrate, COUNT_CRATES]}
-      />
+        {/* 3. Small Dented Soda Cans */}
+        <instancedMesh
+          ref={(m) => {
+            if (m) {
+              canInstRef.current = m;
+              initMesh(m, canData);
+            }
+          }}
+          castShadow
+          receiveShadow
+          args={[canGeom, matSodaCan, COUNT_CANS]}
+        />
 
-      {/* 5. Small Rubber Tires */}
-      <instancedMesh
-        ref={(m) => {
-          if (m) {
-            tireInstRef.current = m;
-            initMesh(m, tireData);
-          }
-        }}
-        castShadow
-        receiveShadow
-        args={[tireGeom, matRubberTire, COUNT_TIRES]}
-      />
+        {/* 4. Small Blue Milk Crates */}
+        <instancedMesh
+          ref={(m) => {
+            if (m) {
+              crateInstRef.current = m;
+              initMesh(m, crateData);
+            }
+          }}
+          castShadow
+          receiveShadow
+          args={[crateGeom, matBlueCrate, COUNT_CRATES]}
+        />
 
-      {/* 6. Small Takeaway Coffee Cups */}
-      <instancedMesh
-        ref={(m) => {
-          if (m) {
-            cupInstRef.current = m;
-            initMesh(m, cupData);
-          }
-        }}
-        castShadow
-        receiveShadow
-        args={[cupGeom, matPaperCup, COUNT_CUPS]}
-      />
+        {/* 5. Small Rubber Tires */}
+        <instancedMesh
+          ref={(m) => {
+            if (m) {
+              tireInstRef.current = m;
+              initMesh(m, tireData);
+            }
+          }}
+          castShadow
+          receiveShadow
+          args={[tireGeom, matRubberTire, COUNT_TIRES]}
+        />
 
-      {/* 7. Small Bottle Caps, Wrappers & Chips */}
-      <instancedMesh
-        ref={(m) => {
-          if (m) {
-            capInstRef.current = m;
-            initMesh(m, capData);
-          }
-        }}
-        castShadow
-        receiveShadow
-        args={[capGeom, matCap, COUNT_CAPS]}
-      />
+        {/* 6. Small Takeaway Coffee Cups */}
+        <instancedMesh
+          ref={(m) => {
+            if (m) {
+              cupInstRef.current = m;
+              initMesh(m, cupData);
+            }
+          }}
+          castShadow
+          receiveShadow
+          args={[cupGeom, matPaperCup, COUNT_CUPS]}
+        />
+
+        {/* 7. Small Bottle Caps, Wrappers & Chips */}
+        <instancedMesh
+          ref={(m) => {
+            if (m) {
+              capInstRef.current = m;
+              initMesh(m, capData);
+            }
+          }}
+          castShadow
+          receiveShadow
+          args={[capGeom, matCap, COUNT_CAPS]}
+        />
+      </group>
     </group>
   );
 };

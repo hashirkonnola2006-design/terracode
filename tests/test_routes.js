@@ -100,9 +100,9 @@ async function main() {
     fs.writeFileSync(path.join(ARTIFACT_DIR, 'landing_scroll_0.png'), Buffer.from(res.data, 'base64'));
     console.log('Saved: landing_scroll_0.png');
 
-    // Scroll to 20% (Beat 1: Plastics)
+    // Scroll to 40% (Beat 1: Plastics)
     await send('Runtime.evaluate', {
-      expression: `window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * 0.20, behavior: 'auto' });`,
+      expression: `window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * 0.40, behavior: 'auto' });`,
     });
     await new Promise((r) => setTimeout(r, 800));
     res = await send('Page.captureScreenshot', { format: 'png' });
@@ -110,9 +110,9 @@ async function main() {
     fs.writeFileSync(path.join(ARTIFACT_DIR, 'landing_beat_1.png'), Buffer.from(res.data, 'base64'));
     console.log('Saved: landing_beat_1.png');
 
-    // Scroll to 50% (Beat 2: Forests)
+    // Scroll to 72% (Beat 2: Call for help)
     await send('Runtime.evaluate', {
-      expression: `window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * 0.50, behavior: 'auto' });`,
+      expression: `window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * 0.72, behavior: 'auto' });`,
     });
     await new Promise((r) => setTimeout(r, 800));
     res = await send('Page.captureScreenshot', { format: 'png' });

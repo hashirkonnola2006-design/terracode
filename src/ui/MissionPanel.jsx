@@ -165,3 +165,4 @@ export const MissionPanel = () => {
 };
 
 export default MissionPanel;
+

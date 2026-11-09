@@ -136,3 +136,4 @@ export const GAME_CONFIG = {
 };
 
 export default GAME_CONFIG;
+

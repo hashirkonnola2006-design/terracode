@@ -140,3 +140,4 @@ export const InteractiveForests = ({ isInteractive = true }) => {
 };
 
 export default InteractiveForests;
+

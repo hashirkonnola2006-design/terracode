@@ -156,3 +156,4 @@ export const InteractiveSmog = ({ isInteractive = true }) => {
 };
 
 export default InteractiveSmog;
+

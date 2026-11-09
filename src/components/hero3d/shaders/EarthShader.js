@@ -120,108 +120,63 @@ export const EarthShader = {
       float oceanMask = specular;
 
       // Realistic terrain normal perturbation (subtle relief without skewing world orientation)
-      vec3 normal = normalize(wn + vec3(normalMap.xy * 0.05, 0.0));
+      vec3 normal = wn;
 
-      // ── 1. POLLUTED STATE (exact match to ground truth image 3d_earth.png) ──
-      // Tan/orange deserts (Arabia, Sahara, Australia interior)
-      // Dark green vegetation (India, Southeast Asia)
-      // Deep navy oceans with subtle bathymetry gradients and micro-grime
-      vec3 pollutedBase = atmosTex;
+      // ── 1. POLLUTED STATE (Realistic NASA Earth with subtle smog haze and murky navy oceans) ──
+      float landLuma = dot(atmosTex, vec3(0.299, 0.587, 0.114));
+      vec3 desatLand = mix(atmosTex, vec3(landLuma), 0.20);
+      vec3 smogColor = vec3(0.52, 0.45, 0.36);
+      vec3 pollutedLand = mix(desatLand, smogColor, 0.15);
 
-      // Enhance warm tan ochre on arid deserts (Sahara, Arabia, Australia)
-      float isDesert = smoothstep(0.14, 0.42, pollutedBase.r - pollutedBase.b * 0.85) * (1.0 - oceanMask);
-      vec3 richDesert = pollutedBase * vec3(1.30, 1.10, 0.80) + vec3(0.06, 0.03, 0.0);
-      vec3 pollutedLand = mix(pollutedBase, richDesert, isDesert * 0.90);
-
-      // Deep forest green on vegetation (India, Congo, SE Asia)
-      float isVeg = smoothstep(0.08, 0.35, pollutedBase.g - pollutedBase.r * 0.80) * (1.0 - oceanMask);
-      vec3 darkForest = pollutedBase * vec3(0.68, 0.95, 0.62);
-      pollutedLand = mix(pollutedLand, darkForest, isVeg * 0.75);
-
-      // Grimy micro-dirt overlay on continents
-      float microMud = fbm(wn * 6.0);
-      pollutedLand = mix(pollutedLand, vec3(0.14, 0.11, 0.08), smoothstep(0.40, 0.80, microMud) * 0.24);
-
-      // Deep navy ocean matching reference image exactly
+      // Deep murky navy ocean
       vec3 pollutedOcean = mix(
-        pollutedBase * vec3(0.70, 0.82, 1.15),
+        atmosTex * vec3(0.70, 0.82, 1.15),
         vec3(0.012, 0.038, 0.11),
         0.50
       );
       vec3 pollutedColor = mix(pollutedLand, pollutedOcean, oceanMask);
 
       // ── 2. HEALTHY RESTORED STATE ──
-      // Brilliant crystal azure/sapphire oceans, rich emerald green continents
-      vec3 healthyLand = dayTex;
-      float vegMask = smoothstep(0.12, 0.40, dayTex.g - dayTex.r * 0.75);
+      vec3 healthyLand = atmosTex;
+      float vegMask = smoothstep(0.08, 0.35, atmosTex.g - atmosTex.r * 0.80);
       vec3 lushGreen = vec3(0.06, 0.74, 0.22);
-      healthyLand = mix(healthyLand, lushGreen, vegMask * 0.72);
-      // Boost land vibrance
+      healthyLand = mix(healthyLand, lushGreen, vegMask * 0.65);
       float luma = dot(healthyLand, vec3(0.299, 0.587, 0.114));
-      healthyLand = mix(vec3(luma), healthyLand, 1.45);
+      healthyLand = mix(vec3(luma), healthyLand, 1.30);
 
-      // Crystal clear ocean with vibrant royal blue and coastal cyan shelf
       vec3 healthyOcean = mix(
-        vec3(0.015, 0.16, 0.58), // deep vibrant royal blue
-        vec3(0.030, 0.45, 0.72), // tropical turquoise coastal shelf
-        smoothstep(0.15, 0.65, dayTex.b - dayTex.r)
+        vec3(0.015, 0.16, 0.58),
+        vec3(0.030, 0.45, 0.72),
+        smoothstep(0.15, 0.65, atmosTex.b - atmosTex.r)
       );
       vec3 healthyColor = mix(healthyLand, healthyOcean, oceanMask);
 
       // ── 3. NOISE-DRIVEN HEALING WAVE CROSSFADE ──
-      // Multi-scale 3D simplex noise creates organic expanding patches across the sphere
-      float waveNoise = fbm(wn * 3.4 + vec3(1.2, 2.8, 4.4)) * 0.40 + snoise(wn * 7.5) * 0.15;
+      float waveNoise = fbm(wn * 3.4 + vec3(1.2, 2.8, 4.4)) * 0.40;
       float healThreshold = waveNoise + 0.5;
-
-      // Smooth wave propagation as uHeal goes 0 -> 1
-      float healFactor = smoothstep(healThreshold - 0.22, healThreshold + 0.22, uHeal * 1.44 - 0.22);
-      healFactor = clamp(healFactor, 0.0, 1.0);
-
-      // Strict boundaries
+      float healFactor = clamp(smoothstep(healThreshold - 0.22, healThreshold + 0.22, uHeal * 1.44 - 0.22), 0.0, 1.0);
       if (uHeal <= 0.001) healFactor = 0.0;
       if (uHeal >= 0.999) healFactor = 1.0;
 
-      // Glowing wave front edge where healing actively transforms the surface
       float frontDist = abs(healFactor - 0.5) * 2.0;
       float frontGlow = pow(max(1.0 - frontDist, 0.0), 3.2) * smoothstep(0.02, 0.98, uHeal);
-      vec3 frontColor = vec3(0.26, 1.0, 0.60); // luminous emerald laser edge
+      vec3 frontColor = vec3(0.26, 1.0, 0.60);
 
-      // Soft green sprouts on land as uHeal approaches 1
-      float sprouts = smoothstep(0.72, 0.98, uHeal) * (1.0 - oceanMask) * smoothstep(0.25, 0.75, snoise(wn * 16.0));
-      vec3 sproutColor = vec3(0.18, 0.88, 0.32);
-
-      // Composite base surface color
       vec3 surfaceColor = mix(pollutedColor, healthyColor, healFactor);
-      surfaceColor = mix(surfaceColor, sproutColor, sprouts * 0.35);
 
       // ── 4. LIGHTING & SPECULAR HIGHLIGHTS ──
       float NdotL = dot(normal, sunDir);
       float sunDiffuse = smoothstep(-0.06, 0.44, NdotL);
 
-      // Ocean specular glint (sharp & vibrant in healed state)
       vec3 halfH = normalize(sunDir + viewDir);
       float NdotH = max(dot(normal, halfH), 0.0);
       float specPower = mix(24.0, 60.0, healFactor);
       float specIntensity = mix(1.6, 3.2, healFactor);
       float oceanSpec = pow(NdotH, specPower) * oceanMask * smoothstep(0.0, 0.28, NdotL) * specIntensity;
 
-      // Final illuminated surface with front glow
-      vec3 finalCol = surfaceColor * (uSunColor * sunDiffuse * ${SUN_LIGHT_BOOST.toFixed(2)} + uAmbientColor)
+      vec3 finalCol = surfaceColor * (uSunColor * sunDiffuse * 1.75 + uAmbientColor)
                     + vec3(oceanSpec) * uSunColor
                     + frontColor * frontGlow * 1.55 * sunDiffuse;
-
-      // ── 5. POLLUTED EMBER GLOWS (Few sparse slow embers on damaged continents) ──
-      float fireNoise = fbm(wn * 5.0 + vec3(uTime * 0.03, 0.0, 0.0));
-      float fireSpot = smoothstep(0.78, 0.88, fireNoise) * (1.0 - oceanMask) * (1.0 - smoothstep(0.0, 0.35, uHeal));
-      vec3 fireColor = vec3(1.0, 0.35, 0.05) * (0.6 + 0.4 * sin(uTime * 3.0));
-      finalCol += fireColor * fireSpot * 0.7;
-
-      // ── 6. RENEWABLE CITY LIGHTS ON NIGHT SIDE (Appears at 70%+ Cleanliness) ──
-      float nightMask = smoothstep(0.08, -0.25, NdotL);
-      vec3 cityLights = texture2D(uLightsMap, vUv).rgb;
-      float lightsFade = smoothstep(0.70, 0.98, uHeal);
-      vec3 cleanCityGlow = cityLights * vec3(1.0, 0.88, 0.62) * lightsFade * nightMask * 2.6;
-      finalCol += cleanCityGlow;
 
       gl_FragColor = vec4(finalCol, 1.0);
     }
