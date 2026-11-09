@@ -14,6 +14,8 @@ export const EarthShader = {
     uSpecularMap: { value: null },
     uTime:        { value: 0.0 },
     uHeal:        { value: 0.0 },
+    uDim:         { value: 1.0 },
+    uHover:       { value: 0.0 },
     uCameraPos:   { value: new THREE.Vector3(0, 0, 3.65) },
   },
 
@@ -40,6 +42,8 @@ export const EarthShader = {
     uniform sampler2D uSpecularMap;
     uniform float     uTime;
     uniform float     uHeal;
+    uniform float     uDim;
+    uniform float     uHover;
 
     varying vec2 vUv;
     varying vec3 vViewNormal;
@@ -104,16 +108,21 @@ export const EarthShader = {
       // Smooth color transition driven by uHeal
       vec3 surfaceColor = mix(pollutedColor, cleanColor, uHeal);
 
-      // ── 3. OCEAN SPECULAR GLOSS (Controlled highlight, no bloom blowout) ──
+      // On button hover: subtle saturation raise
+      if (uHover > 0.001) {
+        float luma = dot(surfaceColor, vec3(0.299, 0.587, 0.114));
+        surfaceColor = mix(vec3(luma), surfaceColor, 1.0 + 0.22 * uHover);
+      }
+
+      // ── 3. OCEAN SHEEN (Subtle wide soft sheen, NO bright white hotspot blob) ──
       vec3 H = normalize(keyDir + V);
       float NdotH = max(dot(N, H), 0.0);
-      float specPower = mix(36.0, 72.0, uHeal);
-      float specIntensity = mix(0.45, 0.85, uHeal);
-      float oceanSpec = pow(NdotH, specPower) * oceanMask * specIntensity;
+      // Low exponent (7.0) and gentle intensity (0.16) gives a wide, smooth water sheen
+      float oceanSheen = pow(NdotH, 7.0) * mix(0.12, 0.22, uHeal) * oceanMask;
+      vec3 sheenColor = vec3(oceanSheen) * vec3(0.45, 0.68, 0.95);
 
-      // ── 4. FINAL COMPOSITION ──
-      vec3 litColor = surfaceColor * diffuse * limb
-                    + vec3(oceanSpec) * vec3(0.95, 0.98, 1.0);
+      // ── 4. FINAL COMPOSITION (with subtle dimming for text contrast) ──
+      vec3 litColor = (surfaceColor * diffuse * limb + sheenColor) * uDim;
 
       gl_FragColor = vec4(litColor, 1.0);
     }

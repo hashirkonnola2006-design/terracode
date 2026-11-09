@@ -145,7 +145,7 @@ function createCrateTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
-export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, healProgress = 0 }) => {
+export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, healProgress = 0, isFinalBeat = false }) => {
   // Instanced mesh refs
   const bottleInstRef = useRef(null);
   const bagInstRef    = useRef(null);
@@ -247,15 +247,35 @@ export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, 
     new THREE.Color('#e2e8f0'),
   ], []);
 
-  // 6 Large Hero pieces close to camera for extreme depth of field
-  const heroItems = useMemo(() => [
-    { geom: bottleGeom, mat: matClearBottle, pos: [1.8, -1.0, 2.2], scale: 0.26, rot: [0.4, 0.2, 0.6], speed: [0.12, 0.08, 0.05] },
-    { geom: bagGeom, mat: matTranslucentBag, pos: [1.9, 1.1, 2.0], scale: 0.30, rot: [-0.3, 0.5, 0.2], speed: [-0.08, 0.10, 0.04] },
-    { geom: cupGeom, mat: matPaperCup, pos: [1.1, -1.3, 2.1], scale: 0.24, rot: [0.6, -0.4, 0.3], speed: [0.06, -0.09, 0.07] },
-    { geom: canGeom, mat: matSodaCan, pos: [-1.8, -1.1, 2.1], scale: 0.22, rot: [0.2, 0.6, -0.5], speed: [0.10, 0.05, -0.06] },
-    { geom: tireGeom, mat: matRubberTire, pos: [-1.9, 0.5, 2.2], scale: 0.20, rot: [0.5, 0.3, -0.2], speed: [-0.05, 0.08, 0.05] },
-    { geom: crateGeom, mat: matBlueCrate, pos: [2.1, 0.2, 2.1], scale: 0.22, rot: [0.1, -0.3, 0.4], speed: [0.07, -0.06, 0.04] },
-  ], [bottleGeom, bagGeom, cupGeom, canGeom, tireGeom, crateGeom, matClearBottle, matTranslucentBag, matPaperCup, matSodaCan, matRubberTire, matBlueCrate]);
+  // 7 Large Hero pieces placed at corners and edges matching reference mockup
+  const heroItems = useMemo(() => {
+    if (isFinalBeat) {
+      return [
+        // 1. Giant blurred water bottle at bottom-left corner
+        { geom: bottleGeom, mat: matClearBottle, pos: [-1.45, -0.75, 2.75], scale: 0.78, rot: [0.45, -0.3, 0.82], speed: [0.06, 0.04, 0.02] },
+        // 2. Large crumpled translucent bag at top-right corner
+        { geom: bagGeom, mat: matTranslucentBag, pos: [1.70, 1.05, 2.45], scale: 0.85, rot: [-0.2, 0.6, 0.3], speed: [-0.05, 0.06, 0.03] },
+        // 3. Rubber tire at right-lower edge
+        { geom: tireGeom, mat: matRubberTire, pos: [1.46, -0.42, 2.50], scale: 0.58, rot: [0.6, 0.4, -0.3], speed: [-0.04, 0.05, 0.03] },
+        // 4. Dented soda can at bottom-right corner
+        { geom: canGeom, mat: matSodaCan, pos: [1.65, -0.88, 2.62], scale: 0.55, rot: [0.3, 0.7, -0.4], speed: [0.06, 0.03, -0.04] },
+        // 5. Blue industrial crate at right-middle
+        { geom: crateGeom, mat: matBlueCrate, pos: [1.18, -0.32, 1.85], scale: 0.32, rot: [0.2, -0.4, 0.5], speed: [0.05, -0.04, 0.03] },
+        // 6. Secondary water bottle above equator on right
+        { geom: bottleGeom, mat: matClearBottle, pos: [1.14, 0.44, 1.95], scale: 0.30, rot: [0.5, 0.2, 0.9], speed: [0.04, 0.06, 0.03] },
+        // 7. Small crumpled takeaway cup at upper-left
+        { geom: cupGeom, mat: matPaperCup, pos: [-1.55, 0.65, 2.15], scale: 0.28, rot: [0.4, -0.3, 0.5], speed: [0.04, -0.05, 0.04] },
+      ];
+    }
+    return [
+      { geom: bottleGeom, mat: matClearBottle, pos: [1.8, -1.0, 2.2], scale: 0.26, rot: [0.4, 0.2, 0.6], speed: [0.12, 0.08, 0.05] },
+      { geom: bagGeom, mat: matTranslucentBag, pos: [1.9, 1.1, 2.0], scale: 0.30, rot: [-0.3, 0.5, 0.2], speed: [-0.08, 0.10, 0.04] },
+      { geom: cupGeom, mat: matPaperCup, pos: [1.1, -1.3, 2.1], scale: 0.24, rot: [0.6, -0.4, 0.3], speed: [0.06, -0.09, 0.07] },
+      { geom: canGeom, mat: matSodaCan, pos: [-1.8, -1.1, 2.1], scale: 0.22, rot: [0.2, 0.6, -0.5], speed: [0.10, 0.05, -0.06] },
+      { geom: tireGeom, mat: matRubberTire, pos: [-1.9, 0.5, 2.2], scale: 0.20, rot: [0.5, 0.3, -0.2], speed: [-0.05, 0.08, 0.05] },
+      { geom: crateGeom, mat: matBlueCrate, pos: [2.1, 0.2, 2.1], scale: 0.22, rot: [0.1, -0.3, 0.4], speed: [0.07, -0.06, 0.04] },
+    ];
+  }, [isFinalBeat, bottleGeom, bagGeom, cupGeom, canGeom, tireGeom, crateGeom, matClearBottle, matTranslucentBag, matPaperCup, matSodaCan, matRubberTire, matBlueCrate]);
 
   // Generate orbital shell parameters for clutter particles
   const generateClutterData = (count, baseScale, minRadius, maxRadius, colorPalette = null) => {
@@ -370,7 +390,15 @@ export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, 
         const pos = computeOrbitalPos(item);
 
         const localDissolve = Math.max(0.0, 1.0 - smoothstep(item.threshold * 0.45, item.threshold * 0.45 + 0.38, healProgress));
-        const s = healProgress >= 0.88 ? 0.0 : item.scale * localDissolve;
+
+        // When in final beat, clear any debris within ~25% viewport radius from screen center
+        let centerClearFactor = 1.0;
+        if (isFinalBeat) {
+          const screenDist = Math.hypot(pos.x + center[0], pos.y + center[1] + 0.10);
+          centerClearFactor = smoothstep(0.48, 0.75, screenDist);
+        }
+
+        const s = healProgress >= 0.88 ? 0.0 : item.scale * localDissolve * centerClearFactor;
 
         dummy.position.set(pos.x, pos.y, pos.z);
         dummy.rotation.set(item.rotX, item.rotY, item.rotZ);

@@ -207,8 +207,77 @@ body.intro-snap {
   will-change: transform, opacity;
 }
 
+/* ── Button Sonar Ripple & Shine Animations ── */
+@keyframes sonarPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.70;
+  }
+  100% {
+    transform: scale(1.50, 1.95);
+    opacity: 0;
+  }
+}
+
+@keyframes buttonShine {
+  0% {
+    transform: translateX(-180%) skewX(-25deg);
+  }
+  25%, 100% {
+    transform: translateX(280%) skewX(-25deg);
+  }
+}
+
+@keyframes arrowNudge {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes finalBeatEntrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  70% {
+    transform: scale(1.01) translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.0) translateY(0);
+  }
+}
+
+.sonar-ring-1 {
+  animation: sonarPulse 2.4s cubic-bezier(0.1, 0.4, 0.2, 1) infinite;
+}
+
+.sonar-ring-2 {
+  animation: sonarPulse 2.4s cubic-bezier(0.1, 0.4, 0.2, 1) infinite 1.2s;
+}
+
+.btn-shine {
+  animation: buttonShine 4.0s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.arrow-nudge {
+  animation: arrowNudge 1.6s ease-in-out infinite;
+}
+
+.final-beat-unit {
+  animation: finalBeatEntrance 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .beat-unit {
+  .sonar-ring-1,
+  .sonar-ring-2,
+  .btn-shine,
+  .arrow-nudge,
+  .final-beat-unit {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

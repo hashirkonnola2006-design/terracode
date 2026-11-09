@@ -16,7 +16,7 @@ export const AXIAL_TILT_Z = -0.10;          // Subtle natural axial tilt
 export const INITIAL_ROTATION_Y = 2.94;     // Centers India & the Indian Ocean
 export const HEAL_SCALE_EXPANSION = 0.035;  // Expands ~3.5% as biosphere restores
 
-export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0, isLowEnd = false }) => {
+export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0, dim = 1.0, hover = 0.0, isLowEnd = false }) => {
   const { gl } = useThree();
   const earthRef = useRef(null);
   const shaderMatRef = useRef(null);
@@ -80,6 +80,16 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0, isLow
     if (shaderMatRef.current) {
       shaderMatRef.current.uniforms.uHeal.value = smoothHealRef.current;
       shaderMatRef.current.uniforms.uTime.value = t;
+      shaderMatRef.current.uniforms.uDim.value = THREE.MathUtils.lerp(
+        shaderMatRef.current.uniforms.uDim.value,
+        dim,
+        Math.min(delta * 5.0, 1.0)
+      );
+      shaderMatRef.current.uniforms.uHover.value = THREE.MathUtils.lerp(
+        shaderMatRef.current.uniforms.uHover.value,
+        hover,
+        Math.min(delta * 6.0, 1.0)
+      );
     }
 
     if (earthRef.current) {

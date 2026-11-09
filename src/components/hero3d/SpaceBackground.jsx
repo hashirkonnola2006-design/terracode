@@ -17,8 +17,8 @@ export const STARS_COUNT_HIGH   = 5500;
 export const STARS_COUNT_MEDIUM = 3200;
 export const STARS_COUNT_LOW    = 1500;
 
-export const NEBULA_OPACITY = 0.22;    // Faint, soft indigo/violet cosmic dust
-export const STAR_BASE_SIZE = 1.05;    // Crisp celestial pinpricks
+export const NEBULA_OPACITY = 0.16;    // Very soft purple cosmic dust on right
+export const STAR_BASE_SIZE = 0.88;    // Tiny crisp celestial pinpricks
 
 export const PARALLAX_STARS_STRENGTH  = 0.038;
 export const PARALLAX_NEBULA_STRENGTH = 0.018;
@@ -30,7 +30,9 @@ export const SHOOTING_STAR_DURATION     = 1.15;
 export const SpaceBackground = ({
   mousePos = { x: 0, y: 0 },
   reducedMotion = false,
-  qualityOverride = null
+  qualityOverride = null,
+  isFinalBeat = false,
+  hover = 0.0,
 }) => {
   const { gl } = useThree();
 
@@ -363,6 +365,41 @@ export const SpaceBackground = ({
           uniforms={shootUniforms}
           vertexShader={ShootingStarMaterial.vertexShader}
           fragmentShader={ShootingStarMaterial.fragmentShader}
+          transparent={true}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* ── 5. Faint Reddish-Brown Pollution Haze (Behind Earth, lerps toward green on hover) ── */}
+      <mesh position={[0, -0.12, -8]} renderOrder={1}>
+        <planeGeometry args={[14, 14]} />
+        <shaderMaterial
+          uniforms={useMemo(() => ({ uHover: { value: 0.0 } }), [])}
+          ref={(mat) => {
+            if (mat) {
+              mat.uniforms.uHover.value = hover;
+            }
+          }}
+          vertexShader={`
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `}
+          fragmentShader={`
+            uniform float uHover;
+            varying vec2 vUv;
+            void main() {
+              float d = length(vUv - 0.5) * 2.0;
+              float alpha = smoothstep(1.0, 0.0, d) * 0.24;
+              vec3 brownHaze = vec3(0.52, 0.22, 0.10);
+              vec3 greenHaze = vec3(0.12, 0.72, 0.42);
+              vec3 col = mix(brownHaze, greenHaze, uHover);
+              gl_FragColor = vec4(col, alpha);
+            }
+          `}
           transparent={true}
           depthWrite={false}
           blending={THREE.AdditiveBlending}

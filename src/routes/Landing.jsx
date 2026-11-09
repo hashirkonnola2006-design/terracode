@@ -13,10 +13,10 @@ import { ArrowRight, Leaf, Sparkles } from 'lucide-react';
 
 // Camera & Earth target values per discrete beat
 const BEAT_CAMERA_TARGETS = [
-  { camZ: 3.65, earthFactor: 1.0 },   // Beat 0: Hero (Earth on right x=1.35, camZ=3.65)
-  { camZ: 3.25, earthFactor: 0.7 },   // Beat 1: Plastic Crisis (camZ=3.25, earth moves slightly inward)
-  { camZ: 2.85, earthFactor: 0.35 },  // Beat 2: Forests & Air (camZ=2.85, earth moves more inward)
-  { camZ: 2.45, earthFactor: 0.0 },   // Beat 3: Restoration Call (camZ=2.45, earth centered x=0)
+  { camZ: 3.65, earthFactor: 1.0, earthY: 0.0 },    // Beat 0: Hero (Earth on right x=1.35, camZ=3.65)
+  { camZ: 3.25, earthFactor: 0.7, earthY: 0.0 },    // Beat 1: Plastic Crisis (earth moves inward)
+  { camZ: 2.85, earthFactor: 0.35, earthY: 0.0 },   // Beat 2: Forests & Air (earth moves inward)
+  { camZ: 2.22, earthFactor: 0.0, earthY: -0.12 },  // Beat 3: Centered, 80-85% height, nudged slightly down!
 ];
 
 // Discrete story beats configuration
@@ -56,16 +56,13 @@ const BEATS_DATA = [
   },
   {
     id: 3,
-    eyebrow: 'CALL TO RESTORATION',
-    eyebrowColor: 'text-[#4ade80]',
-    headline: 'The planet is asking for help.',
-    body: 'Every piece of debris removed brings life back to our oceans and continents. You have the power to turn back the tide.',
-    button: {
-      label: 'Start Cleaning',
-      primary: true,
-      large: true,
-      badge: 'Interactive Restoration Simulator',
-    },
+    eyebrow: "THE PLANET CAN'T WAIT",
+    eyebrowColor: 'text-white/70',
+    headline: (
+      <>
+        Heal it with<br />your own hands.
+      </>
+    ),
   },
 ];
 
@@ -97,7 +94,7 @@ const computeActiveBeat = (progress, prevBeat) => {
   return 0;
 };
 
-const LandingSceneController = ({ activeBeat, isTransitioning, mousePos }) => {
+const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHovered }) => {
   const earthGroupRef = useRef(null);
   const currentCamZ = useRef(3.65);
   const currentEarthPos = useRef(new THREE.Vector3(1.35, 0, 0));
@@ -124,8 +121,8 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos }) => {
     state.camera.position.z = currentCamZ.current;
 
     // Target Earth position for this beat
-    const targetEarthX = baseEarthX * targetConfig.earthFactor;
-    const targetEarthY = baseEarthY * targetConfig.earthFactor;
+    const targetEarthX = isMobile ? 0.0 : baseEarthX * targetConfig.earthFactor;
+    const targetEarthY = isMobile ? baseEarthY * targetConfig.earthFactor : targetConfig.earthY;
 
     currentEarthPos.current.x = THREE.MathUtils.lerp(currentEarthPos.current.x, targetEarthX, easeFactor);
     currentEarthPos.current.y = THREE.MathUtils.lerp(currentEarthPos.current.y, targetEarthY, easeFactor);
@@ -145,21 +142,32 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos }) => {
 
   return (
     <>
-      <SpaceBackground mousePos={mousePos} reducedMotion={false} />
+      <SpaceBackground
+        mousePos={mousePos}
+        reducedMotion={false}
+        isFinalBeat={activeBeat === 3}
+        hover={isBtnHovered ? 1.0 : 0.0}
+      />
+
       {/* Sun key lighting (healProgress = 0, camera following) */}
       <Sun healProgress={0} isLowEnd={false} />
 
       <group ref={earthGroupRef} scale={0.72}>
-        <Earth healProgress={0} />
+        <Earth
+          healProgress={0}
+          dim={activeBeat === 3 ? 0.76 : 1.0}
+          hover={isBtnHovered ? 1.0 : 0.0}
+        />
         <Clouds healProgress={0} />
         <Atmosphere healProgress={0} />
       </group>
 
-      {/* Floating debris follows Earth center position */}
+      {/* Floating debris follows Earth center position, clears center in final beat */}
       <FloatingDebris
         center={[currentEarthPos.current.x, currentEarthPos.current.y, 0]}
         mousePos={mousePos}
         healProgress={0}
+        isFinalBeat={activeBeat === 3}
       />
     </>
   );
@@ -169,6 +177,7 @@ export const Landing = () => {
   const navigate = useNavigate();
   const [activeBeat, setActiveBeat] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isBtnHovered, setIsBtnHovered] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [screenFlash, setScreenFlash] = useState(false);
 
@@ -222,7 +231,7 @@ export const Landing = () => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
-      if (['ArrowDown', 'PageDown', ' '].includes(e.key)) {
+      if (['ArrowDown', 'PageDown'].includes(e.key)) {
         e.preventDefault();
         setActiveBeat((curr) => {
           const next = Math.min(curr + 1, 3);
@@ -244,13 +253,22 @@ export const Landing = () => {
   }, []);
 
   const handleStartCleaning = () => {
+    if (isTransitioning) return;
     setIsTransitioning(true);
     setScreenFlash(true);
 
-    // Camera zooms into Earth, brief flash, seamless navigate to /clean
-    setTimeout(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
       navigate('/clean');
-    }, 700);
+    } else {
+      // Camera zooms into Earth, radial green flash, seamless navigate to /clean
+      setTimeout(() => {
+        navigate('/clean');
+      }, 700);
+    }
   };
 
   const currentBeatData = BEATS_DATA[activeBeat] || BEATS_DATA[0];
@@ -266,7 +284,7 @@ export const Landing = () => {
       <section className="snap-beat-section pointer-events-none" />
       <section className="snap-beat-section pointer-events-none" />
 
-      {/* ── Transparent Fixed Header (Hides on game transition) ── */}
+      {/* ── Transparent Fixed Header ── */}
       <header
         className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-6 sm:px-12 py-6 transition-all duration-300 pointer-events-auto"
         style={{
@@ -274,10 +292,12 @@ export const Landing = () => {
           transform: isTransitioning ? 'translateY(-20px)' : 'translateY(0)',
         }}
       >
-        {/* Left: Leaf Logo + EcoFuture */}
+        {/* Left: Leaf Logo + EcoFuture (70% opacity on Beat 3) */}
         <div
           onClick={() => goToBeat(0)}
-          className="flex items-center gap-2.5 select-none cursor-pointer"
+          className={`flex items-center gap-2.5 select-none cursor-pointer transition-opacity duration-150 ${
+            activeBeat === 3 ? 'opacity-70' : 'opacity-100'
+          }`}
         >
           <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
             <Leaf className="w-4 h-4 text-[#4ade80]" />
@@ -287,8 +307,14 @@ export const Landing = () => {
           </span>
         </div>
 
-        {/* Right: Nav items (About, Impact, Solutions) + Take Action pill */}
-        <div className="flex items-center gap-6 sm:gap-8">
+        {/* Right: Nav items + Take Action pill (Fades out completely in 150ms on Beat 3) */}
+        <div
+          className="flex items-center gap-6 sm:gap-8 transition-opacity duration-150"
+          style={{
+            opacity: activeBeat === 3 ? 0 : 1,
+            pointerEvents: activeBeat === 3 ? 'none' : 'auto',
+          }}
+        >
           <nav className="hidden md:flex items-center gap-7">
             <button
               onClick={() => goToBeat(1)}
@@ -345,20 +371,31 @@ export const Landing = () => {
               activeBeat={activeBeat}
               isTransitioning={isTransitioning}
               mousePos={mousePos}
+              isBtnHovered={isBtnHovered}
             />
             <Effects isLowEnd={false} />
           </Suspense>
         </Canvas>
 
-        {/* Left-to-Right Dark Gradient Scrim (Protects text contrast from Earth) */}
+        {/* 1. Left-to-Right Dark Gradient Scrim (Beats 0-2) */}
         <div
-          className="absolute inset-y-0 left-0 w-full md:w-3/5 pointer-events-none"
+          className="absolute inset-y-0 left-0 w-full md:w-3/5 pointer-events-none transition-opacity duration-300"
           style={{
+            opacity: activeBeat < 3 ? 1 : 0,
             background: 'linear-gradient(to right, rgba(3, 7, 18, 0.94) 0%, rgba(3, 7, 18, 0.82) 45%, rgba(3, 7, 18, 0.25) 80%, transparent 100%)',
           }}
         />
 
-        {/* Dynamic Pollution Vignette & Contrast Overlay (Smooth 600ms transition) */}
+        {/* 2. Soft Dark Radial Scrim for Final Beat 3 (Centered over Earth, transparent by ~45% viewport width) */}
+        <div
+          className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+          style={{
+            opacity: activeBeat === 3 ? 1 : 0,
+            background: 'radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.52) 0%, rgba(0, 0, 0, 0.38) 25%, transparent 45%)',
+          }}
+        />
+
+        {/* Dynamic Pollution Vignette & Contrast Overlay */}
         <div
           className="absolute inset-0 pointer-events-none transition-opacity duration-700 ease-out"
           style={{
@@ -366,9 +403,9 @@ export const Landing = () => {
           }}
         />
 
-        {/* Transition Flash Overlay */}
+        {/* Click Transition Radial Green Flash */}
         {screenFlash && (
-          <div className="absolute inset-0 z-50 bg-[#4ade80] animate-out fade-out duration-700 pointer-events-none" />
+          <div className="absolute inset-0 z-50 bg-gradient-radial from-[#4ade80] to-[#16a34a] animate-out fade-out duration-700 pointer-events-none" />
         )}
       </div>
 
@@ -378,68 +415,125 @@ export const Landing = () => {
         {/* Spacer for fixed header */}
         <div className="h-16" />
 
-        {/* ── Left Column Stage: Stepped Beats (Only active beat rendered) ── */}
-        <div className="relative w-full max-w-xl md:max-w-2xl my-auto text-left pointer-events-auto">
-          <div key={activeBeat} className="beat-unit">
-            
-            {/* Eyebrow */}
-            <p className={`font-label uppercase text-[12px] sm:text-[13px] tracking-[0.3em] ${currentBeatData.eyebrowColor} mb-4 block`}>
-              {currentBeatData.eyebrow}
+        {/* ── Content Stage ── */}
+        {activeBeat === 3 ? (
+          /* ── FINAL BEAT 3: Centered Cinematic Composition ── */
+          <div
+            key="beat-3"
+            className="final-beat-unit w-full max-w-3xl mx-auto my-auto text-center flex flex-col items-center justify-center pointer-events-auto px-4"
+          >
+            {/* a) Eyebrow: 14px, uppercase, letter-spacing 0.3em, white at 70% opacity */}
+            <p className="font-label uppercase text-[14px] tracking-[0.3em] text-white/70 mb-5 block text-center">
+              THE PLANET CAN'T WAIT
             </p>
 
-            {/* Headline */}
-            <h1 className="font-display font-extrabold text-[clamp(2.5rem,7vw,6.5rem)] leading-[0.95] tracking-[-0.02em] text-white mb-6 drop-shadow-2xl">
-              {currentBeatData.headline}
+            {/* b) Headline: two lines max, centered, heavy geometric sans (display font, weight 800), white, clamp(2.5rem, 6vw, 5.5rem), line-height 1.0 */}
+            <h1 className="font-display font-extrabold text-[clamp(2.5rem,6vw,5.5rem)] leading-[1.0] text-white text-center drop-shadow-2xl mb-10 max-w-2xl mx-auto tracking-[-0.02em]">
+              Heal it with<br />your own hands.
             </h1>
 
-            {/* Body Text */}
-            {currentBeatData.body && (
-              <p className="font-body font-light text-[18px] sm:text-[20px] leading-[1.6] text-white/70 mb-8 max-w-[46ch]">
-                {currentBeatData.body}
-              </p>
-            )}
+            {/* c) The Button: at least 72px tall and 300px wide (desktop), 64px full width (mobile), gradient #4ade80 to #22c55e, text #052e16, white top highlight, sonar ripple rings, shine sweep, arrow nudge */}
+            <div className="relative flex items-center justify-center my-2 w-full max-w-[340px] sm:max-w-none sm:w-auto">
+              
+              {/* Sonar Ripple Ring 1 (2.4s loop) */}
+              <div className="absolute inset-0 rounded-full bg-emerald-400/40 sonar-ring-1 pointer-events-none" />
 
-            {/* Sourced Data Line */}
-            {currentBeatData.source && (
-              <p className="font-mono text-xs sm:text-sm text-white/50 tracking-wider mb-8">
-                {currentBeatData.source}
-              </p>
-            )}
+              {/* Sonar Ripple Ring 2 (staggered by 1.2s) */}
+              <div className="absolute inset-0 rounded-full bg-emerald-400/25 sonar-ring-2 pointer-events-none" />
 
-            {/* Action Button (Beat 0 and Beat 3) */}
-            {currentBeatData.button && (
-              <div>
-                <button
-                  onClick={handleStartCleaning}
-                  disabled={isTransitioning}
-                  className={`btn-aerospace-primary group ${
-                    currentBeatData.button.large ? 'text-base sm:text-lg px-9 py-4 shadow-[0_0_50px_rgba(74,222,128,0.5)]' : ''
-                  }`}
-                >
-                  {currentBeatData.button.large && (
-                    <Sparkles className="w-5 h-5 text-slate-950 group-hover:rotate-12 transition-transform duration-200" />
-                  )}
-                  <span>{currentBeatData.button.label}</span>
-                  <ArrowRight className="w-4 h-4 text-slate-950 group-hover:translate-x-1.5 transition-transform duration-200" />
-                </button>
+              {/* Main Glowing Green Pill Button */}
+              <button
+                onClick={handleStartCleaning}
+                onMouseEnter={() => setIsBtnHovered(true)}
+                onMouseLeave={() => setIsBtnHovered(false)}
+                disabled={isTransitioning}
+                className="relative group overflow-hidden flex items-center justify-center gap-3 sm:gap-4 min-h-[64px] sm:min-h-[72px] w-full sm:w-auto sm:min-w-[340px] px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-gradient-to-r from-[#4ade80] to-[#22c55e] text-[#052e16] font-bold text-base sm:text-lg tracking-[0.06em] uppercase shadow-[0_0_50px_rgba(74,222,128,0.65)] hover:shadow-[0_0_75px_rgba(74,222,128,0.95)] hover:scale-[1.06] active:scale-[0.97] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-4 focus:ring-white select-none z-10"
+                style={{
+                  boxShadow: isBtnHovered
+                    ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.90), 0 0 75px rgba(74, 222, 128, 0.90)'
+                    : 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.75), 0 0 50px rgba(74, 222, 128, 0.65)',
+                }}
+              >
+                {/* Light shine sweep across button every 4s */}
+                <div className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent btn-shine pointer-events-none" />
 
-                {currentBeatData.button.badge && (
-                  <p className="mt-4 font-mono text-xs text-white/50 uppercase tracking-[0.25em]">
-                    {currentBeatData.button.badge}
-                  </p>
-                )}
-              </div>
-            )}
+                {/* Sparkle Icon */}
+                <Sparkles className="w-5 h-5 text-[#052e16] shrink-0" />
+
+                {/* Label */}
+                <span className="font-extrabold text-[15px] sm:text-base tracking-[0.06em]">
+                  START CLEANING
+                </span>
+
+                {/* Arrow Icon with nudge animation & hover slide */}
+                <ArrowRight className="w-5 h-5 text-[#052e16] shrink-0 arrow-nudge group-hover:translate-x-2 transition-transform duration-200" />
+              </button>
+            </div>
+
+            {/* d) Micro-copy: 15px, white at 80% opacity */}
+            <p className="mt-5 text-[15px] font-body font-light text-white/80 tracking-wide text-center">
+              4 missions. About 3 minutes. No sign-up.
+            </p>
 
           </div>
-        </div>
+        ) : (
+          /* ── BEATS 0, 1, 2: Left Column Stage ── */
+          <div className="relative w-full max-w-xl md:max-w-2xl my-auto text-left pointer-events-auto">
+            <div key={activeBeat} className="beat-unit">
+              
+              {/* Eyebrow */}
+              <p className={`font-label uppercase text-[12px] sm:text-[13px] tracking-[0.3em] ${currentBeatData.eyebrowColor} mb-4 block`}>
+                {currentBeatData.eyebrow}
+              </p>
 
-        {/* ── Bottom Bar: Beat Dots / Mouse Indicator (Center) & Skip Intro (Right) ── */}
-        <div className="relative w-full flex items-center justify-between pointer-events-auto">
-          
+              {/* Headline */}
+              <h1 className="font-display font-extrabold text-[clamp(2.5rem,7vw,6.5rem)] leading-[0.95] tracking-[-0.02em] text-white mb-6 drop-shadow-2xl">
+                {currentBeatData.headline}
+              </h1>
+
+              {/* Body Text */}
+              {currentBeatData.body && (
+                <p className="font-body font-light text-[18px] sm:text-[20px] leading-[1.6] text-white/70 mb-8 max-w-[46ch]">
+                  {currentBeatData.body}
+                </p>
+              )}
+
+              {/* Sourced Data Line */}
+              {currentBeatData.source && (
+                <p className="font-mono text-xs sm:text-sm text-white/50 tracking-wider mb-8">
+                  {currentBeatData.source}
+                </p>
+              )}
+
+              {/* Action Button for Beat 0 */}
+              {currentBeatData.button && (
+                <div>
+                  <button
+                    onClick={handleStartCleaning}
+                    disabled={isTransitioning}
+                    className="btn-aerospace-primary group"
+                  >
+                    <span>{currentBeatData.button.label}</span>
+                    <ArrowRight className="w-4 h-4 text-slate-950 group-hover:translate-x-1.5 transition-transform duration-200" />
+                  </button>
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+
+        {/* ── Bottom Bar: Hidden completely on Beat 3; Visible on Beats 0-2 ── */}
+        <div
+          className="relative w-full flex items-center justify-between pointer-events-auto transition-opacity duration-200"
+          style={{
+            opacity: activeBeat === 3 ? 0 : 1,
+            pointerEvents: activeBeat === 3 ? 'none' : 'auto',
+          }}
+        >
           {/* Bottom Left: Beat Pagination Dots */}
           <div className="flex items-center gap-2">
-            {[0, 1, 2, 3].map((b) => (
+            {[0, 1, 2].map((b) => (
               <button
                 key={b}
                 onClick={() => goToBeat(b)}
@@ -450,16 +544,14 @@ export const Landing = () => {
               />
             ))}
             <span className="font-mono text-xs text-white/40 ml-1.5 tracking-wider">
-              0{activeBeat + 1} / 04
+              0{activeBeat + 1} / 03
             </span>
           </div>
 
-          {/* Bottom Center: Minimal Mouse Scroll Indicator (visible on beats 0-2) */}
+          {/* Bottom Center: Minimal Mouse Scroll Indicator */}
           <div
             onClick={() => goToBeat(Math.min(activeBeat + 1, 3))}
-            className={`hidden sm:flex items-center justify-center gap-3 transition-opacity duration-300 cursor-pointer ${
-              activeBeat < 3 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
+            className="hidden sm:flex items-center justify-center gap-3 transition-opacity duration-300 cursor-pointer"
             title="Scroll or click to advance"
           >
             <div className="w-12 h-px bg-white/15" />
