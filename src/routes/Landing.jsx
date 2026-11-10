@@ -8,7 +8,7 @@ import { Earth } from '../components/hero3d/Earth';
 import { Clouds } from '../components/hero3d/Clouds';
 import { Atmosphere } from '../components/hero3d/Atmosphere';
 import { Smog } from '../components/hero3d/Smog';
-import { FloatingDebris } from '../components/hero3d/FloatingDebris';
+import { FloatingDebris, ForegroundDebris } from '../components/hero3d/FloatingDebris';
 import { Effects } from '../components/hero3d/Effects';
 import { ArrowRight, Leaf, Sparkles } from 'lucide-react';
 
@@ -194,9 +194,15 @@ const LandingSceneController = ({
         <FloatingDebris
           pollution={1.0}
           healProgress={0}
-          isFinalBeat={activeBeat === 3}
         />
       </group>
+
+      {/* Cinematic Foreground Debris framing the camera viewport (matches reference mockup) */}
+      <ForegroundDebris
+        pollution={1.0}
+        healProgress={0}
+        isFinalBeat={activeBeat === 3}
+      />
     </>
   );
 };
