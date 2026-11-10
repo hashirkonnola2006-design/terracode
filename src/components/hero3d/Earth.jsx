@@ -16,7 +16,15 @@ export const AXIAL_TILT_Z = -0.10;          // Subtle natural axial tilt
 export const INITIAL_ROTATION_Y = 2.94;     // Centers India & the Indian Ocean
 export const HEAL_SCALE_EXPANSION = 0.035;  // Expands ~3.5% as biosphere restores
 
-export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0, dim = 1.0, hover = 0.0, isLowEnd = false }) => {
+export const Earth = ({
+  onEarthMesh,
+  scrollRotation = 0,
+  healProgress = 0,
+  pollution = 1.0,
+  dim = 1.0,
+  hover = 0.0,
+  isLowEnd = false,
+}) => {
   const { gl } = useThree();
   const earthRef = useRef(null);
   const shaderMatRef = useRef(null);
@@ -43,42 +51,35 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0, dim =
       t.anisotropy = maxAnisotropy;
       t.needsUpdate = true;
     });
-
-    // Progressive upgrade: If desktop / high-end mode, load 8K daymap in background
-    // if (!isLowEnd) {
-    //   const loader = new THREE.TextureLoader();
-    //   loader.load('/textures/earth_day_8k.jpg', (tex8k) => {
-    //     tex8k.colorSpace = THREE.SRGBColorSpace;
-    //     tex8k.minFilter = THREE.LinearMipmapLinearFilter;
-    //     tex8k.magFilter = THREE.LinearFilter;
-    //     tex8k.generateMipmaps = true;
-    //     tex8k.anisotropy = maxAnisotropy;
-    //     tex8k.needsUpdate = true;
-    //     if (shaderMatRef.current) {
-    //       shaderMatRef.current.uniforms.uDayMap.value = tex8k;
-    //       shaderMatRef.current.uniformsNeedUpdate = true;
-    //     }
-    //   });
-    // }
   }, [dayMap2k, normalMap, specularMap, gl, isLowEnd]);
+
+  // Effective pollution value: explicit pollution prop or (1 - healProgress)
+  const initialPollution = pollution !== undefined ? pollution : 1.0 - healProgress;
 
   const earthUniforms = useMemo(() => {
     const u = THREE.UniformsUtils.clone(EarthShader.uniforms);
     u.uDayMap.value = dayMap2k;
     u.uNormalMap.value = normalMap;
     u.uSpecularMap.value = specularMap;
-    u.uHeal.value = healProgress;
+    u.uPollution.value = initialPollution;
+    u.uHeal.value = 1.0 - initialPollution;
     return u;
   }, [dayMap2k, normalMap, specularMap]);
 
-  const smoothHealRef = useRef(healProgress);
+  const smoothPollutionRef = useRef(initialPollution);
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
-    smoothHealRef.current = THREE.MathUtils.lerp(smoothHealRef.current, healProgress, Math.min(delta * 4.0, 1.0));
+    const targetPollution = pollution !== undefined ? pollution : 1.0 - healProgress;
+    smoothPollutionRef.current = THREE.MathUtils.lerp(
+      smoothPollutionRef.current,
+      targetPollution,
+      Math.min(delta * 4.0, 1.0)
+    );
 
     if (shaderMatRef.current) {
-      shaderMatRef.current.uniforms.uHeal.value = smoothHealRef.current;
+      shaderMatRef.current.uniforms.uPollution.value = smoothPollutionRef.current;
+      shaderMatRef.current.uniforms.uHeal.value = 1.0 - smoothPollutionRef.current;
       shaderMatRef.current.uniforms.uTime.value = t;
       shaderMatRef.current.uniforms.uDim.value = THREE.MathUtils.lerp(
         shaderMatRef.current.uniforms.uDim.value,
@@ -93,10 +94,11 @@ export const Earth = ({ onEarthMesh, scrollRotation = 0, healProgress = 0, dim =
     }
 
     if (earthRef.current) {
-      const currentSpeed = THREE.MathUtils.lerp(BASE_ROTATION_SPEED, HEALED_ROTATION_SPEED, smoothHealRef.current);
+      const cleanProgress = 1.0 - smoothPollutionRef.current;
+      const currentSpeed = THREE.MathUtils.lerp(BASE_ROTATION_SPEED, HEALED_ROTATION_SPEED, cleanProgress);
       earthRef.current.rotation.y = INITIAL_ROTATION_Y + t * currentSpeed + scrollRotation;
 
-      const s = 1.0 + smoothHealRef.current * HEAL_SCALE_EXPANSION;
+      const s = 1.0 + cleanProgress * HEAL_SCALE_EXPANSION;
       earthRef.current.scale.set(s, s, s);
     }
   });

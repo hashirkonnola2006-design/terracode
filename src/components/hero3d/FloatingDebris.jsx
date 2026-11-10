@@ -3,21 +3,21 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // ═══════════════════════════════════════════════════════════════
-// TWEAKABLE CONSTANTS (Cinematic Clutter of Small Floating Wastes)
+// TWEAKABLE CONSTANTS (Cinematic Clutter of Floating Wastes)
 // ═══════════════════════════════════════════════════════════════
-export const SMALL_DEBRIS_SCALE = 0.036;  // Small debris scale (realistic relative to Earth radius = 0.70)
-export const ORBIT_MIN_RADIUS   = 0.78;   // Inner orbit just skimming above the atmosphere
-export const ORBIT_MAX_RADIUS   = 1.58;   // Outer edge of orbital debris halo
+export const SMALL_DEBRIS_SCALE = 0.060;  // 1.5 - 2x current size for damaged Earth look
+export const ORBIT_MIN_RADIUS   = 0.85;   // Skimming above atmosphere
+export const ORBIT_MAX_RADIUS   = 1.65;   // Outer edge of orbital debris halo
 export const DRIFT_SPEED_MULT   = 0.035;  // Slow, serene orbital drift speed
 
-// Clutter item counts (Total ~230 instanced items across 7 draw calls)
-export const COUNT_BOTTLES = 32; // Small transparent water bottles
-export const COUNT_BAGS    = 42; // Small translucent crumpled bags & sheets
-export const COUNT_CANS    = 36; // Small soda cans & metal tins
-export const COUNT_CRATES  = 18; // Small industrial crates & containers
-export const COUNT_TIRES   = 18; // Small rubber tires
-export const COUNT_CUPS    = 22; // Small takeaway coffee cups
-export const COUNT_CAPS    = 64; // Small colorful bottle caps, wrappers & chips
+// Clutter item counts (~2x current counts, ~460 instanced items across 7 draw calls)
+export const COUNT_BOTTLES = 64;  // Transparent water bottles
+export const COUNT_BAGS    = 84;  // Translucent crumpled bags & sheets
+export const COUNT_CANS    = 72;  // Soda cans & metal tins
+export const COUNT_CRATES  = 36;  // Industrial crates & containers
+export const COUNT_TIRES   = 36;  // Rubber tires
+export const COUNT_CUPS    = 44;  // Takeaway coffee cups
+export const COUNT_CAPS    = 128; // Bottle caps, wrappers & chips
 
 // ── 1. PROCEDURAL GEOMETRIES (Crisp, Detailed, Low-Poly) ──
 function createWaterBottleGeometry() {
@@ -145,7 +145,13 @@ function createCrateTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
-export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, healProgress = 0, isFinalBeat = false }) => {
+export const FloatingDebris = ({
+  center = [0, 0, 0],
+  mousePos = { x: 0, y: 0 },
+  healProgress = 0,
+  pollution = 1.0,
+  isFinalBeat = false,
+}) => {
   // Instanced mesh refs
   const bottleInstRef = useRef(null);
   const bagInstRef    = useRef(null);
@@ -277,7 +283,7 @@ export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, 
     ];
   }, [isFinalBeat, bottleGeom, bagGeom, cupGeom, canGeom, tireGeom, crateGeom, matClearBottle, matTranslucentBag, matPaperCup, matSodaCan, matRubberTire, matBlueCrate]);
 
-  // Generate orbital shell parameters for clutter particles
+  // Generate orbital shell parameters for clutter particles (with distinct orbital debris belt)
   const generateClutterData = (count, baseScale, minRadius, maxRadius, colorPalette = null) => {
     const list = [];
     let seed = 789123 + count * 13;
@@ -287,13 +293,25 @@ export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, 
     };
 
     for (let i = 0; i < count; i++) {
-      const radius = minRadius + rand() * (maxRadius - minRadius);
-      const inclination = (rand() - 0.5) * Math.PI * 0.70;
-      const nodeAngle   = rand() * Math.PI * 2;
-      const baseAngle   = rand() * Math.PI * 2;
-      const orbitSpeed  = (rand() > 0.45 ? 1 : -1) * (0.012 + rand() * 0.024) * DRIFT_SPEED_MULT;
+      // ~65% of clutter clustered into a visible debris belt/ring around the Earth
+      const isBelt = (i % 3) !== 0;
+      let radius, inclination, nodeAngle, orbitSpeed;
 
-      const scale = baseScale * (0.75 + rand() * 0.50);
+      if (isBelt) {
+        radius = 0.95 + rand() * 0.48; // Concentrated orbital band
+        inclination = 0.32 + (rand() - 0.5) * 0.12; // Coherent plane tilt
+        nodeAngle = 0.45 + (rand() - 0.5) * 0.16;   // Shared ascending node
+        orbitSpeed = (0.016 + rand() * 0.022) * DRIFT_SPEED_MULT;
+      } else {
+        // Remaining items in wider halo
+        radius = minRadius + rand() * (maxRadius - minRadius);
+        inclination = (rand() - 0.5) * Math.PI * 0.70;
+        nodeAngle = rand() * Math.PI * 2;
+        orbitSpeed = (rand() > 0.45 ? 1 : -1) * (0.012 + rand() * 0.024) * DRIFT_SPEED_MULT;
+      }
+
+      const baseAngle = rand() * Math.PI * 2;
+      const scale = baseScale * (0.80 + rand() * 0.45);
       const threshold = 0.10 + rand() * 0.72;
 
       const color = colorPalette
@@ -376,6 +394,7 @@ export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, 
 
   useFrame((state, delta) => {
     const clampedDelta = Math.min(delta, 0.05);
+    const effectivePollution = pollution !== undefined ? pollution : 1.0 - healProgress;
 
     const updateInstances = (mesh, data) => {
       if (!mesh) return;
@@ -389,7 +408,8 @@ export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, 
 
         const pos = computeOrbitalPos(item);
 
-        const localDissolve = Math.max(0.0, 1.0 - smoothstep(item.threshold * 0.45, item.threshold * 0.45 + 0.38, healProgress));
+        // Clutter dissolves smoothly when pollution drops to 0
+        const localDissolve = Math.max(0.0, smoothstep(item.threshold * 0.45, item.threshold * 0.45 + 0.38, effectivePollution));
 
         // When in final beat, clear any debris within ~25% viewport radius from screen center
         let centerClearFactor = 1.0;
@@ -398,7 +418,7 @@ export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, 
           centerClearFactor = smoothstep(0.48, 0.75, screenDist);
         }
 
-        const s = healProgress >= 0.88 ? 0.0 : item.scale * localDissolve * centerClearFactor;
+        const s = effectivePollution <= 0.01 ? 0.0 : item.scale * localDissolve * centerClearFactor;
 
         dummy.position.set(pos.x, pos.y, pos.z);
         dummy.rotation.set(item.rotX, item.rotY, item.rotZ);
@@ -428,7 +448,7 @@ export const FloatingDebris = ({ center = [0, 0, 0], mousePos = { x: 0, y: 0 }, 
         child.rotation.z += item.speed[2] * clampedDelta;
         child.position.y = item.pos[1] + Math.sin(state.clock.elapsedTime * 0.8 + i) * 0.04 + mousePos.y * 0.02;
         child.position.x = item.pos[0] + mousePos.x * 0.03;
-        const s = Math.max(0, 1 - healProgress * 1.5) * item.scale;
+        const s = Math.max(0, effectivePollution) * item.scale;
         child.scale.set(s, s, s);
       });
     }

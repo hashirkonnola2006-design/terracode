@@ -16,7 +16,7 @@ const BEAT_CAMERA_TARGETS = [
   { camZ: 3.65, earthFactor: 1.0, earthY: 0.0 },    // Beat 0: Hero (Earth on right x=1.35, camZ=3.65)
   { camZ: 3.25, earthFactor: 0.7, earthY: 0.0 },    // Beat 1: Plastic Crisis (earth moves inward)
   { camZ: 2.85, earthFactor: 0.35, earthY: 0.0 },   // Beat 2: Forests & Air (earth moves inward)
-  { camZ: 2.22, earthFactor: 0.0, earthY: -0.12 },  // Beat 3: Centered, 80-85% height, nudged slightly down!
+  { camZ: 2.85, earthFactor: 0.0, earthY: -0.24 },  // Beat 3: Centered, 22% smaller Earth, centered lower so heading is clear!
 ];
 
 // Discrete story beats configuration
@@ -141,7 +141,7 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
         mousePos={mousePos}
         reducedMotion={false}
         isFinalBeat={activeBeat === 3}
-        hover={isBtnHovered ? 1.0 : 0.0}
+        hover={0.0}
       />
 
       {/* Sun key lighting (healProgress = 0, camera following) */}
@@ -149,18 +149,20 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
 
       <group ref={earthGroupRef} scale={0.72}>
         <Earth
+          pollution={1.0}
           healProgress={0}
-          dim={activeBeat === 3 ? 0.76 : 1.0}
-          hover={isBtnHovered ? 1.0 : 0.0}
+          dim={activeBeat === 3 ? 0.88 : 1.0}
+          hover={0.0}
         />
-        <Clouds healProgress={0} />
-        <Atmosphere healProgress={0} />
+        <Clouds pollution={1.0} healProgress={0} />
+        <Atmosphere pollution={1.0} healProgress={0} />
       </group>
 
       {/* Floating debris follows Earth center position, clears center in final beat */}
       <FloatingDebris
         center={[currentEarthPos.current.x, currentEarthPos.current.y, 0]}
         mousePos={mousePos}
+        pollution={1.0}
         healProgress={0}
         isFinalBeat={activeBeat === 3}
       />
@@ -372,12 +374,12 @@ export const Landing = () => {
           </Suspense>
         </Canvas>
 
-        {/* 1. Left-to-Right Dark Gradient Scrim (Beats 0-2) */}
+        {/* 1. Soft Dark Gradient behind Left Text Block (Slides 1-3, Beats 0-2) */}
         <div
           className="absolute inset-y-0 left-0 w-full md:w-3/5 pointer-events-none transition-opacity duration-300"
           style={{
             opacity: activeBeat < 3 ? 1 : 0,
-            background: 'linear-gradient(to right, rgba(3, 7, 18, 0.94) 0%, rgba(3, 7, 18, 0.82) 45%, rgba(3, 7, 18, 0.25) 80%, transparent 100%)',
+            background: 'linear-gradient(to right, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.45) 24%, rgba(0, 0, 0, 0.16) 48%, transparent 72%)',
           }}
         />
 
@@ -386,7 +388,7 @@ export const Landing = () => {
           className="absolute inset-0 pointer-events-none transition-opacity duration-300"
           style={{
             opacity: activeBeat === 3 ? 1 : 0,
-            background: 'radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.52) 0%, rgba(0, 0, 0, 0.38) 25%, transparent 45%)',
+            background: 'radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.28) 30%, transparent 55%)',
           }}
         />
 
@@ -427,26 +429,19 @@ export const Landing = () => {
               Heal it with<br />your own hands.
             </h1>
 
-            {/* c) The Button: at least 72px tall and 300px wide, gradient #4ade80 to #22c55e, text #052e16, white top highlight, sonar ripple rings, shine sweep, arrow nudge */}
+            {/* c) The Button: bright green, tight glow around button only (no spill over Earth) */}
             <div className="relative flex items-center justify-center my-2">
-              
-              {/* Sonar Ripple Ring 1 (2.4s loop) */}
-              <div className="absolute inset-0 rounded-full bg-emerald-400/40 sonar-ring-1 pointer-events-none" />
-
-              {/* Sonar Ripple Ring 2 (staggered by 1.2s) */}
-              <div className="absolute inset-0 rounded-full bg-emerald-400/25 sonar-ring-2 pointer-events-none" />
-
               {/* Main Glowing Green Pill Button */}
               <button
                 onClick={handleStartCleaning}
                 onMouseEnter={() => setIsBtnHovered(true)}
                 onMouseLeave={() => setIsBtnHovered(false)}
                 disabled={isTransitioning}
-                className="relative group overflow-hidden flex items-center justify-center gap-4 min-h-[72px] min-w-[300px] sm:min-w-[340px] px-10 py-5 rounded-full bg-gradient-to-r from-[#4ade80] to-[#22c55e] text-[#052e16] font-bold text-base sm:text-lg tracking-[0.06em] uppercase shadow-[0_0_50px_rgba(74,222,128,0.65)] hover:shadow-[0_0_75px_rgba(74,222,128,0.95)] hover:scale-[1.06] active:scale-[0.97] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-4 focus:ring-white select-none z-10"
+                className="relative group overflow-hidden flex items-center justify-center gap-4 min-h-[72px] min-w-[300px] sm:min-w-[340px] px-10 py-5 rounded-full bg-gradient-to-r from-[#4ade80] to-[#22c55e] text-[#052e16] font-bold text-base sm:text-lg tracking-[0.06em] uppercase hover:scale-[1.04] active:scale-[0.97] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-4 focus:ring-white select-none z-10"
                 style={{
                   boxShadow: isBtnHovered
-                    ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.90), 0 0 75px rgba(74, 222, 128, 0.90)'
-                    : 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.75), 0 0 50px rgba(74, 222, 128, 0.65)',
+                    ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.90), 0 0 20px rgba(74, 222, 128, 0.55), 0 4px 14px rgba(0, 0, 0, 0.4)'
+                    : 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.75), 0 0 14px rgba(74, 222, 128, 0.40), 0 4px 10px rgba(0, 0, 0, 0.35)',
                 }}
               >
                 {/* Light shine sweep across button every 4s */}
@@ -460,7 +455,7 @@ export const Landing = () => {
                   START CLEANING
                 </span>
 
-                {/* Arrow Icon with nudge animation & hover slide */}
+                {/* Arrow Icon */}
                 <ArrowRight className="w-5 h-5 text-[#052e16] shrink-0 arrow-nudge group-hover:translate-x-2 transition-transform duration-200" />
               </button>
             </div>
@@ -488,14 +483,20 @@ export const Landing = () => {
 
               {/* Body Text */}
               {currentBeatData.body && (
-                <p className="font-body font-light text-[18px] sm:text-[20px] leading-[1.6] text-white/70 mb-8 max-w-[46ch]">
+                <p
+                  className="font-body font-normal text-[18px] sm:text-[20px] leading-[1.6] text-gray-200 mb-8 max-w-[46ch]"
+                  style={{ textShadow: '0 1px 4px rgba(0, 0, 0, 0.90), 0 2px 10px rgba(0, 0, 0, 0.65)' }}
+                >
                   {currentBeatData.body}
                 </p>
               )}
 
               {/* Sourced Data Line */}
               {currentBeatData.source && (
-                <p className="font-mono text-xs sm:text-sm text-white/50 tracking-wider mb-8">
+                <p
+                  className="font-mono text-xs sm:text-sm text-gray-300 tracking-wider mb-8"
+                  style={{ textShadow: '0 1px 3px rgba(0, 0, 0, 0.85)' }}
+                >
                   {currentBeatData.source}
                 </p>
               )}

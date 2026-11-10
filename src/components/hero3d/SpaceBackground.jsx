@@ -371,16 +371,10 @@ export const SpaceBackground = ({
         />
       </mesh>
 
-      {/* ── 5. Faint Reddish-Brown Pollution Haze (Behind Earth, lerps toward green on hover) ── */}
+      {/* ── 5. Faint Dark Red/Brown Pollution Haze (Behind Earth, matches polluted Earth) ── */}
       <mesh position={[0, -0.12, -8]} renderOrder={1}>
         <planeGeometry args={[14, 14]} />
         <shaderMaterial
-          uniforms={useMemo(() => ({ uHover: { value: 0.0 } }), [])}
-          ref={(mat) => {
-            if (mat) {
-              mat.uniforms.uHover.value = hover;
-            }
-          }}
           vertexShader={`
             varying vec2 vUv;
             void main() {
@@ -389,15 +383,12 @@ export const SpaceBackground = ({
             }
           `}
           fragmentShader={`
-            uniform float uHover;
             varying vec2 vUv;
             void main() {
               float d = length(vUv - 0.5) * 2.0;
-              float alpha = smoothstep(1.0, 0.0, d) * 0.24;
-              vec3 brownHaze = vec3(0.52, 0.22, 0.10);
-              vec3 greenHaze = vec3(0.12, 0.72, 0.42);
-              vec3 col = mix(brownHaze, greenHaze, uHover);
-              gl_FragColor = vec4(col, alpha);
+              float alpha = smoothstep(1.0, 0.0, d) * 0.18;
+              vec3 brownHaze = vec3(0.36, 0.14, 0.07);
+              gl_FragColor = vec4(brownHaze, alpha);
             }
           `}
           transparent={true}
