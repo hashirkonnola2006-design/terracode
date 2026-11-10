@@ -15,24 +15,43 @@ const BackgroundSceneController = ({
   healMaskManager = null,
   liteMode = false,
   enableOrbit = false,
-  customCameraZ = 3.3,
-  spinRate = 0.014,
+  customCameraZ = 3.2,
+  spinRate = 0.012,
+  isResults = false,
 }) => {
   const planetGroupRef = useRef(null);
   const controlsRef = useRef(null);
+  const isDragging = useRef(false);
   const smoothHealth = useRef(health / 100);
+
+  const currentEarthPos = useRef(new THREE.Vector3(0, 0, 0));
+  const currentCameraZ = useRef(customCameraZ);
+  const currentScale = useRef(1.0);
+
   const { size, camera } = useThree();
   const aspect = size.width / Math.max(1, size.height);
   const isPortrait = aspect < 1.05;
+  const isMobile = size.width < 768 || isPortrait;
+
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
-    if (isPortrait) {
-      camera.position.z = Math.min(6.2, customCameraZ / Math.max(0.50, aspect * 1.15));
+    if (isResults && isMobile) {
+      // Shift viewport so Earth appears centered in top half above the bottom sheet
+      camera.setViewOffset(
+        size.width,
+        size.height,
+        0,
+        Math.round(size.height * 0.14),
+        size.width,
+        size.height
+      );
     } else {
-      camera.position.z = customCameraZ;
+      camera.clearViewOffset();
     }
-    camera.lookAt(0, 0, 0);
-  }, [isPortrait, aspect, camera, customCameraZ]);
+  }, [isResults, isMobile, size.width, size.height, camera]);
 
   useEffect(() => {
     if (planetGroupRef.current) {
@@ -40,12 +59,81 @@ const BackgroundSceneController = ({
     }
   }, []);
 
-  useFrame((state, delta) => {
-    const target = health / 100;
-    smoothHealth.current = THREE.MathUtils.lerp(smoothHealth.current, target, Math.min(delta * 3.5, 1.0));
+  useFrame((_, delta) => {
+    const targetHealth = health / 100;
+    smoothHealth.current = THREE.MathUtils.lerp(
+      smoothHealth.current,
+      targetHealth,
+      Math.min(delta * 3.5, 1.0)
+    );
+
+    // Calculate target position, camera pullback, and scale based on screen state
+    let targetEarthX = 0;
+    let targetEarthY = 0;
+    let targetCamZ = customCameraZ;
+    let targetScale = 1.0;
+
+    if (isResults) {
+      if (isMobile) {
+        // Mobile: Earth in top half (fully visible, completely above compact bottom sheet)
+        targetEarthX = 0.0;
+        targetEarthY = 0.0;
+        targetCamZ = 3.8;
+        targetScale = 0.54;
+      } else {
+        // Desktop: Results card on left (40%), Earth centered in remaining 60% with wide clearance
+        targetEarthX = Math.min(1.48, Math.max(1.30, 0.75 * aspect));
+        targetEarthY = 0.0;
+        targetCamZ = 4.4;
+        targetScale = 0.95;
+      }
+    } else {
+      if (isPortrait) {
+        targetEarthX = 0;
+        targetEarthY = 0;
+        targetCamZ = Math.min(6.2, customCameraZ / Math.max(0.50, aspect * 1.15));
+        targetScale = 1.0;
+      } else {
+        targetEarthX = 0;
+        targetEarthY = 0;
+        targetCamZ = customCameraZ;
+        targetScale = 1.0;
+      }
+    }
+
+    // Smooth transition over ~1.2s ease-out (snaps instantly if reduced motion)
+    const lerpSpeed = prefersReducedMotion ? 1.0 : Math.min(delta * 2.8, 1.0);
+    currentEarthPos.current.x = THREE.MathUtils.lerp(currentEarthPos.current.x, targetEarthX, lerpSpeed);
+    currentEarthPos.current.y = THREE.MathUtils.lerp(currentEarthPos.current.y, targetEarthY, lerpSpeed);
+    currentCameraZ.current = THREE.MathUtils.lerp(currentCameraZ.current, targetCamZ, lerpSpeed);
+    currentScale.current = THREE.MathUtils.lerp(currentScale.current, targetScale, lerpSpeed);
+
+    camera.position.z = currentCameraZ.current;
 
     if (planetGroupRef.current) {
-      planetGroupRef.current.rotation.y += delta * spinRate;
+      planetGroupRef.current.position.set(
+        currentEarthPos.current.x,
+        currentEarthPos.current.y,
+        0
+      );
+      planetGroupRef.current.scale.set(
+        currentScale.current,
+        currentScale.current,
+        currentScale.current
+      );
+
+      // Auto-rotate Earth slowly so all sides can be seen; PAUSE while user drags
+      if (!isDragging.current) {
+        planetGroupRef.current.rotation.y += delta * spinRate;
+      }
+    }
+
+    if (controlsRef.current) {
+      controlsRef.current.target.set(
+        currentEarthPos.current.x,
+        currentEarthPos.current.y,
+        0
+      );
     }
   });
 
@@ -58,13 +146,19 @@ const BackgroundSceneController = ({
           ref={controlsRef}
           enablePan={false}
           enableZoom={false}
-          rotateSpeed={0.5}
+          rotateSpeed={0.55}
           dampingFactor={0.06}
           enableDamping
+          onStart={() => {
+            isDragging.current = true;
+          }}
+          onEnd={() => {
+            isDragging.current = false;
+          }}
         />
       )}
 
-      <SpaceBackground reducedMotion={false} qualityOverride={liteMode ? 'LOW' : 'HIGH'} />
+      <SpaceBackground reducedMotion={prefersReducedMotion} qualityOverride={liteMode ? 'LOW' : 'HIGH'} />
       <Sun healProgress={smoothHealth.current} isLowEnd={liteMode} />
 
       <group
@@ -105,11 +199,16 @@ export const EarthBackground = ({
   healMaskManager = null,
   liteMode = false,
   enableOrbit = false,
-  customCameraZ = 3.3,
-  spinRate = 0.014,
+  customCameraZ = 3.2,
+  spinRate = 0.012,
+  isResults = false,
 }) => {
   return (
-    <div className="fixed inset-0 z-0 bg-[#030712] pointer-events-none select-none">
+    <div
+      className={`fixed inset-0 z-0 bg-[#030712] select-none ${
+        enableOrbit ? 'pointer-events-auto' : 'pointer-events-none'
+      }`}
+    >
       <Canvas
         gl={{
           preserveDrawingBuffer: false,
@@ -130,6 +229,7 @@ export const EarthBackground = ({
             enableOrbit={enableOrbit}
             customCameraZ={customCameraZ}
             spinRate={spinRate}
+            isResults={isResults}
           />
           {!liteMode && <Effects isLowEnd={liteMode} />}
         </Suspense>
@@ -139,4 +239,3 @@ export const EarthBackground = ({
 };
 
 export default EarthBackground;
-

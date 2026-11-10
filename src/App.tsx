@@ -4,6 +4,11 @@ import { Solutions } from './routes/Solutions';
 import { Clean } from './routes/Clean';
 import { Quiz } from './routes/Quiz';
 import { Game3 } from './routes/Game3';
+import { useGameStore } from './store/gameStore';
+
+if (typeof window !== 'undefined') {
+  (window as any).__ECO_STORE__ = useGameStore;
+}
 
 /**
  * EcoFuture — Root Application Router
