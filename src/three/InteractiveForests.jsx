@@ -78,12 +78,16 @@ function generateStumps(patchId) {
 export const InteractiveForests = ({ isInteractive = true }) => {
   const plantForestPatch = useGameStore((s) => s.plantForestPatch);
   const plantedPatches = useGameStore((s) => s.cleanup?.mission3?.plantedPatches ?? s.mission3?.plantedPatches ?? []);
+  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
+  const isFinished = useGameStore((s) => s.cleanup?.completed ?? s.finished ?? false);
+  const mission3Completed = useGameStore((s) => s.cleanup?.mission3?.completed ?? s.mission3?.completed ?? false);
   const activeMissionId = useGameStore((s) => s.cleanup?.activeMissionId ?? s.activeMissionId ?? 1);
   const liteMode = useGameStore((s) => s.liteMode);
 
   // Hover states & scale pop
   const [hoveredPatch, setHoveredPatch] = useState(null);
   const [clickPop, setClickPop] = useState({});
+  const pointerDownPos = useRef({});
 
   // Tree growth tracking
   const plantingTimes = useRef({});
@@ -141,7 +145,7 @@ export const InteractiveForests = ({ isInteractive = true }) => {
 
     // Update tree growth scales with ease-out-back
     patches.forEach((patch) => {
-      const isPlanted = plantedPatches.includes(patch.id);
+      const isPlanted = cleanliness >= 100 || isFinished || mission3Completed || plantedPatches.includes(patch.id);
       if (!isPlanted) {
         treeScales.current[patch.id] = 0;
         return;
@@ -159,7 +163,7 @@ export const InteractiveForests = ({ isInteractive = true }) => {
   return (
     <group>
       {patches.map((patch) => {
-        const isPlanted = plantedPatches.includes(patch.id);
+        const isPlanted = cleanliness >= 100 || isFinished || mission3Completed || plantedPatches.includes(patch.id);
         const isHovered = hoveredPatch === patch.id;
         const now = performance.now();
         const popTime = clickPop[patch.id] || 0;
@@ -194,8 +198,22 @@ export const InteractiveForests = ({ isInteractive = true }) => {
                   setHoveredPatch(patch.id);
                 }}
                 onPointerOut={() => setHoveredPatch(null)}
-                onPointerDown={(e) => handlePatchClick(patch.id, e)}
-                onClick={(e) => handlePatchClick(patch.id, e)}
+                onPointerDown={(e) => {
+                  if (e.stopPropagation) e.stopPropagation();
+                  pointerDownPos.current[patch.id] = { x: e.clientX, y: e.clientY };
+                }}
+                onPointerUp={(e) => {
+                  if (e.stopPropagation) e.stopPropagation();
+                  const down = pointerDownPos.current[patch.id];
+                  if (down) {
+                    const dx = e.clientX - down.x;
+                    const dy = e.clientY - down.y;
+                    if (Math.hypot(dx, dy) < 8) {
+                      handlePatchClick(patch.id, e);
+                    }
+                    delete pointerDownPos.current[patch.id];
+                  }
+                }}
               >
                 {/* Generous Invisible Hit Target */}
                 <mesh position={[0, 0.035, 0]}>

@@ -4,13 +4,11 @@ import { GAME_CONFIG } from '../config/game';
 import {
   ChevronDown,
   ChevronUp,
-  CircleDot,
   CheckCircle2,
   Trash2,
   SunMedium,
   Trees,
   Droplets,
-  Flame,
 } from 'lucide-react';
 
 export const MissionPanel = () => {
@@ -23,8 +21,6 @@ export const MissionPanel = () => {
   const m2Raw = cleanup?.mission2;
   const m3Raw = cleanup?.mission3;
   const m4Raw = cleanup?.mission4;
-  const combo = cleanup?.combo ?? 1;
-  const co2Absorbed = cleanup?.co2Absorbed ?? 0;
 
   // Normalized mission progress & targets
   const m1Count = m1Raw?.count ?? 0;
@@ -50,130 +46,108 @@ export const MissionPanel = () => {
   const missions = [
     {
       id: 1,
-      title: 'Orbit Cleanup',
-      description: 'Tap floating space debris',
+      title: 'Orbit Debris',
       progress: m1Progress,
       countLabel: `${m1Count}/${m1Target}`,
       completed: m1Completed,
       icon: Trash2,
-      accent: 'text-amber-400',
-      tag: combo > 1 ? `x${combo} Combo!` : null,
     },
     {
       id: 2,
       title: 'Clean Energy',
-      description: 'Convert smog & coal emissions',
       progress: m2Progress,
       countLabel: `${m2Count}/${m2Target}`,
       completed: m2Completed,
       icon: SunMedium,
-      accent: 'text-yellow-400',
     },
     {
       id: 3,
-      title: 'Reforest Continents',
-      description: 'Tap dry patches to plant trees',
+      title: 'Forests',
       progress: m3Progress,
       countLabel: `${m3Count}/${m3Target}`,
       completed: m3Completed,
       icon: Trees,
-      accent: 'text-emerald-400',
-      tag: co2Absorbed > 0 ? `${(co2Absorbed / 1000).toFixed(1)}t CO2` : null,
     },
     {
       id: 4,
-      title: 'Water & Oceans',
-      description: 'Drag net to sweep ocean plastic',
+      title: 'Oceans',
       progress: m4Progress,
       countLabel: `${m4Percent}%`,
       completed: m4Completed,
       icon: Droplets,
-      accent: 'text-cyan-400',
     },
   ];
 
+  const completedCount = missions.filter((m) => m.completed).length;
+
   return (
-    <div className="fixed bottom-3 left-3 sm:bottom-4 sm:left-4 z-30 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] select-none pointer-events-auto">
-      <div className="rounded-xl bg-slate-950/85 backdrop-blur-xl border border-white/10 overflow-hidden transition-all duration-200 shadow-2xl">
-        {/* Header Toggle */}
+    <aside
+      aria-label="Restoration Missions"
+      className="fixed bottom-3 left-3 sm:bottom-4 sm:left-4 z-30 w-64 sm:w-72 max-w-[calc(100vw-1.5rem)] select-none pointer-events-auto font-sans"
+    >
+      <div className="rounded-xl bg-[#050505]/90 backdrop-blur-md border border-white/10 overflow-hidden shadow-xl transition-all duration-200">
+        {/* Sleek Minimal Header */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 bg-white/[0.03] hover:bg-white/[0.06] text-left transition-colors duration-200 cursor-pointer border-b border-white/10"
+          className="w-full flex items-center justify-between px-3.5 py-2.5 bg-white/[0.02] hover:bg-white/[0.05] text-left transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#0becc2]" />
-            <span className="font-label uppercase text-[11px] sm:text-[12px] tracking-[0.18em] sm:tracking-[0.22em] text-white/80 font-semibold">
-              Restoration Missions
+            <span className="font-mono uppercase text-[10px] tracking-[0.18em] text-white/80 font-medium">
+              Missions
             </span>
           </div>
-          <div className="flex items-center gap-1.5 font-mono text-[11px] sm:text-xs text-white/50">
-            <span className="tabular-nums">
-              {missions.filter((m) => m.completed).length}/4 Done
+          <div className="flex items-center gap-2 font-mono text-[11px] text-white/50">
+            <span className="tabular-nums font-medium text-white/70">
+              {completedCount}/4
             </span>
-            {collapsed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {collapsed ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </div>
         </button>
 
-        {/* Missions List */}
+        {/* Minimal Missions List */}
         {!collapsed && (
-          <div className="p-2 space-y-1.5 max-h-[44vh] sm:max-h-[55vh] overflow-y-auto">
+          <div className="px-3 py-2 space-y-1.5 border-t border-white/5">
             {missions.map((m) => {
               const Icon = m.icon;
               const isActive = activeMissionId === m.id;
-              const isLocked = m.id > 1 && !missions[m.id - 2].completed && !m.completed;
 
               return (
                 <div
                   key={m.id}
-                  onClick={() => {
-                    if (!isLocked) setActiveMission(m.id);
-                  }}
-                  className={`relative p-2.5 rounded-lg transition-all duration-200 cursor-pointer border ${
+                  onClick={() => setActiveMission(m.id)}
+                  className={`group px-2.5 py-2 rounded-lg transition-colors cursor-pointer ${
                     isActive
-                      ? 'bg-[#0becc2]/10 border-[#0becc2]/40 ring-1 ring-[#0becc2]/20'
+                      ? 'bg-white/[0.08] text-white'
                       : m.completed
-                      ? 'bg-white/[0.03] border-white/10 hover:border-white/20'
-                      : 'bg-white/[0.015] border-white/5 hover:border-white/15'
+                      ? 'bg-transparent text-white/60 hover:text-white/80'
+                      : 'bg-transparent text-white/70 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <div className={`p-1.5 rounded-md bg-white/[0.05] ${m.accent}`}>
-                        <Icon className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`font-label uppercase text-[12px] tracking-[0.08em] font-semibold ${isActive ? 'text-white' : 'text-white/80'}`}>
-                            {m.title}
-                          </span>
-                          {m.tag && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#0becc2]/20 text-[#0becc2] font-mono tabular-nums">
-                              {m.tag}
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-body font-light text-[12px] text-white/60 leading-tight">
-                          {m.description}
-                        </p>
-                      </div>
+                      <Icon className={`w-3.5 h-3.5 ${m.completed ? 'text-[#0becc2]' : isActive ? 'text-[#0becc2]' : 'text-white/40'}`} />
+                      <span className="text-xs font-medium tracking-tight">
+                        {m.title}
+                      </span>
                     </div>
 
                     <div className="text-right">
                       {m.completed ? (
-                        <CheckCircle2 className="w-4 h-4 text-[#0becc2]" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#0becc2]" />
                       ) : (
-                        <span className="font-mono tabular-nums text-[12px] font-semibold text-white/80">
+                        <span className="font-mono tabular-nums text-[11px] text-white/50">
                           {m.countLabel}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Mini Progress Bar */}
-                  <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+                  {/* Hairline 2px progress bar */}
+                  <div className="w-full h-[2px] rounded-full bg-white/10 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
-                        m.completed ? 'bg-[#0becc2]' : 'bg-gradient-to-r from-[#0becc2] to-[#5df7d9]'
+                        m.completed ? 'bg-[#0becc2]' : 'bg-[#0becc2]/80'
                       }`}
                       style={{ width: `${m.progress}%` }}
                     />
@@ -184,7 +158,7 @@ export const MissionPanel = () => {
           </div>
         )}
       </div>
-    </div>
+    </aside>
   );
 };
 

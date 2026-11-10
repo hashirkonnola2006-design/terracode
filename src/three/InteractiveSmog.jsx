@@ -27,11 +27,15 @@ export const SMOG_SOURCES = [
 export const InteractiveSmog = ({ isInteractive = true }) => {
   const convertSmogSource = useGameStore((s) => s.convertSmogSource);
   const convertedSources = useGameStore((s) => s.cleanup?.mission2?.convertedSources ?? s.mission2?.convertedSources ?? []);
+  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
+  const isFinished = useGameStore((s) => s.cleanup?.completed ?? s.finished ?? false);
+  const mission2Completed = useGameStore((s) => s.cleanup?.mission2?.completed ?? s.mission2?.completed ?? false);
   const liteMode = useGameStore((s) => s.liteMode);
 
   const [hoveredSpot, setHoveredSpot] = useState(null);
   const [clickPop, setClickPop] = useState({});
   const convertTimes = useRef({});
+  const pointerDownPos = useRef({});
 
   // Wind turbine blade rotation refs
   const turbineRotorRefs = useRef([]);
@@ -107,7 +111,7 @@ export const InteractiveSmog = ({ isInteractive = true }) => {
   return (
     <group>
       {spots.map((spot, idx) => {
-        const isConverted = convertedSources.includes(spot.id);
+        const isConverted = cleanliness >= 100 || isFinished || mission2Completed || convertedSources.includes(spot.id);
         const isHovered = hoveredSpot === spot.id;
         const now = performance.now();
         const popTime = clickPop[spot.id] || 0;
@@ -142,8 +146,22 @@ export const InteractiveSmog = ({ isInteractive = true }) => {
                   setHoveredSpot(spot.id);
                 }}
                 onPointerOut={() => setHoveredSpot(null)}
-                onPointerDown={(e) => handleSpotClick(spot.id, e)}
-                onClick={(e) => handleSpotClick(spot.id, e)}
+                onPointerDown={(e) => {
+                  if (e.stopPropagation) e.stopPropagation();
+                  pointerDownPos.current[spot.id] = { x: e.clientX, y: e.clientY };
+                }}
+                onPointerUp={(e) => {
+                  if (e.stopPropagation) e.stopPropagation();
+                  const down = pointerDownPos.current[spot.id];
+                  if (down) {
+                    const dx = e.clientX - down.x;
+                    const dy = e.clientY - down.y;
+                    if (Math.hypot(dx, dy) < 8) {
+                      handleSpotClick(spot.id, e);
+                    }
+                    delete pointerDownPos.current[spot.id];
+                  }
+                }}
               >
                 {/* Generous Invisible Hit Target */}
                 <mesh position={[0, 0.045, 0]}>

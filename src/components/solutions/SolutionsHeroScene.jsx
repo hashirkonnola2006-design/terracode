@@ -4,16 +4,17 @@ import * as THREE from 'three';
 import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../hero3d/Earth';
 import { Clouds } from '../hero3d/Clouds';
 import { Atmosphere } from '../hero3d/Atmosphere';
+import { HERO_CONFIG } from '../../config/heroSolutions';
 
 // ═══════════════════════════════════════════════════════════════
 // TUNABLE CONSTANTS (Solutions Hero Destroyed Earth Look)
 // ═══════════════════════════════════════════════════════════════
-export const HERO_CAMERA_FOV = 40;
-export const HERO_CAMERA_Z = 2.18;
+export const HERO_CAMERA_FOV = HERO_CONFIG.cameraFov;
+export const HERO_CAMERA_Z = HERO_CONFIG.cameraZDesktop;
 export const HERO_CAMERA_Y = 0.0;
-export const HERO_PLANET_Y = -0.78;
-export const HERO_PLANET_SCALE = 1.22;
-export const HERO_ROTATION_SPEED = 0.0055; // ~1 revolution per 4 minutes
+export const HERO_PLANET_Y = HERO_CONFIG.planetYDesktop;
+export const HERO_PLANET_SCALE = HERO_CONFIG.planetScaleDesktop;
+export const HERO_ROTATION_SPEED = HERO_CONFIG.rotationSpeed;
 
 // Lat/Lon to Sphere Cartesian Coordinate converter
 function latLonToVector3(lat, lon, radius = 1.0) {
@@ -259,9 +260,9 @@ const HeroPlanetController = ({ liteMode = false }) => {
   const aspect = size.width / Math.max(1, size.height);
   const isMobile = size.width < 768 || aspect < 1.05;
 
-  const targetPlanetY = isMobile ? -0.78 : HERO_PLANET_Y;
-  const targetScale = isMobile ? 1.20 : HERO_PLANET_SCALE;
-  const targetCamZ = isMobile ? 2.20 : HERO_CAMERA_Z;
+  const targetPlanetY = isMobile ? HERO_CONFIG.planetYMobile : HERO_CONFIG.planetYDesktop;
+  const targetScale = isMobile ? HERO_CONFIG.planetScaleMobile : HERO_CONFIG.planetScaleDesktop;
+  const targetCamZ = isMobile ? HERO_CONFIG.cameraZMobile : HERO_CONFIG.cameraZDesktop;
 
   const prefersReducedMotion =
     typeof window !== 'undefined' &&

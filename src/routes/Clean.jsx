@@ -43,70 +43,70 @@ export const Clean = () => {
         <div className="flex items-center gap-2 sm:gap-3 pointer-events-auto shrink-0">
           <button
             onClick={() => navigate('/solutions#play')}
-            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-white/80 hover:text-white font-label uppercase text-[10px] sm:text-[11px] font-semibold tracking-wider transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#050505]/80 hover:bg-white/[0.08] border border-white/10 hover:border-white/20 text-white/80 hover:text-white font-mono text-xs transition-colors cursor-pointer"
             title="Return to Solutions Hub"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Hub</span>
           </button>
 
-          <TerraHealLogo markSize={26} textClass="text-sm sm:text-base font-bold hidden md:inline-block" to="/solutions#play" />
+          <TerraHealLogo markSize={24} textClass="text-sm font-semibold hidden md:inline-block" to="/solutions#play" />
         </div>
 
         {/* Cleanliness Meter in the Center */}
-        <div className="flex-1 max-w-xs sm:max-w-md pointer-events-auto px-1 sm:px-2">
+        <div className="flex-1 max-w-xs sm:max-w-sm pointer-events-auto px-2">
           <CleanlinessMeter />
         </div>
 
         {/* Controls & Quick Actions on Right */}
-        <div className="flex items-center gap-1 sm:gap-2 pointer-events-auto shrink-0">
+        <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
           
           {/* Skip / Auto-Heal (Accessibility & Demonstration) */}
           <button
             onClick={skipAndHealAll}
-            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.10] text-white/80 hover:text-white border border-white/20 font-label uppercase text-[11px] font-semibold tracking-[0.14em] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#050505]/80 hover:bg-white/[0.08] text-white/70 hover:text-white border border-white/10 hover:border-white/20 font-mono text-xs transition-colors cursor-pointer"
             title="Skip game and heal Earth automatically"
           >
-            <FastForward className="w-3.5 h-3.5 text-emerald-400" />
+            <FastForward className="w-3 h-3 text-[#0becc2]" />
             <span>Skip, just heal it</span>
           </button>
 
           {/* Sound Toggle */}
           <button
             onClick={toggleMute}
-            className={`p-1.5 sm:p-2 rounded-lg backdrop-blur-md border text-xs transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 ${
+            className={`p-1.5 sm:p-2 rounded-lg border text-xs transition-colors cursor-pointer ${
               muted
-                ? 'bg-slate-900/80 border-white/10 text-slate-500'
-                : 'bg-slate-900/80 border-white/20 text-emerald-400 hover:bg-white/[0.08]'
+                ? 'bg-[#050505]/80 border-white/10 text-white/30'
+                : 'bg-[#050505]/80 border-white/10 text-white/80 hover:text-white hover:bg-white/[0.08]'
             }`}
             title={muted ? 'Unmute audio' : 'Mute audio'}
             aria-label={muted ? 'Unmute audio' : 'Mute audio'}
           >
-            {muted ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-[#0becc2]" />}
           </button>
 
           {/* Lite Mode Toggle */}
           <button
             onClick={toggleLiteMode}
-            className={`p-1.5 sm:p-2 rounded-lg backdrop-blur-md border text-xs transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 ${
+            className={`p-1.5 sm:p-2 rounded-lg border text-xs transition-colors cursor-pointer ${
               liteMode
-                ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                : 'bg-slate-900/80 border-white/10 text-slate-300 hover:text-white hover:bg-white/[0.08]'
+                ? 'bg-[#050505]/80 border-amber-500/40 text-amber-300'
+                : 'bg-[#050505]/80 border-white/10 text-white/60 hover:text-white hover:bg-white/[0.08]'
             }`}
             title={liteMode ? 'Switch to Cinematic High-DPI' : 'Switch to Eco/Lite Mode'}
             aria-label="Toggle Lite Mode"
           >
-            <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Zap className="w-3.5 h-3.5" />
           </button>
 
           {/* Reset / Restart */}
           <button
             onClick={restartGame}
-            className="p-1.5 sm:p-2 rounded-lg bg-slate-900/80 border border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            className="p-1.5 sm:p-2 rounded-lg bg-[#050505]/80 border border-white/10 text-white/60 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
             title="Restart Cleaning"
             aria-label="Restart Cleaning"
           >
-            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <RotateCcw className="w-3.5 h-3.5" />
           </button>
         </div>
 

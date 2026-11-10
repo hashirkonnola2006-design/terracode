@@ -36,51 +36,24 @@ export const CleanlinessMeter = () => {
   return (
     <div className="flex flex-col items-center w-full max-w-xs sm:max-w-md mx-auto">
       {/* Percentage Header */}
-      <div className="flex items-center justify-between w-full mb-1.5 px-1">
-        <span className="font-label uppercase text-[10px] sm:text-[12px] tracking-[0.14em] sm:tracking-[0.2em] text-[#0becc2] flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
-          <Sparkles className="w-3 h-3 text-[#0becc2] shrink-0" />
-          <span className="hidden min-[380px]:inline">Global </span>Cleanliness
+      <div className="flex items-center justify-between w-full mb-1 px-0.5">
+        <span className="font-mono uppercase text-[10px] tracking-[0.16em] text-white/50 flex items-center gap-1.5 whitespace-nowrap">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0becc2]" />
+          <span>Global Cleanliness</span>
         </span>
-        <span className="font-mono tabular-nums text-xs sm:text-sm font-semibold text-white tracking-tight flex items-center gap-1 shrink-0 ml-2">
+        <span className="font-mono tabular-nums text-xs font-medium text-white tracking-tight flex items-center gap-1 shrink-0 ml-2">
           {displayValue}%
           {displayValue === 100 && <CheckCircle2 className="w-3.5 h-3.5 text-[#0becc2]" />}
         </span>
       </div>
 
-      {/* Horizontal Glass Bar with Milestones */}
-      <div className="relative w-full h-2.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/10 p-0.5 overflow-visible">
+      {/* Horizontal Minimal Bar */}
+      <div className="relative w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
         {/* Fill Bar */}
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[#0becc2] via-[#0ad0ab] to-[#5df7d9] shadow-[0_0_12px_rgba(11,236,194,0.55)] transition-all duration-500 ease-out"
-          style={{ width: `${Math.max(displayValue, 2)}%` }}
+          className="h-full rounded-full bg-[#0becc2] transition-all duration-500 ease-out"
+          style={{ width: `${Math.max(displayValue, 1)}%` }}
         />
-
-        {/* Milestone Ticks */}
-        {milestones.map((m) => {
-          const isReached = displayValue >= m;
-          return (
-            <div
-              key={m}
-              className="absolute top-0 bottom-0 flex flex-col items-center"
-              style={{ left: `${m}%`, transform: 'translateX(-50%)' }}
-            >
-              {/* Tick Mark */}
-              <div
-                className={`w-0.5 h-full ${
-                  isReached ? 'bg-teal-200 shadow-[0_0_8px_rgba(11,236,194,0.8)]' : 'bg-slate-600/80'
-                } transition-all duration-300`}
-              />
-              {/* Milestone Dot on Top */}
-              <div
-                className={`w-2 h-2 rounded-full -mt-2.5 transition-all duration-300 ${
-                  isReached
-                    ? 'bg-[#0becc2] shadow-[0_0_10px_#0becc2] ring-2 ring-[#0becc2]/60 scale-125'
-                    : 'bg-slate-700'
-                }`}
-              />
-            </div>
-          );
-        })}
       </div>
     </div>
   );

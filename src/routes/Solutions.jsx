@@ -86,17 +86,38 @@ export const Solutions = () => {
   const toggleMute = useGameStore((s) => s.toggleMute);
 
   const [headerScrolled, setHeaderScrolled] = useState(false);
+  const [activeNavSection, setActiveNavSection] = useState('home');
+
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
     document.title = 'TerraHeal | Solutions';
   }, []);
 
-  // Scroll listener for top header transparency vs border
+  // Scroll listener for top header styling and active nav section highlighting
   useEffect(() => {
     const handleScroll = () => {
-      setHeaderScrolled(window.scrollY > 20);
+      const scrollPos = window.scrollY;
+      setHeaderScrolled(scrollPos > 20);
+
+      const playEl = document.getElementById('play');
+      const solutionsEl = document.getElementById('solutions-grid');
+
+      if (scrollPos < 120) {
+        setActiveNavSection('home');
+      } else if (playEl && scrollPos >= playEl.offsetTop - 280) {
+        setActiveNavSection('play');
+      } else if (solutionsEl && scrollPos >= solutionsEl.offsetTop - 300) {
+        setActiveNavSection('solutions');
+      } else {
+        setActiveNavSection('home');
+      }
     };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -105,17 +126,39 @@ export const Solutions = () => {
     if (location.hash === '#play') {
       setTimeout(() => {
         const el = document.getElementById('play');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
+        if (el) el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
       }, 150);
     } else if (location.hash === '#sources') {
       navigate('/sources', { replace: true });
     }
-  }, [location.hash, navigate]);
+  }, [location.hash, navigate, prefersReducedMotion]);
+
+  const handleHomeClick = () => {
+    if (window.scrollY === 0) return;
+    window.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    });
+  };
+
+  const handleSolutionsClick = () => {
+    const el = document.getElementById('solutions-grid');
+    if (el) {
+      el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    }
+  };
+
+  const handlePlayClick = () => {
+    const el = document.getElementById('play');
+    if (el) {
+      el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    }
+  };
 
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
     }
   };
 
@@ -132,25 +175,65 @@ export const Solutions = () => {
         {/* Logo */}
         <TerraHealLogo markSize={28} textClass="text-base sm:text-lg font-bold" />
 
-        {/* Nav Links */}
+        {/* Nav Links (Desktop) */}
         <nav className="hidden md:flex items-center gap-8 font-label uppercase text-xs tracking-[0.18em]">
           <button
-            onClick={() => navigate('/')}
-            className="text-white/70 hover:text-white transition-colors cursor-pointer"
+            onClick={handleHomeClick}
+            className={`transition-colors cursor-pointer relative py-1 ${
+              activeNavSection === 'home'
+                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#0becc2]'
+                : 'text-white/60 hover:text-white'
+            }`}
           >
             Home
           </button>
           <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="text-white/70 hover:text-white transition-colors cursor-pointer"
+            onClick={handleSolutionsClick}
+            className={`transition-colors cursor-pointer relative py-1 ${
+              activeNavSection === 'solutions'
+                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#0becc2]'
+                : 'text-white/60 hover:text-white'
+            }`}
           >
             Solutions
           </button>
           <button
-            onClick={() => scrollToSection('play')}
-            className="text-[#0becc2] hover:text-[#5df7d9] font-semibold transition-colors cursor-pointer"
+            onClick={handlePlayClick}
+            className={`transition-colors cursor-pointer relative py-1 ${
+              activeNavSection === 'play'
+                ? 'text-[#0becc2] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#0becc2]'
+                : 'text-[#0becc2]/80 hover:text-[#0becc2]'
+            }`}
           >
             Play Games
+          </button>
+        </nav>
+
+        {/* Nav Links (Mobile) */}
+        <nav className="flex md:hidden items-center gap-3 font-label uppercase text-[10px] tracking-[0.14em]">
+          <button
+            onClick={handleHomeClick}
+            className={`transition-colors cursor-pointer py-1 ${
+              activeNavSection === 'home' ? 'text-white font-semibold' : 'text-white/60'
+            }`}
+          >
+            Home
+          </button>
+          <button
+            onClick={handleSolutionsClick}
+            className={`transition-colors cursor-pointer py-1 ${
+              activeNavSection === 'solutions' ? 'text-white font-semibold' : 'text-white/60'
+            }`}
+          >
+            Solutions
+          </button>
+          <button
+            onClick={handlePlayClick}
+            className={`transition-colors cursor-pointer py-1 ${
+              activeNavSection === 'play' ? 'text-[#0becc2] font-semibold' : 'text-[#0becc2]/70'
+            }`}
+          >
+            Play
           </button>
         </nav>
 

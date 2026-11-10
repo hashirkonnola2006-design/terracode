@@ -25,12 +25,37 @@ export const GYRE_CLUSTERS = [
 export const InteractiveOceans = ({ isInteractive = true }) => {
   const updateOceanSweep = useGameStore((s) => s.updateOceanSweep);
   const sweptPercent = useGameStore((s) => s.cleanup?.mission4?.sweptPercent ?? s.mission4?.sweptPercent ?? 0);
+  const storedSweptIds = useGameStore((s) => s.cleanup?.mission4?.sweptIds ?? s.mission4?.sweptIds ?? []);
+  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
+  const isFinished = useGameStore((s) => s.cleanup?.completed ?? s.finished ?? false);
+  const mission4Completed = useGameStore((s) => s.cleanup?.mission4?.completed ?? s.mission4?.completed ?? false);
   const activeMissionId = useGameStore((s) => s.cleanup?.activeMissionId ?? s.activeMissionId ?? 1);
+  const setActiveMission = useGameStore((s) => s.setActiveMission);
   const liteMode = useGameStore((s) => s.liteMode);
 
-  const [sweptSet, setSweptSet] = useState(new Set());
+  const [sweptSet, setSweptSet] = useState(() => {
+    const s = new Set(storedSweptIds);
+    if (sweptPercent > 0 && s.size === 0) {
+      const count = Math.round((sweptPercent / 100) * (liteMode ? 60 : 120));
+      for (let i = 0; i < count; i++) s.add(i);
+    }
+    return s;
+  });
   const [netPos, setNetPos] = useState(null);
   const [isSweeping, setIsSweeping] = useState(false);
+
+  // Keep sweptSet in sync if storedSweptIds grows or resets
+  React.useEffect(() => {
+    if (storedSweptIds.length === 0 && sweptPercent === 0) {
+      setSweptSet(new Set());
+    } else if (storedSweptIds.length > sweptSet.size) {
+      setSweptSet((prev) => {
+        const next = new Set(prev);
+        storedSweptIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  }, [storedSweptIds, sweptPercent]);
 
   // Generate varied low-poly floating plastic items clustered in real oceanic gyres
   const { items, clusterAnchors } = useMemo(() => {
@@ -111,15 +136,14 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
   const oceanSphereRef = useRef(null);
 
   const handlePointerDown = (e) => {
-    if (!isInteractive || activeMissionId !== 4) return;
-    if (e.stopPropagation) e.stopPropagation();
+    if (!isInteractive) return;
     setIsSweeping(true);
+    if (activeMissionId !== 4) setActiveMission(4);
     checkSweepHit(e.point);
   };
 
   const handlePointerMove = (e) => {
-    if (!isInteractive || activeMissionId !== 4) return;
-    if (e.stopPropagation) e.stopPropagation();
+    if (!isInteractive) return;
     setNetPos(e.point);
     if (isSweeping || e.buttons === 1) {
       checkSweepHit(e.point);
@@ -149,7 +173,7 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
         const next = new Set(prev);
         newlySwept.forEach((id) => next.add(id));
         const currentPercent = Math.min(100, Math.round((next.size / items.length) * 100));
-        updateOceanSweep(currentPercent);
+        updateOceanSweep(currentPercent, newlySwept);
         return next;
       });
     }
@@ -175,6 +199,11 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
       item.currentPos.copy(gyre.pos).add(localVec).normalize().multiplyScalar(1.003 + bob);
     });
   });
+
+  // When 100% cleaned, or ocean mission is completed, completely remove all ocean plastic and waste
+  if (cleanliness >= 100 || isFinished || mission4Completed) {
+    return null;
+  }
 
   return (
     <group>

@@ -47,14 +47,17 @@ function createCrateGeom() {
 export const InteractiveOrbit = ({ isInteractive = true }) => {
   const collectDebrisItem = useGameStore((s) => s.collectDebrisItem);
   const collectedIds = useGameStore((s) => s.cleanup?.mission1?.collectedIds ?? s.mission1?.collectedIds ?? []);
+  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
+  const isFinished = useGameStore((s) => s.cleanup?.completed ?? s.finished ?? false);
+  const mission1Completed = useGameStore((s) => s.cleanup?.mission1?.completed ?? s.mission1?.completed ?? false);
   const activeMissionId = useGameStore((s) => s.cleanup?.activeMissionId ?? s.activeMissionId ?? 1);
   const liteMode = useGameStore((s) => s.liteMode);
 
   const [hoveredId, setHoveredId] = useState(null);
   const [clickPops, setClickPops] = useState({});
-  const [tapsNeeded, setTapsNeeded] = useState({});
   const [floatingTexts, setFloatingTexts] = useState([]);
   const [hintId, setHintId] = useState(null);
+  const pointerDownPos = useRef({});
 
   // Generate 50 fixed orbital debris items
   const items = useMemo(() => {
@@ -179,26 +182,13 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
     if (e && e.stopPropagation) e.stopPropagation();
 
     const now = performance.now();
-    if (now - (lastCollectRef.current[item.id] || 0) < 300) return;
+    if (now - (lastCollectRef.current[item.id] || 0) < 250) return;
     lastCollectRef.current[item.id] = now;
 
     // Trigger scale-pop animation
     setClickPops((prev) => ({ ...prev, [item.id]: now }));
 
-    // Tires & Crates take 2 taps
-    if (item.points === 3) {
-      const currentTaps = (tapsNeeded[item.id] || 0) + 1;
-      if (currentTaps < 2) {
-        setTapsNeeded((prev) => ({ ...prev, [item.id]: currentTaps }));
-        setFloatingTexts((prev) => [
-          ...prev,
-          { id: Date.now(), text: 'Tap again!', pos: itemPositions.current[item.id] || [0, 0, 0], color: '#f6ad55' },
-        ]);
-        return;
-      }
-    }
-
-    // Collect item
+    // Collect item immediately in 1 satisfying tap
     const res = collectDebrisItem(item.id, item.type, item.points);
     if (res) {
       const label = res.combo > 1 ? `+${res.points} (x${res.combo})` : `+${res.points}`;
@@ -245,6 +235,11 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
     });
   });
 
+  // When 100% cleaned, or when orbit mission is completed, completely remove all orbital waste
+  if (cleanliness >= 100 || isFinished || mission1Completed) {
+    return null;
+  }
+
   return (
     <group>
       {items.map((item) => {
@@ -284,15 +279,15 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
               receiveShadow={!liteMode}
             />
 
-            {/* Hover Emissive Pulse Halo */}
+            {/* Hover subtle wireframe halo */}
             {isHovered && (
-              <mesh scale={[item.scale * 2.2, item.scale * 2.2, item.scale * 2.2]}>
-                <sphereGeometry args={[0.3, 10, 10]} />
-                <meshBasicMaterial color="#38bdf8" transparent opacity={0.35} wireframe />
+              <mesh scale={[item.scale * 1.6, item.scale * 1.6, item.scale * 1.6]}>
+                <sphereGeometry args={[0.25, 8, 8]} />
+                <meshBasicMaterial color="#38bdf8" transparent opacity={0.25} wireframe />
               </mesh>
             )}
 
-            {/* Generous Invisible Hit Target for Touch & Click */}
+            {/* Generous Invisible Hit Target with distance threshold to distinguish tap from globe rotation */}
             {isInteractive && (
               <mesh
                 geometry={hitGeom}
@@ -303,16 +298,30 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
                   setHoveredId(item.id);
                 }}
                 onPointerOut={() => setHoveredId(null)}
-                onPointerDown={(e) => handleItemClick(e, item)}
-                onClick={(e) => handleItemClick(e, item)}
+                onPointerDown={(e) => {
+                  if (e.stopPropagation) e.stopPropagation();
+                  pointerDownPos.current[item.id] = { x: e.clientX, y: e.clientY };
+                }}
+                onPointerUp={(e) => {
+                  if (e.stopPropagation) e.stopPropagation();
+                  const down = pointerDownPos.current[item.id];
+                  if (down) {
+                    const dx = e.clientX - down.x;
+                    const dy = e.clientY - down.y;
+                    if (Math.hypot(dx, dy) < 8) {
+                      handleItemClick(e, item);
+                    }
+                    delete pointerDownPos.current[item.id];
+                  }
+                }}
               />
             )}
 
-            {/* Idle Hint Beacon Ring */}
+            {/* Subtle Minimal Idle Hint (No huge thick rings) */}
             {isHinted && (
-              <mesh scale={[item.scale * 2.8, item.scale * 2.8, item.scale * 2.8]}>
-                <ringGeometry args={[0.8, 1.0, 16]} />
-                <meshBasicMaterial color="#0becc2" side={THREE.DoubleSide} transparent opacity={0.75} />
+              <mesh scale={[item.scale * 1.3, item.scale * 1.3, item.scale * 1.3]}>
+                <sphereGeometry args={[0.26, 8, 8]} />
+                <meshBasicMaterial color="#0becc2" transparent opacity={0.3} wireframe />
               </mesh>
             )}
           </group>

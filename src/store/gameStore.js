@@ -110,6 +110,7 @@ export const useGameStore = create(
           target: GAME_CONFIG.MISSION_4_TARGET,
           completed: false,
           sweptPercent: 0,
+          sweptIds: [],
         },
         healRegions: [],
         milestonesAchieved: [],
@@ -179,6 +180,7 @@ export const useGameStore = create(
         target: GAME_CONFIG.MISSION_4_TARGET,
         completed: false,
         sweptPercent: 0,
+        sweptIds: [],
       },
       activeMissionId: 1,
       itemsCollected: 0,
@@ -446,10 +448,12 @@ export const useGameStore = create(
         get().checkCleanupMilestones(newHealth);
       },
 
-      updateOceanSweep: (sweptPercent) => {
+      updateOceanSweep: (sweptPercent, newlySweptIds = []) => {
         const state = get();
         const target = GAME_CONFIG.MISSION_4_TARGET;
         const currentSwept = Math.max(state.cleanup.mission4.sweptPercent, sweptPercent);
+        const existingIds = state.cleanup.mission4.sweptIds || [];
+        const mergedIds = Array.from(new Set([...existingIds, ...newlySweptIds]));
         const isComplete = currentSwept >= target;
         const wasComplete = state.cleanup.mission4.completed;
 
@@ -457,6 +461,7 @@ export const useGameStore = create(
           ...state.cleanup.mission4,
           target,
           sweptPercent: currentSwept,
+          sweptIds: mergedIds,
           progress: Math.min(100, Math.round((currentSwept / target) * 100)),
           completed: isComplete,
         };
@@ -550,25 +555,26 @@ export const useGameStore = create(
                   target: GAME_CONFIG.MISSION_1_TARGET,
                   count: GAME_CONFIG.MISSION_1_TARGET,
                   completed: true,
-                  collectedIds: Array.from({ length: GAME_CONFIG.MISSION_1_TARGET }, (_, i) => i),
+                  collectedIds: Array.from({ length: 60 }, (_, i) => i),
                 },
                 mission2: {
                   progress: 100,
                   target: GAME_CONFIG.MISSION_2_TARGET,
                   completed: true,
-                  convertedSources: Array.from({ length: GAME_CONFIG.MISSION_2_TARGET }, (_, i) => i),
+                  convertedSources: Array.from({ length: 8 }, (_, i) => i),
                 },
                 mission3: {
                   progress: 100,
                   target: GAME_CONFIG.MISSION_3_TARGET,
                   completed: true,
-                  plantedPatches: Array.from({ length: GAME_CONFIG.MISSION_3_TARGET }, (_, i) => i),
+                  plantedPatches: Array.from({ length: 10 }, (_, i) => i),
                 },
                 mission4: {
                   progress: 100,
                   target: GAME_CONFIG.MISSION_4_TARGET,
                   completed: true,
                   sweptPercent: 100,
+                  sweptIds: Array.from({ length: 140 }, (_, i) => i),
                 },
               },
               {
@@ -620,6 +626,7 @@ export const useGameStore = create(
               target: GAME_CONFIG.MISSION_4_TARGET,
               completed: false,
               sweptPercent: 0,
+              sweptIds: [],
             },
           },
           {
@@ -765,6 +772,7 @@ export const useGameStore = create(
               target: GAME_CONFIG.MISSION_4_TARGET,
               completed: false,
               sweptPercent: 0,
+              sweptIds: [],
             },
           },
           quiz: {

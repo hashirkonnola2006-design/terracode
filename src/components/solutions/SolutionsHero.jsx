@@ -1,11 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Leaf } from 'lucide-react';
 import { SolutionsHeroScene } from './SolutionsHeroScene';
 import { useIntroStatus } from '../intro/useIntroStatus';
+import { HERO_CONFIG } from '../../config/heroSolutions';
 
 export const SolutionsHero = ({ liteMode = false, onScrollToPillars }) => {
-  const navigate = useNavigate();
   const heroContainerRef = useRef(null);
   const [isVisible, setIsVisible] = useState(true);
   const [scrollY, setScrollY] = useState(0);
@@ -93,7 +91,7 @@ export const SolutionsHero = ({ liteMode = false, onScrollToPillars }) => {
         }}
       >
         <div
-          className="w-full max-w-[1920px] mx-auto px-2 sm:px-6 md:px-8 pt-14 sm:pt-16 md:pt-12 flex justify-between items-start font-display text-white text-[32vw] sm:text-[28vw] md:text-[24vw] leading-[0.78] uppercase select-none will-change-transform"
+          className={`w-full max-w-[1920px] mx-auto px-2 sm:px-6 md:px-8 ${HERO_CONFIG.healTopOffsetDesktop} flex justify-between items-start font-display text-white ${HERO_CONFIG.healFontSize} leading-[0.76] uppercase select-none will-change-transform`}
           style={{
             fontFamily: "'Outfit', sans-serif",
             fontWeight: 100,
@@ -119,15 +117,15 @@ export const SolutionsHero = ({ liteMode = false, onScrollToPillars }) => {
         <SolutionsHeroScene isVisible={isVisible} liteMode={liteMode} />
       </div>
 
-      {/* ── LAYER 4: Bottom-Left Narrative & Action Stack ── */}
-      <div className="absolute bottom-5 sm:bottom-10 left-5 sm:left-10 md:left-14 lg:left-16 z-30 max-w-2xl pointer-events-auto">
+      {/* ── LAYER 4: Bottom-Left Narrative Stack (Start Cleaning button removed) ── */}
+      <div className={`absolute ${HERO_CONFIG.headlineBottomDesktop} ${HERO_CONFIG.headlineLeftDesktop} z-30 max-w-2xl pointer-events-auto`}>
         {/* Soft dark radial scrim behind text for WCAG AA readability */}
         <div className="absolute -inset-8 -z-10 bg-radial from-[#050505]/95 via-[#050505]/75 to-transparent blur-2xl pointer-events-none" />
 
-        <div className="space-y-4 sm:space-y-5">
+        <div className="space-y-3 sm:space-y-4">
           {/* Headline on two lines */}
           <h1
-            className={`tracking-[-0.02em] leading-[0.95] text-[clamp(40px,6.5vw,110px)] transition-all duration-1000 delay-300 ease-out ${
+            className={`tracking-[-0.02em] leading-[0.95] text-[clamp(38px,6vw,104px)] transition-all duration-1000 delay-300 ease-out ${
               entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
             style={{
@@ -139,24 +137,9 @@ export const SolutionsHero = ({ liteMode = false, onScrollToPillars }) => {
             <div className="text-[#0becc2] drop-shadow-lg">Your move.</div>
           </h1>
 
-          {/* Outlined Pill Button + Leaf Icon */}
-          <div
-            className={`transition-all duration-1000 delay-500 ease-out ${
-              entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-            }`}
-          >
-            <button
-              onClick={() => navigate('/clean')}
-              className="group inline-flex items-center gap-2.5 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full border border-white/80 hover:border-[#0becc2] bg-transparent hover:bg-[#0becc2] text-white hover:text-black font-mono uppercase text-xs sm:text-sm tracking-[0.16em] transition-all duration-300 cursor-pointer shadow-[0_0_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_35px_rgba(11,236,194,0.45)] hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Leaf className="w-4 h-4 text-[#0becc2] group-hover:text-black transition-colors" />
-              <span className="font-semibold">START CLEANING</span>
-            </button>
-          </div>
-
           {/* Faint Mono Caption */}
           <div
-            className={`font-mono uppercase text-[10px] sm:text-xs tracking-[0.24em] text-white/40 pt-1 transition-all duration-1000 delay-700 ease-out ${
+            className={`font-mono uppercase text-[10px] sm:text-xs tracking-[0.24em] text-white/50 pt-1 transition-all duration-1000 delay-500 ease-out ${
               entered ? 'opacity-100' : 'opacity-0'
             }`}
           >
