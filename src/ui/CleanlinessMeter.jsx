@@ -67,13 +67,15 @@ export const CleanlinessMeter = () => {
               {/* Tick Mark */}
               <div
                 className={`w-0.5 h-full ${
-                  isReached ? 'bg-emerald-200' : 'bg-slate-600/80'
-                } transition-colors duration-300`}
+                  isReached ? 'bg-emerald-200 shadow-[0_0_8px_rgba(74,222,128,0.8)]' : 'bg-slate-600/80'
+                } transition-all duration-300`}
               />
-              {/* Subtle Milestone Dot on Top */}
+              {/* Milestone Dot on Top */}
               <div
-                className={`w-1.5 h-1.5 rounded-full -mt-2.5 transition-all duration-300 ${
-                  isReached ? 'bg-emerald-400 ring-2 ring-emerald-500/50 scale-110' : 'bg-slate-700'
+                className={`w-2 h-2 rounded-full -mt-2.5 transition-all duration-300 ${
+                  isReached
+                    ? 'bg-[#4ade80] shadow-[0_0_10px_#4ade80] ring-2 ring-emerald-400/60 scale-125'
+                    : 'bg-slate-700'
                 }`}
               />
             </div>
@@ -85,4 +87,3 @@ export const CleanlinessMeter = () => {
 };
 
 export default CleanlinessMeter;
-

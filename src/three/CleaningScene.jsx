@@ -5,17 +5,20 @@ import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore';
 import { SpaceBackground } from '../components/hero3d/SpaceBackground';
 import { Sun } from '../components/hero3d/Sun';
-import { Earth } from '../components/hero3d/Earth';
+import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../components/hero3d/Earth';
 import { Clouds } from '../components/hero3d/Clouds';
 import { Atmosphere } from '../components/hero3d/Atmosphere';
+import { Smog } from '../components/hero3d/Smog';
 import { Effects } from '../components/hero3d/Effects';
 import { InteractiveOrbit } from './InteractiveOrbit';
 import { InteractiveSmog } from './InteractiveSmog';
 import { InteractiveForests } from './InteractiveForests';
 import { InteractiveOceans } from './InteractiveOceans';
+import { healMask } from './HealMask';
 
 const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
-  const earthGroupRef = useRef(null);
+  const planetGroupRef = useRef(null);
+  const orbitGroupRef = useRef(null);
   const controlsRef = useRef(null);
   const smoothCleanliness = useRef(cleanliness / 100);
   const { size, camera } = useThree();
@@ -23,7 +26,24 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
   const isPortrait = aspect < 1.05;
   const initialAdjusted = useRef(false);
 
-  // Responsive camera initial distance on mobile/portrait so Earth & orbiting debris fit inside viewport
+  // Auto-rotation idle & drag state
+  const isUserInteracting = useRef(false);
+  const lastInteractionTime = useRef(performance.now());
+  const currentSpinSpeed = useRef(0.014);
+
+  // Heal mask persistence: restore saved regions on mount
+  const healRegions = useGameStore((s) => s.healRegions);
+  useEffect(() => {
+    if (healRegions && healRegions.length > 0) {
+      healMask.restoreRegions(healRegions);
+    } else if (cleanliness >= 100) {
+      healMask.fill();
+    } else {
+      healMask.clear();
+    }
+  }, []);
+
+  // Responsive camera initial distance on mobile/portrait
   useEffect(() => {
     if (!initialAdjusted.current) {
       if (isPortrait) {
@@ -38,16 +58,65 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
     }
   }, [isPortrait, aspect, camera]);
 
-  // Smoothly lerp visual cleanliness state (never snap)
+  // Set initial planet orientation
+  useEffect(() => {
+    if (planetGroupRef.current) {
+      planetGroupRef.current.rotation.y = INITIAL_ROTATION_Y;
+    }
+  }, []);
+
+  // Listen to OrbitControls interaction events to pause/resume auto-rotation
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const onStart = () => {
+      isUserInteracting.current = true;
+    };
+    const onEnd = () => {
+      isUserInteracting.current = false;
+      lastInteractionTime.current = performance.now();
+    };
+
+    controls.addEventListener('start', onStart);
+    controls.addEventListener('end', onEnd);
+    return () => {
+      controls.removeEventListener('start', onStart);
+      controls.removeEventListener('end', onEnd);
+    };
+  }, []);
+
+  // Render loop: smooth pollution lerp, auto-rotation on planet group only
   useFrame((state, delta) => {
     const target = cleanliness / 100;
-    smoothCleanliness.current = THREE.MathUtils.lerp(smoothCleanliness.current, target, delta * 3.5);
+    smoothCleanliness.current = THREE.MathUtils.lerp(smoothCleanliness.current, target, Math.min(delta * 3.5, 1.0));
 
-    // Auto slow rotate when idle or at 100% finished
-    if (earthGroupRef.current && cleanliness >= 100) {
-      earthGroupRef.current.rotation.y += delta * 0.12;
+    const now = performance.now();
+    const isIdle = !isUserInteracting.current && (now - lastInteractionTime.current > 2000);
+
+    // Target spin speed: 0.016 when polluted, slows to 0.010 when healed, 0.0 during user drag
+    const baseTargetSpeed = THREE.MathUtils.lerp(0.016, 0.010, smoothCleanliness.current);
+    const targetSpeed = isIdle ? baseTargetSpeed : 0.0;
+
+    currentSpinSpeed.current = THREE.MathUtils.lerp(
+      currentSpinSpeed.current,
+      targetSpeed,
+      Math.min(delta * 2.0, 1.0)
+    );
+
+    // ONE SINGLE PLANET GROUP ROTATION:
+    // Earth, Clouds, Atmosphere, Smog, Forests, Smog sources, and Oceans all rotate together in lockstep!
+    if (planetGroupRef.current) {
+      planetGroupRef.current.rotation.y += delta * currentSpinSpeed.current;
+    }
+
+    // Free-floating orbit debris rotates at its own leisurely rate
+    if (orbitGroupRef.current) {
+      orbitGroupRef.current.rotation.y += delta * 0.006;
     }
   });
+
+  const pollutionVal = 1.0 - smoothCleanliness.current;
 
   return (
     <>
@@ -65,22 +134,58 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
       <SpaceBackground reducedMotion={false} qualityOverride={liteMode ? 'LOW' : 'HIGH'} />
       <Sun healProgress={cleanliness / 100} isLowEnd={liteMode} />
 
-      <group ref={earthGroupRef} scale={1.0}>
-        <Earth healProgress={cleanliness / 100} isLowEnd={liteMode} />
-        <Clouds healProgress={cleanliness / 100} />
-        <Atmosphere healProgress={cleanliness / 100} />
+      {/* ── ONE UNIFIED PLANET GROUP ──
+          Earth, clouds, atmosphere, smog shell, industrial plumes, forests,
+          smog/energy sources, and oceans are ALL children of this group.
+          They inherit identical rotation and axial tilt with zero desync! ── */}
+      <group
+        ref={planetGroupRef}
+        rotation={[AXIAL_TILT_X, 0, AXIAL_TILT_Z]}
+        scale={1.0}
+      >
+        {/* Photorealistic Earth Mesh with NASA Maps & Local Heal Mask */}
+        <Earth
+          autoRotate={false}
+          noGroupTilt={true}
+          healProgress={smoothCleanliness.current}
+          pollution={pollutionVal}
+          isLowEnd={liteMode}
+        />
 
-        {/* Mission 1: Floating Orbit Trash */}
-        <InteractiveOrbit isInteractive={true} />
+        {/* Cloud Atmosphere Envelope */}
+        <Clouds
+          autoRotate={false}
+          noGroupTilt={true}
+          healProgress={smoothCleanliness.current}
+          pollution={pollutionVal}
+        />
 
-        {/* Mission 2: Smog Sources to Clean Energy */}
+        {/* Thin Atmospheric Rim Glow */}
+        <Atmosphere
+          healProgress={smoothCleanliness.current}
+          pollution={pollutionVal}
+        />
+
+        {/* Smog Shell & Industrial Smoke Plumes (Anchored to Earth) */}
+        <Smog
+          pollution={pollutionVal}
+          escalation={0.5}
+        />
+
+        {/* Mission 2: Smog Sources to Clean Energy (Industrial factory -> Wind / Solar) */}
         <InteractiveSmog isInteractive={true} />
 
-        {/* Mission 3: Continental Forest Reforestation */}
+        {/* Mission 3: Continental Forest Reforestation (Dead patches -> Lush canopy) */}
         <InteractiveForests isInteractive={true} />
 
-        {/* Mission 4: Ocean Plastic Sweeper */}
+        {/* Mission 4: Ocean Plastic Sweeper (Gyre waste & oily decals -> Pristine ocean) */}
         <InteractiveOceans isInteractive={true} />
+      </group>
+
+      {/* ── FREE-FLOATING ORBITAL DEBRIS ──
+          Mission 1: Debris orbits freely in low Earth space */}
+      <group ref={orbitGroupRef}>
+        <InteractiveOrbit isInteractive={true} />
       </group>
     </>
   );
@@ -127,7 +232,7 @@ export const CleaningScene = () => {
       <Canvas
         ref={canvasRef}
         gl={{
-          preserveDrawingBuffer: true, // Needed for "Download my clean Earth" canvas screenshot
+          preserveDrawingBuffer: true,
           antialias: !liteMode,
           alpha: false,
           powerPreference: 'high-performance',

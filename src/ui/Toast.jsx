@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { GAME_CONFIG } from '../config/game';
-import { CheckCircle2, Award, ArrowRight, X, Info } from 'lucide-react';
+import { CheckCircle2, Award, ArrowRight, X, Info, Sparkles } from 'lucide-react';
 
 export const Toast = () => {
   const activeToast = useGameStore((s) => s.activeToast);
   const dismissToast = useGameStore((s) => s.dismissToast);
+  const milestoneToast = useGameStore((s) => s.milestoneToast);
+  const dismissMilestoneToast = useGameStore((s) => s.dismissMilestoneToast);
   const completedModalMission = useGameStore((s) => s.completedModalMission);
   const closeCompletedModal = useGameStore((s) => s.closeCompletedModal);
 
@@ -18,14 +20,49 @@ export const Toast = () => {
     return () => clearTimeout(timer);
   }, [activeToast, dismissToast]);
 
+  // Auto-dismiss milestone toast after 4.5s
+  useEffect(() => {
+    if (!milestoneToast) return;
+    const timer = setTimeout(() => {
+      dismissMilestoneToast();
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [milestoneToast, dismissMilestoneToast]);
+
   const missionReveal = completedModalMission
     ? GAME_CONFIG.MISSION_REVEALS[completedModalMission]
     : null;
 
   return (
     <>
-      {/* ── 1. Floating Fact Toast (Triggered every 10 items) ── */}
-      {activeToast && (
+      {/* ── 1. Milestone Glass Toast (25%, 50%, 75%, 100%) ── */}
+      {milestoneToast && (
+        <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 w-96 max-w-[92vw] select-none pointer-events-auto animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/85 backdrop-blur-2xl border border-emerald-400/40 shadow-[0_0_24px_rgba(74,222,128,0.25)] flex items-center justify-between gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-[#4ade80] shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="font-display font-extrabold text-sm sm:text-base text-white tracking-tight block">
+                {milestoneToast.title}
+              </span>
+              <span className="font-body text-xs text-white/75 truncate block mt-0.5">
+                {milestoneToast.sub}
+              </span>
+            </div>
+            <button
+              onClick={dismissMilestoneToast}
+              className="text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors duration-200 shrink-0"
+              aria-label="Close notification"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2. Floating Fact Toast (Triggered every 10 items) ── */}
+      {activeToast && !milestoneToast && (
         <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 w-88 max-w-[92vw] select-none pointer-events-auto animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="p-3.5 rounded-xl bg-slate-950/90 backdrop-blur-2xl border border-emerald-500/30 flex items-start gap-3">
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-300 shrink-0">
@@ -52,7 +89,7 @@ export const Toast = () => {
         </div>
       )}
 
-      {/* ── 2. Mission Completed Infographic Modal ── */}
+      {/* ── 3. Mission Completed Infographic Modal ── */}
       {missionReveal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300 select-none pointer-events-auto">
           <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 rounded-2xl bg-slate-950/95 border border-emerald-500/40 text-center shadow-2xl">
@@ -101,4 +138,3 @@ export const Toast = () => {
 };
 
 export default Toast;
-

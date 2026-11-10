@@ -2,6 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { EARTH_RADIUS } from './Earth';
+import { healMask } from '../../three/HealMask';
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS (Desaturated Industrial Smog Shell & Emitters)
@@ -42,14 +43,17 @@ const SmogShellShader = {
     uEscalation: { value: 0.5 },
     uTime:       { value: 0.0 },
     uCameraPos:  { value: new THREE.Vector3(0, 0, 3.65) },
+    uHealMask:   { value: null },
   },
 
   vertexShader: `
+    varying vec2 vUv;
     varying vec3 vWorldNormal;
     varying vec3 vWorldPos;
     varying vec3 vObjectPos;
 
     void main() {
+      vUv          = uv;
       vObjectPos   = position;
       vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
       vWorldPos    = (modelMatrix * vec4(position, 1.0)).xyz;
@@ -62,12 +66,13 @@ const SmogShellShader = {
     uniform float uEscalation;
     uniform float uTime;
     uniform vec3  uCameraPos;
+    uniform sampler2D uHealMask;
 
+    varying vec2 vUv;
     varying vec3 vWorldNormal;
     varying vec3 vWorldPos;
     varying vec3 vObjectPos;
 
-    // Simple, lightweight procedural 3D noise anchored to Earth object coords
     float hash(vec3 p) {
       p = fract(p * 0.3183099 + 0.1);
       p *= 17.0;
@@ -88,7 +93,10 @@ const SmogShellShader = {
     }
 
     void main() {
-      if (uPollution < 0.005) discard;
+      float localHeal = texture2D(uHealMask, vUv).r;
+      float effPollution = clamp(uPollution * (1.0 - localHeal * 0.95), 0.0, 1.0);
+
+      if (effPollution < 0.005) discard;
 
       vec3 wn = normalize(vWorldNormal);
       vec3 viewDir = normalize(uCameraPos - vWorldPos);
@@ -106,9 +114,8 @@ const SmogShellShader = {
       vec3 ashLight = vec3(0.42, 0.37, 0.35);
       vec3 shellCol = mix(ashDark, ashLight, horizon * 0.7);
 
-      // Opacity escalates from Slide 1 (0.4) to Slide 3 / Final (1.0)
       float baseAlpha = mix(0.06, 0.52, horizon);
-      float alpha = baseAlpha * densityMod * uPollution * mix(0.55, 1.0, uEscalation);
+      float alpha = baseAlpha * densityMod * effPollution * mix(0.55, 1.0, uEscalation);
 
       gl_FragColor = vec4(shellCol, clamp(alpha, 0.0, 0.90));
     }
@@ -148,55 +155,70 @@ const SmokePuffShader = {
       float riseDist = t * 0.11;
       vec3 puffCenter = aEmitterPos + aNormal * riseDist + aDrift * (t * t * 0.04);
 
-      // Expand as it rises
-      float size = aScale * mix(0.030, 0.095, t);
+      // Billow expansion: puff grows from small initial burst to wider cloud
+      float puffGrowth = mix(0.016, 0.052, sqrt(t)) * aScale;
 
-      // Alpha envelope: quick rise from 0, sustain, then fade out
-      float fadeIn  = smoothstep(0.0, 0.20, t);
-      float fadeOut = smoothstep(1.0, 0.45, t);
+      // Billboarding in object/model space
+      vec3 right = normalize(cross(aNormal, vec3(0.0, 1.0, 0.001)));
+      vec3 up    = normalize(cross(right, aNormal));
+
+      vec3 displacedPos = puffCenter + (right * position.x + up * position.y) * puffGrowth;
+
+      // Alpha envelope: quick fade-in, smooth dissipation
+      float fadeIn  = smoothstep(0.0, 0.15, t);
+      float fadeOut = smoothstep(1.0, 0.65, t);
       vAlpha = fadeIn * fadeOut * uPollution * mix(0.45, 1.0, uEscalation);
 
-      // Billboard orientation facing the camera in model-view space
-      vec4 mvPosition = modelViewMatrix * vec4(puffCenter, 1.0);
-      mvPosition.xy += (position.xy * size);
-
-      gl_Position = projectionMatrix * mvPosition;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPos, 1.0);
     }
   `,
 
   fragmentShader: `
+    uniform float uPollution;
+    uniform float uEscalation;
+
     varying vec2  vUv;
     varying float vAlpha;
 
     void main() {
-      // Soft round Gaussian puff texture
-      float dist = length(vUv - 0.5) * 2.0;
+      if (vAlpha < 0.004) discard;
+
+      // Soft circular puff with feathered radial falloff
+      vec2 center = vUv - vec2(0.5);
+      float dist = length(center) * 2.0; // [0.0, 1.0]
       if (dist > 1.0) discard;
-      float softCircle = smoothstep(1.0, 0.05, dist);
 
-      // Soft dark-gray industrial smoke color (#34302c)
-      vec3 smokeColor = vec3(0.20, 0.19, 0.18);
-      float alpha = softCircle * vAlpha * 0.45;
+      float radialMask = smoothstep(1.0, 0.15, dist);
 
-      gl_FragColor = vec4(smokeColor, clamp(alpha, 0.0, 1.0));
+      // Desaturated ash-gray smoke (#4a4642 core to #5e544d edge)
+      vec3 coreColor = vec3(0.27, 0.25, 0.24); // Sooty charcoal ash
+      vec3 edgeColor = vec3(0.38, 0.34, 0.32); // Slightly softer ash edge
+      vec3 puffColor = mix(edgeColor, coreColor, radialMask);
+
+      float finalAlpha = radialMask * vAlpha * 0.42;
+
+      gl_FragColor = vec4(puffColor, finalAlpha);
     }
   `
 };
 
-export const Smog = ({ pollution = 1.0, escalation = 0.5 }) => {
+export const Smog = ({
+  pollution = 1.0,
+  escalation = 0.5,
+}) => {
+  const { camera } = useThree();
   const shellMatRef = useRef(null);
   const puffsMatRef = useRef(null);
-  const { camera } = useThree();
 
-  // Create geometry and instanced attributes for the smoke puffs
   const { puffGeom, puffUniforms, shellUniforms } = useMemo(() => {
-    // 1. Shared instanced quad geometry for all smoke puffs
-    const baseGeom = new THREE.PlaneGeometry(1, 1);
+    // 1. Create base quad geometry for GPU smoke puffs
+    const baseQuad = new THREE.PlaneGeometry(1, 1);
     const instGeom = new THREE.InstancedBufferGeometry();
-    instGeom.index = baseGeom.index;
-    instGeom.attributes.position = baseGeom.attributes.position;
-    instGeom.attributes.uv = baseGeom.attributes.uv;
+    instGeom.index = baseQuad.index;
+    instGeom.attributes.position = baseQuad.attributes.position;
+    instGeom.attributes.uv = baseQuad.attributes.uv;
 
+    // Attributes for all 188 puff instances
     const emitterPosArr = new Float32Array(TOTAL_PUFFS * 3);
     const normalArr     = new Float32Array(TOTAL_PUFFS * 3);
     const driftArr      = new Float32Array(TOTAL_PUFFS * 3);
@@ -207,16 +229,20 @@ export const Smog = ({ pollution = 1.0, escalation = 0.5 }) => {
     let idx = 0;
     INDUSTRIAL_EMITTERS.forEach((emitter) => {
       const normal = emitter.pos.clone().normalize();
-      
-      // Compute two tangent vectors on the surface for wind/drift
-      const up = Math.abs(normal.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
-      const tangent = new THREE.Vector3().crossVectors(normal, up).normalize();
-      const bitangent = new THREE.Vector3().crossVectors(normal, tangent).normalize();
+
+      // Tangent coordinate frame on sphere for slight random positional scatter
+      let tangent = new THREE.Vector3(0, 1, 0).cross(normal);
+      if (tangent.lengthSq() < 0.001) tangent = new THREE.Vector3(1, 0, 0).cross(normal);
+      tangent.normalize();
+      const bitangent = normal.clone().cross(tangent).normalize();
 
       for (let i = 0; i < emitter.count; i++) {
-        // Slight surface jitter around industrial centroid
-        const jitterR = (Math.random() - 0.5) * 0.045;
-        const jitterT = (Math.random() - 0.5) * 0.045;
+        // Small scatter around industrial center (radius ~0.02)
+        const scatterAngle = Math.random() * Math.PI * 2;
+        const scatterDist  = Math.sqrt(Math.random()) * 0.028;
+        const jitterR = Math.cos(scatterAngle) * scatterDist;
+        const jitterT = Math.sin(scatterAngle) * scatterDist;
+
         const p = emitter.pos.clone()
           .addScaledVector(tangent, jitterR)
           .addScaledVector(bitangent, jitterT)
@@ -263,6 +289,7 @@ export const Smog = ({ pollution = 1.0, escalation = 0.5 }) => {
     const sUniforms = THREE.UniformsUtils.clone(SmogShellShader.uniforms);
     sUniforms.uPollution.value = pollution;
     sUniforms.uEscalation.value = escalation;
+    sUniforms.uHealMask.value = healMask.getTexture();
 
     return { puffGeom: instGeom, puffUniforms: pUniforms, shellUniforms: sUniforms };
   }, []);
@@ -274,6 +301,7 @@ export const Smog = ({ pollution = 1.0, escalation = 0.5 }) => {
       shellMatRef.current.uniforms.uCameraPos.value.copy(camera.position);
       shellMatRef.current.uniforms.uTime.value = t;
       shellMatRef.current.uniforms.uPollution.value = pollution;
+      shellMatRef.current.uniforms.uHealMask.value = healMask.getTexture();
       shellMatRef.current.uniforms.uEscalation.value = THREE.MathUtils.lerp(
         shellMatRef.current.uniforms.uEscalation.value,
         escalation,

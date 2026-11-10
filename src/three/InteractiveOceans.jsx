@@ -1,10 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useGameStore } from '../store/gameStore';
+import { useGameStore, OCEAN_GYRES } from '../store/gameStore';
 import { GAME_CONFIG } from '../config/game';
 
-function latLonToVector3(lat, lon, radius = 1.0) {
+// Convert Lat/Lon (degrees) into 3D sphere coordinate
+export function latLonToVector3(lat, lon, radius = 1.0) {
   const phi = (90 - lat) * (Math.PI / 180);
   const theta = (lon + 180) * (Math.PI / 180);
   const x = -(radius * Math.sin(phi) * Math.cos(theta));
@@ -13,44 +14,100 @@ function latLonToVector3(lat, lon, radius = 1.0) {
   return new THREE.Vector3(x, y, z);
 }
 
+// 4 Major Oceanic Plastic Gyres with cluster center and extent
+export const GYRE_CLUSTERS = [
+  { id: 0, name: 'Great Pacific Garbage Patch', lat: 32.0,  lon: -145.0, radius: 0.18 },
+  { id: 1, name: 'North Atlantic Ocean Gyre',   lat: 28.0,  lon: -42.0,  radius: 0.16 },
+  { id: 2, name: 'Indian Ocean Garbage Gyre',   lat: -16.0, lon: 78.0,   radius: 0.15 },
+  { id: 3, name: 'South Pacific Ocean Gyre',    lat: -26.0, lon: -112.0, radius: 0.15 },
+];
+
 export const InteractiveOceans = ({ isInteractive = true }) => {
   const updateOceanSweep = useGameStore((s) => s.updateOceanSweep);
   const sweptPercent = useGameStore((s) => s.mission4.sweptPercent);
   const activeMissionId = useGameStore((s) => s.activeMissionId);
+  const liteMode = useGameStore((s) => s.liteMode);
 
   const [sweptSet, setSweptSet] = useState(new Set());
   const [netPos, setNetPos] = useState(null);
   const [isSweeping, setIsSweeping] = useState(false);
 
-  // Generate 120 ocean plastic particles across real ocean gyres
-  const particles = useMemo(() => {
+  // Generate varied low-poly floating plastic items clustered in real oceanic gyres
+  const { items, clusterAnchors } = useMemo(() => {
     const list = [];
-    let seed = 443322;
+    let seed = 771122;
     const rand = () => {
       seed = (seed * 16807) % 2147483647;
       return (seed - 1) / 2147483646;
     };
 
-    // Major gyres: Pacific (30N, -145W), Atlantic (28N, -40W), Indian (-15S, 80E)
-    const gyres = [
-      { lat: 30, lon: -145, rad: 22 }, // North Pacific Gyre
-      { lat: 28, lon: -40,  rad: 18 }, // North Atlantic Gyre
-      { lat: -15, lon: 80,  rad: 16 }, // Indian Ocean Gyre
-      { lat: -25, lon: -110,rad: 16 }, // South Pacific Gyre
-    ];
+    const types = ['bottle', 'bag', 'can', 'crate', 'net'];
+    const totalItems = liteMode ? 60 : 120;
+    const itemsPerGyre = Math.floor(totalItems / GYRE_CLUSTERS.length);
 
-    for (let i = 0; i < 120; i++) {
-      const g = gyres[Math.floor(rand() * gyres.length)];
-      const lat = g.lat + (rand() - 0.5) * g.rad;
-      const lon = g.lon + (rand() - 0.5) * g.rad;
-      const pos = latLonToVector3(lat, lon, 1.003);
-      const color = rand() > 0.5 ? '#f8fafc' : rand() > 0.5 ? '#38bdf8' : '#e2e8f0';
-      list.push({ id: i, pos, color, scale: 0.008 + rand() * 0.008 });
-    }
-    return list;
-  }, []);
+    const anchors = GYRE_CLUSTERS.map((gyre) => {
+      const pos = latLonToVector3(gyre.lat, gyre.lon, 1.002);
+      const normal = pos.clone().normalize();
+      const up = new THREE.Vector3(0, 1, 0);
+      const quat = new THREE.Quaternion().setFromUnitVectors(up, normal);
+      return { ...gyre, pos, normal, quat };
+    });
 
-  // Raycasting on ocean sphere to track sweep net
+    let id = 0;
+    anchors.forEach((gyre, gIdx) => {
+      for (let i = 0; i < itemsPerGyre; i++) {
+        const type = types[Math.floor(rand() * types.length)];
+        // Swirling spiral distribution within gyre radius
+        const angle = rand() * Math.PI * 2;
+        const dist = Math.sqrt(rand()) * 0.14; // distance on tangent plane
+        const phase = rand() * Math.PI * 2;
+        const driftSpeed = 0.2 + rand() * 0.3;
+        const scale = 0.006 + rand() * 0.006;
+
+        // Compute coordinate in gyre local space
+        const lx = Math.cos(angle) * dist;
+        const lz = Math.sin(angle) * dist;
+
+        // Transform to world position on sphere
+        const localVec = new THREE.Vector3(lx, 0, lz).applyQuaternion(gyre.quat);
+        const pos = gyre.pos.clone().add(localVec).normalize().multiplyScalar(1.003);
+
+        list.push({
+          id: id++,
+          gyreId: gIdx,
+          type,
+          lx,
+          lz,
+          angle,
+          dist,
+          phase,
+          driftSpeed,
+          scale,
+          basePos: pos,
+          currentPos: pos.clone(),
+        });
+      }
+    });
+
+    return { items: list, clusterAnchors: anchors };
+  }, [liteMode]);
+
+  // Shared Geometries for low-poly ocean waste
+  const bottleGeom = useMemo(() => new THREE.CylinderGeometry(0.3, 0.3, 1.0, 6), []);
+  const bagGeom    = useMemo(() => new THREE.DodecahedronGeometry(0.55, 0), []);
+  const canGeom    = useMemo(() => new THREE.CylinderGeometry(0.35, 0.35, 0.7, 6), []);
+  const crateGeom  = useMemo(() => new THREE.BoxGeometry(0.8, 0.6, 0.7), []);
+  const netGeom    = useMemo(() => new THREE.TorusGeometry(0.45, 0.15, 4, 8), []);
+  const decalGeom  = useMemo(() => new THREE.CircleGeometry(0.16, 24), []);
+
+  // Shared Materials
+  const matBottle = useMemo(() => new THREE.MeshStandardMaterial({ color: '#cbe6f7', roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.85 }), []);
+  const matBag    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#f1f5f9', roughness: 0.7, transparent: true, opacity: 0.8 }), []);
+  const matCan    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ef4444', metalness: 0.8, roughness: 0.3 }), []);
+  const matCrate  = useMemo(() => new THREE.MeshStandardMaterial({ color: '#0284c7', roughness: 0.5 }), []);
+  const matNet    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#475569', roughness: 0.9 }), []);
+
+  // Raycasting on ocean sphere for sweep net
   const oceanSphereRef = useRef(null);
 
   const handlePointerDown = (e) => {
@@ -78,11 +135,11 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
     const sweepRadius = GAME_CONFIG.SWEEP_RADIUS_WORLD;
     const newlySwept = [];
 
-    particles.forEach((p) => {
-      if (!sweptSet.has(p.id)) {
-        const d = hitPoint.distanceTo(p.pos);
+    items.forEach((item) => {
+      if (!sweptSet.has(item.id)) {
+        const d = hitPoint.distanceTo(item.currentPos);
         if (d < sweepRadius) {
-          newlySwept.push(p.id);
+          newlySwept.push(item.id);
         }
       }
     });
@@ -91,12 +148,33 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
       setSweptSet((prev) => {
         const next = new Set(prev);
         newlySwept.forEach((id) => next.add(id));
-        const currentPercent = Math.min(100, Math.round((next.size / particles.length) * 100));
+        const currentPercent = Math.min(100, Math.round((next.size / items.length) * 100));
         updateOceanSweep(currentPercent);
         return next;
       });
     }
   };
+
+  // Animate items bobbing and gentle circular swirl
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+
+    items.forEach((item) => {
+      if (sweptSet.has(item.id)) return;
+
+      // Gentle vertical bobbing along normal
+      const bob = Math.sin(t * 2.2 + item.phase) * 0.0016;
+
+      // Slow circular swirl around gyre center
+      const currentAngle = item.angle + t * item.driftSpeed * 0.08;
+      const curLx = Math.cos(currentAngle) * item.dist;
+      const curLz = Math.sin(currentAngle) * item.dist;
+
+      const gyre = clusterAnchors[item.gyreId];
+      const localVec = new THREE.Vector3(curLx, bob, curLz).applyQuaternion(gyre.quat);
+      item.currentPos.copy(gyre.pos).add(localVec).normalize().multiplyScalar(1.003 + bob);
+    });
+  });
 
   return (
     <group>
@@ -111,20 +189,63 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
         <meshBasicMaterial visible={false} />
       </mesh>
 
-      {/* Floating Plastic Micro-Particles */}
-      {particles.map((p) => {
-        const isSwept = sweptSet.has(p.id);
-        if (isSwept) return null;
+      {/* ── Dark Oily Discoloration Decals Under Each Gyre Cluster ── */}
+      {clusterAnchors.map((gyre) => {
+        // Calculate remaining unswept items in this gyre
+        const gyreItems = items.filter((it) => it.gyreId === gyre.id);
+        const sweptInGyre = gyreItems.filter((it) => sweptSet.has(it.id)).length;
+        const cleanFraction = sweptInGyre / gyreItems.length;
+        const oilOpacity = Math.max(0.0, (1.0 - cleanFraction) * 0.58);
+
+        if (oilOpacity < 0.01) return null;
 
         return (
-          <mesh key={p.id} position={[p.pos.x, p.pos.y, p.pos.z]}>
-            <dodecahedronGeometry args={[p.scale, 0]} />
-            <meshStandardMaterial color={p.color} roughness={0.3} metalness={0.2} />
-          </mesh>
+          <group
+            key={gyre.id}
+            position={[gyre.pos.x, gyre.pos.y, gyre.pos.z]}
+            quaternion={gyre.quat}
+          >
+            <mesh position={[0, 0.0012, 0]} rotation={[-Math.PI / 2, 0, 0]} geometry={decalGeom}>
+              <meshBasicMaterial
+                color="#0a120f"
+                transparent
+                opacity={oilOpacity}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+          </group>
         );
       })}
 
-      {/* Glowing Sweep Net Cursor Barrier */}
+      {/* ── Varied Low-Poly Ocean Plastic Items (Bottles, Bags, Cans, Crates, Nets) ── */}
+      {items.map((item) => {
+        const isSwept = sweptSet.has(item.id);
+        if (isSwept) return null;
+
+        const geom =
+          item.type === 'bottle' ? bottleGeom :
+          item.type === 'bag'    ? bagGeom :
+          item.type === 'can'    ? canGeom :
+          item.type === 'crate'  ? crateGeom : netGeom;
+
+        const mat =
+          item.type === 'bottle' ? matBottle :
+          item.type === 'bag'    ? matBag :
+          item.type === 'can'    ? matCan :
+          item.type === 'crate'  ? matCrate : matNet;
+
+        return (
+          <mesh
+            key={item.id}
+            position={[item.currentPos.x, item.currentPos.y, item.currentPos.z]}
+            scale={[item.scale, item.scale, item.scale]}
+            geometry={geom}
+            material={mat}
+          />
+        );
+      })}
+
+      {/* ── Glowing Sweep Net Cursor Barrier ── */}
       {isInteractive && activeMissionId === 4 && netPos && (
         <group position={[netPos.x, netPos.y, netPos.z]} lookAt={() => [0, 0, 0]}>
           <mesh>
@@ -142,4 +263,3 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
 };
 
 export default InteractiveOceans;
-

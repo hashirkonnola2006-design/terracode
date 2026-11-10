@@ -30,7 +30,7 @@ export const Clean = () => {
       <CleaningScene />
 
       {/* ── 2. Minimal Top Bar (Fixed) ── */}
-      <header className="fixed top-0 left-0 right-0 z-30 px-3 sm:px-6 md:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-3 pointer-events-none">
+      <header className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 md:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-3 pointer-events-none">
         
         {/* Brand / Logo on Left */}
         <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">

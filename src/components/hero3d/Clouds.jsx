@@ -82,7 +82,13 @@ const CloudShader = {
   `
 };
 
-export const Clouds = ({ scrollRotation = 0, healProgress = 0, pollution = 1.0 }) => {
+export const Clouds = ({
+  scrollRotation = 0,
+  healProgress = 0,
+  pollution = 1.0,
+  autoRotate = true,
+  noGroupTilt = false,
+}) => {
   const cloudsRef = useRef(null);
   const matRef = useRef(null);
 
@@ -120,26 +126,39 @@ export const Clouds = ({ scrollRotation = 0, healProgress = 0, pollution = 1.0 }
     }
 
     if (cloudsRef.current) {
-      const cleanProgress = 1.0 - (matRef.current ? matRef.current.uniforms.uPollution.value : initialPollution);
-      const currentSpeed = THREE.MathUtils.lerp(BASE_ROTATION_SPEED, 0.010, cleanProgress) * CLOUD_SPEED_MULTIPLIER;
-      cloudsRef.current.rotation.y = INITIAL_ROTATION_Y + t * currentSpeed + scrollRotation * CLOUD_SPEED_MULTIPLIER;
+      if (autoRotate) {
+        const cleanProgress = 1.0 - (matRef.current ? matRef.current.uniforms.uPollution.value : initialPollution);
+        const currentSpeed = THREE.MathUtils.lerp(BASE_ROTATION_SPEED, 0.010, cleanProgress) * CLOUD_SPEED_MULTIPLIER;
+        cloudsRef.current.rotation.y = INITIAL_ROTATION_Y + t * currentSpeed + scrollRotation * CLOUD_SPEED_MULTIPLIER;
+      } else {
+        // Subtle natural cloud drift relative to the rotating planet
+        cloudsRef.current.rotation.y += delta * 0.003;
+      }
     }
   });
 
+  const meshNode = (
+    <mesh ref={cloudsRef} scale={EARTH_RADIUS + CLOUD_RADIUS_OFFSET}>
+      <sphereGeometry args={[1, 96, 96]} />
+      <shaderMaterial
+        ref={matRef}
+        uniforms={uniforms}
+        vertexShader={CloudShader.vertexShader}
+        fragmentShader={CloudShader.fragmentShader}
+        transparent={true}
+        depthWrite={false}
+        blending={THREE.NormalBlending}
+      />
+    </mesh>
+  );
+
+  if (noGroupTilt) {
+    return meshNode;
+  }
+
   return (
     <group rotation={[AXIAL_TILT_X, 0, AXIAL_TILT_Z]}>
-      <mesh ref={cloudsRef} scale={EARTH_RADIUS + CLOUD_RADIUS_OFFSET}>
-        <sphereGeometry args={[1, 96, 96]} />
-        <shaderMaterial
-          ref={matRef}
-          uniforms={uniforms}
-          vertexShader={CloudShader.vertexShader}
-          fragmentShader={CloudShader.fragmentShader}
-          transparent={true}
-          depthWrite={false}
-          blending={THREE.NormalBlending}
-        />
-      </mesh>
+      {meshNode}
     </group>
   );
 };

@@ -8,12 +8,12 @@ import { GAME_CONFIG } from '../config/game';
 function createBottleGeom() {
   const pts = [
     new THREE.Vector2(0, 0),
-    new THREE.Vector2(0.3, 0.04),
-    new THREE.Vector2(0.34, 0.12),
-    new THREE.Vector2(0.34, 0.9),
-    new THREE.Vector2(0.18, 1.15),
-    new THREE.Vector2(0.14, 1.4),
-    new THREE.Vector2(0.0, 1.4),
+    new THREE.Vector2(0.28, 0.04),
+    new THREE.Vector2(0.32, 0.12),
+    new THREE.Vector2(0.32, 0.9),
+    new THREE.Vector2(0.16, 1.15),
+    new THREE.Vector2(0.12, 1.38),
+    new THREE.Vector2(0.0, 1.38),
   ];
   const g = new THREE.LatheGeometry(pts, 12);
   g.center();
@@ -21,25 +21,25 @@ function createBottleGeom() {
 }
 
 function createBagGeom() {
-  const g = new THREE.CylinderGeometry(0.3, 0.42, 1.1, 10, 6, true);
+  const g = new THREE.CylinderGeometry(0.28, 0.40, 1.0, 10, 5, true);
   g.center();
   return g;
 }
 
 function createCanGeom() {
-  const g = new THREE.CylinderGeometry(0.28, 0.28, 0.75, 12);
+  const g = new THREE.CylinderGeometry(0.26, 0.26, 0.72, 12);
   g.center();
   return g;
 }
 
 function createTireGeom() {
-  const g = new THREE.TorusGeometry(0.44, 0.18, 8, 16);
+  const g = new THREE.TorusGeometry(0.42, 0.17, 8, 16);
   g.center();
   return g;
 }
 
 function createCrateGeom() {
-  const g = new THREE.BoxGeometry(0.8, 0.55, 0.65);
+  const g = new THREE.BoxGeometry(0.78, 0.52, 0.62);
   g.center();
   return g;
 }
@@ -48,12 +48,15 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
   const collectDebrisItem = useGameStore((s) => s.collectDebrisItem);
   const collectedIds = useGameStore((s) => s.mission1.collectedIds);
   const activeMissionId = useGameStore((s) => s.activeMissionId);
+  const liteMode = useGameStore((s) => s.liteMode);
 
+  const [hoveredId, setHoveredId] = useState(null);
+  const [clickPops, setClickPops] = useState({});
   const [tapsNeeded, setTapsNeeded] = useState({});
   const [floatingTexts, setFloatingTexts] = useState([]);
   const [hintId, setHintId] = useState(null);
 
-  // Generate 60 fixed orbital debris items
+  // Generate 50 fixed orbital debris items
   const items = useMemo(() => {
     const list = [];
     let seed = 998877;
@@ -63,16 +66,21 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
     };
 
     const types = ['bottle', 'bag', 'can', 'tire', 'crate'];
+    const totalCount = liteMode ? 42 : 55;
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < totalCount; i++) {
       const type = types[Math.floor(rand() * types.length)];
-      const radius = 0.85 + rand() * 0.75;
-      const inclination = (rand() - 0.5) * Math.PI * 0.7;
+      const radius = 1.25 + rand() * 0.55; // Floats in low Earth orbit (1.25 to 1.80)
+      const inclination = (rand() - 0.5) * Math.PI * 0.75;
       const nodeAngle = rand() * Math.PI * 2;
       const baseAngle = rand() * Math.PI * 2;
-      const orbitSpeed = (rand() > 0.45 ? 1 : -1) * (0.012 + rand() * 0.02) * 0.04;
-      const scale = 0.038 * (0.8 + rand() * 0.45);
+      const scale = 0.042 * (0.85 + rand() * 0.40);
       const points = (type === 'tire' || type === 'crate') ? 3 : 1;
+
+      // Random tumble spin rates
+      const tumbleSpeedX = (rand() - 0.5) * 0.8;
+      const tumbleSpeedY = (rand() - 0.5) * 0.8;
+      const tumbleSpeedZ = (rand() - 0.5) * 0.8;
 
       list.push({
         id: i,
@@ -81,37 +89,67 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
         inclination,
         nodeAngle,
         baseAngle,
-        currentAngle: baseAngle,
-        orbitSpeed,
         scale,
         points,
         rotX: rand() * Math.PI * 2,
         rotY: rand() * Math.PI * 2,
         rotZ: rand() * Math.PI * 2,
-        rotSpeed: (rand() - 0.5) * 0.4,
+        tumbleSpeedX,
+        tumbleSpeedY,
+        tumbleSpeedZ,
       });
     }
     return list;
-  }, []);
+  }, [liteMode]);
 
-  // Shared geometries
+  // Shared Geometries
   const bottleGeom = useMemo(() => createBottleGeom(), []);
   const bagGeom    = useMemo(() => createBagGeom(), []);
   const canGeom    = useMemo(() => createCanGeom(), []);
   const tireGeom   = useMemo(() => createTireGeom(), []);
   const crateGeom  = useMemo(() => createCrateGeom(), []);
-  const hitGeom    = useMemo(() => new THREE.SphereGeometry(0.24, 8, 8), []);
+  const hitGeom    = useMemo(() => new THREE.SphereGeometry(0.26, 8, 8), []);
 
-  // Materials
-  const matBottle = useMemo(() => new THREE.MeshPhysicalMaterial({ color: '#cbe6f7', transmission: 0.8, roughness: 0.15, transparent: true, opacity: 0.8 }), []);
-  const matBag    = useMemo(() => new THREE.MeshPhysicalMaterial({ color: '#f3f6fa', transmission: 0.5, roughness: 0.4, transparent: true, opacity: 0.85 }), []);
-  const matCan    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e53e3e', metalness: 0.7, roughness: 0.3 }), []);
-  const matTire   = useMemo(() => new THREE.MeshStandardMaterial({ color: '#1a1a1e', roughness: 0.9 }), []);
-  const matCrate  = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2b6cb0', roughness: 0.5 }), []);
-  const matHit    = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
+  // Shared Materials with proper physical properties
+  const matBottle = useMemo(() => new THREE.MeshPhysicalMaterial({
+    color: '#d6ecfa',
+    transmission: 0.82,
+    roughness: 0.14,
+    transparent: true,
+    opacity: 0.85,
+    clearcoat: 1.0,
+  }), []);
 
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const matBag = useMemo(() => new THREE.MeshPhysicalMaterial({
+    color: '#f8fafc',
+    transmission: 0.45,
+    roughness: 0.42,
+    transparent: true,
+    opacity: 0.85,
+  }), []);
+
+  const matCan = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#e11d48',
+    metalness: 0.85,
+    roughness: 0.22,
+  }), []);
+
+  const matTire = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#18181b',
+    roughness: 0.92,
+    metalness: 0.05,
+  }), []);
+
+  const matCrate = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#1d4ed8',
+    roughness: 0.45,
+    metalness: 0.35,
+  }), []);
+
+  const matHit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
+
   const itemPositions = useRef({});
+  const itemRotationRefs = useRef({});
 
   // 8-second idle hint
   useEffect(() => {
@@ -134,22 +172,24 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
     return () => clearTimeout(timer);
   }, [floatingTexts]);
 
-  // Handle tap / click (with debounce guard to prevent double-fire between pointerdown & click)
+  // Handle tap / click
   const lastCollectRef = useRef({});
   const handleItemClick = (e, item) => {
     if (!isInteractive) return;
     if (e && e.stopPropagation) e.stopPropagation();
 
     const now = performance.now();
-    if (now - (lastCollectRef.current[item.id] || 0) < 350) return;
+    if (now - (lastCollectRef.current[item.id] || 0) < 300) return;
     lastCollectRef.current[item.id] = now;
+
+    // Trigger scale-pop animation
+    setClickPops((prev) => ({ ...prev, [item.id]: now }));
 
     // Tires & Crates take 2 taps
     if (item.points === 3) {
       const currentTaps = (tapsNeeded[item.id] || 0) + 1;
       if (currentTaps < 2) {
         setTapsNeeded((prev) => ({ ...prev, [item.id]: currentTaps }));
-        // Add a floating "Tap again!" badge
         setFloatingTexts((prev) => [
           ...prev,
           { id: Date.now(), text: 'Tap again!', pos: itemPositions.current[item.id] || [0, 0, 0], color: '#f6ad55' },
@@ -169,11 +209,14 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
     }
   };
 
-  useFrame(() => {
-    // Orbital & rotation animation frozen — debris is static in space
-    // Positions computed once from fixed baseAngle; no updates needed here
+  // Compute fixed orbital positions and update slight tumble rotation
+  useFrame((state, delta) => {
+    const t = state.clock.elapsedTime;
+
     items.forEach((item) => {
-      const a = item.currentAngle; // stays at baseAngle — never incremented
+      if (collectedIds.includes(item.id)) return;
+
+      const a = item.baseAngle;
       const r = item.radius;
 
       const x0 = r * Math.cos(a);
@@ -191,6 +234,14 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
       const z = x1 * sinN + z1 * cosN;
 
       itemPositions.current[item.id] = [x, y, z];
+
+      // Update tumble rotation
+      const curRot = itemRotationRefs.current[item.id] || [item.rotX, item.rotY, item.rotZ];
+      itemRotationRefs.current[item.id] = [
+        curRot[0] + delta * item.tumbleSpeedX,
+        curRot[1] + delta * item.tumbleSpeedY,
+        curRot[2] + delta * item.tumbleSpeedZ,
+      ];
     });
   });
 
@@ -201,6 +252,12 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
         if (isCollected) return null;
 
         const isHinted = item.id === hintId;
+        const isHovered = item.id === hoveredId;
+        const now = performance.now();
+        const popTime = clickPops[item.id] || 0;
+        const isPopping = now - popTime < 280;
+        const popScale = isPopping ? 1.0 + Math.sin(((now - popTime) / 280) * Math.PI) * 0.35 : 1.0;
+
         const geom =
           item.type === 'bottle' ? bottleGeom :
           item.type === 'bag'    ? bagGeom :
@@ -214,32 +271,40 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
           item.type === 'tire'   ? matTire : matCrate;
 
         const pos = itemPositions.current[item.id] || [0, 0, 0];
+        const rot = itemRotationRefs.current[item.id] || [item.rotX, item.rotY, item.rotZ];
 
         return (
-          <group key={item.id} position={pos} rotation={[item.rotX, item.rotY, item.rotZ]}>
+          <group key={item.id} position={pos} rotation={rot} scale={[popScale, popScale, popScale]}>
             {/* Visible 3D Debris Mesh */}
             <mesh
               geometry={geom}
               material={mat}
               scale={[item.scale, item.scale, item.scale]}
-              castShadow
-              receiveShadow
+              castShadow={!liteMode}
+              receiveShadow={!liteMode}
             />
+
+            {/* Hover Emissive Pulse Halo */}
+            {isHovered && (
+              <mesh scale={[item.scale * 2.2, item.scale * 2.2, item.scale * 2.2]}>
+                <sphereGeometry args={[0.3, 10, 10]} />
+                <meshBasicMaterial color="#38bdf8" transparent opacity={0.35} wireframe />
+              </mesh>
+            )}
 
             {/* Generous Invisible Hit Target for Touch & Click */}
             {isInteractive && (
               <mesh
                 geometry={hitGeom}
                 material={matHit}
-                scale={[item.scale * 3.5, item.scale * 3.5, item.scale * 3.5]}
-                onPointerDown={(e) => {
+                scale={[item.scale * 3.8, item.scale * 3.8, item.scale * 3.8]}
+                onPointerOver={(e) => {
                   e.stopPropagation();
-                  handleItemClick(e, item);
+                  setHoveredId(item.id);
                 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleItemClick(e, item);
-                }}
+                onPointerOut={() => setHoveredId(null)}
+                onPointerDown={(e) => handleItemClick(e, item)}
+                onClick={(e) => handleItemClick(e, item)}
               />
             )}
 
@@ -258,4 +323,3 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
 };
 
 export default InteractiveOrbit;
-
