@@ -12,6 +12,7 @@ import { FloatingDebris, ForegroundDebris } from '../components/hero3d/FloatingD
 import { Effects } from '../components/hero3d/Effects';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
+import { useIntroStatus } from '../components/intro/useIntroStatus';
 
 // Camera & Earth target values per discrete beat
 const BEAT_CAMERA_TARGETS = [
@@ -217,6 +218,10 @@ export const Landing = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [screenFlash, setScreenFlash] = useState(false);
 
+  // Sync hero entrance with PixelIntroLoader exit (~1.45s)
+  const { isIntroActive, isIntroExiting } = useIntroStatus();
+  const heroEntered = !isIntroActive || isIntroExiting;
+
   // Enable snap scrolling on html / body while on the Landing intro
   useEffect(() => {
     document.documentElement.classList.add('intro-snap');
@@ -327,10 +332,16 @@ export const Landing = () => {
 
       {/* ── Transparent Fixed Header ── */}
       <header
-        className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 sm:px-8 md:px-12 py-3.5 sm:py-6 transition-all duration-300 pointer-events-auto"
+        className={`fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 sm:px-8 md:px-12 py-3.5 sm:py-6 transition-all duration-500 pointer-events-auto ${
+          heroEntered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'
+        }`}
         style={{
-          opacity: isTransitioning ? 0 : 1,
-          transform: isTransitioning ? 'translateY(-20px)' : 'translateY(0)',
+          opacity: isTransitioning ? 0 : heroEntered ? 1 : 0,
+          transform: isTransitioning
+            ? 'translateY(-20px)'
+            : heroEntered
+            ? 'translateY(0)'
+            : 'translateY(-12px)',
         }}
       >
         {/* Left: TerraHeal Brand Logo (70% opacity on Beat 3) */}
@@ -516,7 +527,11 @@ export const Landing = () => {
           </div>
         ) : (
           /* ── BEATS 0, 1, 2: Left Column Stage ── */
-          <div className="relative w-full max-w-xl md:max-w-2xl my-auto text-left pointer-events-auto">
+          <div
+            className={`relative w-full max-w-xl md:max-w-2xl my-auto text-left pointer-events-auto transition-all duration-500 ${
+              heroEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+            }`}
+          >
             <div key={activeBeat} className="beat-unit">
               
               {/* Eyebrow */}
@@ -555,9 +570,11 @@ export const Landing = () => {
 
         {/* ── Bottom Bar: Hidden completely on Beat 3; Visible on Beats 0-2 ── */}
         <div
-          className="relative w-full flex items-center justify-between pointer-events-auto transition-opacity duration-200"
+          className={`relative w-full flex items-center justify-between pointer-events-auto transition-all duration-500 ${
+            heroEntered ? 'opacity-100' : 'opacity-0'
+          }`}
           style={{
-            opacity: activeBeat === 3 ? 0 : 1,
+            opacity: activeBeat === 3 ? 0 : heroEntered ? 1 : 0,
             pointerEvents: activeBeat === 3 ? 'none' : 'auto',
           }}
         >

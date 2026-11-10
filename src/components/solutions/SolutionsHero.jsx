@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Leaf } from 'lucide-react';
 import { SolutionsHeroScene } from './SolutionsHeroScene';
+import { useIntroStatus } from '../intro/useIntroStatus';
 
 export const SolutionsHero = ({ liteMode = false, onScrollToPillars }) => {
   const navigate = useNavigate();
@@ -38,13 +39,20 @@ export const SolutionsHero = ({ liteMode = false, onScrollToPillars }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [prefersReducedMotion]);
 
-  // Entrance animation flags
-  const [entered, setEntered] = useState(prefersReducedMotion);
+  // Entrance animation flags (coordinated with PixelIntroLoader exit at ~1.45s)
+  const { isIntroActive, isIntroExiting } = useIntroStatus();
+  const [entered, setEntered] = useState(prefersReducedMotion || !isIntroActive);
+
   useEffect(() => {
     if (prefersReducedMotion) return;
-    const timer = setTimeout(() => setEntered(true), 100);
-    return () => clearTimeout(timer);
-  }, [prefersReducedMotion]);
+    if (!isIntroActive) {
+      const timer = setTimeout(() => setEntered(true), 100);
+      return () => clearTimeout(timer);
+    }
+    if (isIntroExiting) {
+      setEntered(true);
+    }
+  }, [prefersReducedMotion, isIntroActive, isIntroExiting]);
 
   const healParallaxY = prefersReducedMotion ? 0 : scrollY * 0.22;
   const planetParallaxY = prefersReducedMotion ? 0 : scrollY * 0.38;

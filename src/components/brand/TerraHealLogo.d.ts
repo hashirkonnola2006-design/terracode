@@ -18,3 +18,4 @@ export declare const TerraHealMark: React.FC<TerraHealMarkProps>;
 export declare const TerraHealLogo: React.FC<TerraHealLogoProps>;
 
 export default TerraHealLogo;
+

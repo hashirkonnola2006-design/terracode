@@ -241,3 +241,4 @@ ${generateMarkSvg(BRAND_TEAL).replace(/<svg[^>]*>|<\/svg>/g, '')}
 }
 
 generateAllAssets().catch(console.error);
+

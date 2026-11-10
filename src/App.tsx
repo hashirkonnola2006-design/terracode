@@ -5,6 +5,7 @@ import { Clean } from './routes/Clean';
 import { Quiz } from './routes/Quiz';
 import { Game3 } from './routes/Game3';
 import { useGameStore } from './store/gameStore';
+import { PixelIntroLoader } from './components/intro/PixelIntroLoader';
 
 if (typeof window !== 'undefined') {
   (window as any).__ECO_STORE__ = useGameStore;
@@ -22,6 +23,7 @@ if (typeof window !== 'undefined') {
 export function App() {
   return (
     <BrowserRouter>
+      <PixelIntroLoader />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/solutions" element={<Solutions />} />
