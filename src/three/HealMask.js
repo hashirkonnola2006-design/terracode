@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
-class HealMaskManager {
-  constructor() {
+export class HealMaskManager {
+  constructor(name = 'default') {
+    this.name = name;
     this.width = 512;
     this.height = 256;
     this.canvas = null;
@@ -60,7 +61,6 @@ class HealMaskManager {
     const cy = ((90 - lat) / 180) * this.height;
     const rPixels = radiusNorm * this.width;
 
-    // Draw radial gradient centered at (cx, cy)
     const drawSpot = (x, y) => {
       const grad = this.ctx.createRadialGradient(x, y, 0, x, y, rPixels);
       grad.addColorStop(0.0, `rgba(255, 255, 255, ${alpha})`);
@@ -68,7 +68,7 @@ class HealMaskManager {
       grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
 
       this.ctx.save();
-      this.ctx.globalCompositeOperation = 'screen'; // Additive blending for overlapping heals
+      this.ctx.globalCompositeOperation = 'screen';
       this.ctx.fillStyle = grad;
       this.ctx.beginPath();
       this.ctx.arc(x, y, rPixels, 0, Math.PI * 2);
@@ -103,6 +103,17 @@ class HealMaskManager {
   }
 }
 
-export const healMask = new HealMaskManager();
-export default healMask;
+// Separate, independent instances per game to prevent any cross-game bleeding
+export const cleanupHealMask = new HealMaskManager('cleanup');
+export const quizHealMask = new HealMaskManager('quiz');
+export const hubHealMask = new HealMaskManager('hub');
 
+export function getHealMask(gameId = 'cleanup') {
+  if (gameId === 'quiz') return quizHealMask;
+  if (gameId === 'hub') return hubHealMask;
+  return cleanupHealMask;
+}
+
+// Backwards-compatible default export
+export const healMask = cleanupHealMask;
+export default healMask;

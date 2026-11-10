@@ -205,10 +205,12 @@ const SmokePuffShader = {
 export const Smog = ({
   pollution = 1.0,
   escalation = 0.5,
+  healMaskManager = null,
 }) => {
   const { camera } = useThree();
   const shellMatRef = useRef(null);
   const puffsMatRef = useRef(null);
+  const activeMask = healMaskManager || healMask;
 
   const { puffGeom, puffUniforms, shellUniforms } = useMemo(() => {
     // 1. Create base quad geometry for GPU smoke puffs
@@ -289,7 +291,7 @@ export const Smog = ({
     const sUniforms = THREE.UniformsUtils.clone(SmogShellShader.uniforms);
     sUniforms.uPollution.value = pollution;
     sUniforms.uEscalation.value = escalation;
-    sUniforms.uHealMask.value = healMask.getTexture();
+    sUniforms.uHealMask.value = activeMask.getTexture();
 
     return { puffGeom: instGeom, puffUniforms: pUniforms, shellUniforms: sUniforms };
   }, []);
@@ -301,7 +303,7 @@ export const Smog = ({
       shellMatRef.current.uniforms.uCameraPos.value.copy(camera.position);
       shellMatRef.current.uniforms.uTime.value = t;
       shellMatRef.current.uniforms.uPollution.value = pollution;
-      shellMatRef.current.uniforms.uHealMask.value = healMask.getTexture();
+      shellMatRef.current.uniforms.uHealMask.value = activeMask.getTexture();
       shellMatRef.current.uniforms.uEscalation.value = THREE.MathUtils.lerp(
         shellMatRef.current.uniforms.uEscalation.value,
         escalation,

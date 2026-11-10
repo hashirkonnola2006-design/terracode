@@ -292,11 +292,11 @@ export const Landing = () => {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (prefersReducedMotion) {
-      navigate('/clean');
+      navigate('/solutions');
     } else {
-      // Camera zooms into Earth, radial green flash, seamless navigate to /clean
+      // Camera zooms into Earth, radial green flash, seamless navigate to /solutions
       setTimeout(() => {
-        navigate('/clean');
+        navigate('/solutions');
       }, 700);
     }
   };

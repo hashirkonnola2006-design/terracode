@@ -28,10 +28,12 @@ export const Earth = ({
   isLowEnd = false,
   autoRotate = true,
   noGroupTilt = false,
+  healMaskManager = null,
 }) => {
   const { gl } = useThree();
   const earthRef = useRef(null);
   const shaderMatRef = useRef(null);
+  const activeMask = healMaskManager || healMask;
 
   const planetPulseTrigger = useGameStore((s) => s.planetPulseTrigger);
   const lastPulseRef = useRef(0);
@@ -78,7 +80,7 @@ export const Earth = ({
     u.uNormalMap.value = normalMap;
     u.uSpecularMap.value = specularMap;
     u.uLightsMap.value = lightsMap;
-    u.uHealMask.value = healMask.getTexture();
+    u.uHealMask.value = activeMask.getTexture();
     u.uPollution.value = initialPollution;
     u.uHeal.value = 1.0 - initialPollution;
     u.uPulse.value = 0.0;
@@ -106,7 +108,7 @@ export const Earth = ({
       shaderMatRef.current.uniforms.uHeal.value = 1.0 - smoothPollutionRef.current;
       shaderMatRef.current.uniforms.uPulse.value = pulseIntensityRef.current;
       shaderMatRef.current.uniforms.uTime.value = t;
-      shaderMatRef.current.uniforms.uHealMask.value = healMask.getTexture();
+      shaderMatRef.current.uniforms.uHealMask.value = activeMask.getTexture();
       shaderMatRef.current.uniforms.uDim.value = THREE.MathUtils.lerp(
         shaderMatRef.current.uniforms.uDim.value,
         dim,
