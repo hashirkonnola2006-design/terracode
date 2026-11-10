@@ -27,6 +27,15 @@ const BackgroundSceneController = ({
   const currentEarthPos = useRef(new THREE.Vector3(0, 0, 0));
   const currentCameraZ = useRef(customCameraZ);
   const currentScale = useRef(1.0);
+  const transitionActive = useRef(true);
+  const prevIsResults = useRef(isResults);
+
+  useEffect(() => {
+    if (prevIsResults.current !== isResults) {
+      prevIsResults.current = isResults;
+      transitionActive.current = true;
+    }
+  }, [isResults]);
 
   const { size, camera } = useThree();
   const aspect = size.width / Math.max(1, size.height);
@@ -75,23 +84,23 @@ const BackgroundSceneController = ({
 
     if (isResults) {
       if (isMobile) {
-        // Mobile: Earth in top half (fully visible, completely above compact bottom sheet)
+        // Mobile: Earth in top half (prominent, fully visible above bottom sheet)
         targetEarthX = 0.0;
         targetEarthY = 0.0;
-        targetCamZ = 3.8;
-        targetScale = 0.54;
+        targetCamZ = 3.1;
+        targetScale = 0.74;
       } else {
-        // Desktop: Results card on left (40%), Earth centered in remaining 60% with wide clearance
-        targetEarthX = Math.min(1.48, Math.max(1.30, 0.75 * aspect));
+        // Desktop: Results card on left (~420px), Earth prominent and centered in remaining space with slight zoom out
+        targetEarthX = Math.min(1.08, Math.max(0.85, 0.58 * aspect));
         targetEarthY = 0.0;
-        targetCamZ = 4.4;
-        targetScale = 0.95;
+        targetCamZ = 3.05; // Balanced "little zoom out" keeping globe prominent and clear
+        targetScale = 1.0;
       }
     } else {
       if (isPortrait) {
         targetEarthX = 0;
         targetEarthY = 0;
-        targetCamZ = Math.min(6.2, customCameraZ / Math.max(0.50, aspect * 1.15));
+        targetCamZ = Math.min(4.4, customCameraZ / Math.max(0.65, aspect * 1.1));
         targetScale = 1.0;
       } else {
         targetEarthX = 0;
@@ -105,10 +114,15 @@ const BackgroundSceneController = ({
     const lerpSpeed = prefersReducedMotion ? 1.0 : Math.min(delta * 2.8, 1.0);
     currentEarthPos.current.x = THREE.MathUtils.lerp(currentEarthPos.current.x, targetEarthX, lerpSpeed);
     currentEarthPos.current.y = THREE.MathUtils.lerp(currentEarthPos.current.y, targetEarthY, lerpSpeed);
-    currentCameraZ.current = THREE.MathUtils.lerp(currentCameraZ.current, targetCamZ, lerpSpeed);
     currentScale.current = THREE.MathUtils.lerp(currentScale.current, targetScale, lerpSpeed);
 
-    camera.position.z = currentCameraZ.current;
+    if (transitionActive.current) {
+      currentCameraZ.current = THREE.MathUtils.lerp(currentCameraZ.current, targetCamZ, lerpSpeed);
+      camera.position.z = currentCameraZ.current;
+      if (Math.abs(currentCameraZ.current - targetCamZ) < 0.02) {
+        transitionActive.current = false;
+      }
+    }
 
     if (planetGroupRef.current) {
       planetGroupRef.current.position.set(
@@ -145,7 +159,9 @@ const BackgroundSceneController = ({
         <OrbitControls
           ref={controlsRef}
           enablePan={false}
-          enableZoom={false}
+          enableZoom={true}
+          minDistance={2.4}
+          maxDistance={3.5}
           rotateSpeed={0.55}
           dampingFactor={0.06}
           enableDamping

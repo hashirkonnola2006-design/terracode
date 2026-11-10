@@ -124,8 +124,8 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
         ref={controlsRef}
         enablePan={false}
         enableZoom={true}
-        minDistance={1.8}
-        maxDistance={isPortrait ? 8.5 : 5.5}
+        minDistance={2.2}
+        maxDistance={isPortrait ? 4.0 : 3.6}
         rotateSpeed={0.65}
         dampingFactor={0.06}
         enableDamping
