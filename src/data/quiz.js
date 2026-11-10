@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- * ECOFUTURE — ZERO-WASTE QUIZ DATA & GEOGRAPHIC HEALING REGIONS
+ * TERRAHEAL — ZERO-WASTE QUIZ DATA & GEOGRAPHIC HEALING REGIONS
  * ═══════════════════════════════════════════════════════════════
  * 10 verified environmental questions covering waste hierarchy,
  * circular materials, composting, sorting, and hazardous recovery.

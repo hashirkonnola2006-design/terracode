@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { CleaningScene } from '../three/CleaningScene';
@@ -7,11 +7,11 @@ import { MissionPanel } from '../ui/MissionPanel';
 import { Toast } from '../ui/Toast';
 import { Tutorial } from '../ui/Tutorial';
 import { EndingScreen } from '../ui/EndingScreen';
+import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import {
   Volume2,
   VolumeX,
   Zap,
-  Leaf,
   FastForward,
   RotateCcw,
   ArrowLeft,
@@ -19,6 +19,10 @@ import {
 
 export const Clean = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = 'TerraHeal | Clean the Earth';
+  }, []);
   const muted = useGameStore((s) => s.muted);
   const toggleMute = useGameStore((s) => s.toggleMute);
   const liteMode = useGameStore((s) => s.liteMode);
@@ -36,7 +40,7 @@ export const Clean = () => {
       <header className="fixed top-0 left-0 right-0 z-[60] px-3 sm:px-6 md:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-3 pointer-events-none">
         
         {/* Back to Hub + Brand / Logo on Left */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 pointer-events-auto shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 pointer-events-auto shrink-0">
           <button
             onClick={() => navigate('/solutions#play')}
             className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-white/80 hover:text-white font-label uppercase text-[10px] sm:text-[11px] font-semibold tracking-wider transition-colors cursor-pointer"
@@ -46,12 +50,7 @@ export const Clean = () => {
             <span className="hidden sm:inline">Hub</span>
           </button>
 
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#4ade80]" />
-          </div>
-          <span className="font-display font-extrabold text-sm sm:text-base tracking-tight text-white hidden md:inline-block">
-            EcoFuture
-          </span>
+          <TerraHealLogo markSize={26} textClass="text-sm sm:text-base font-bold hidden md:inline-block" to="/solutions#play" />
         </div>
 
         {/* Cleanliness Meter in the Center */}

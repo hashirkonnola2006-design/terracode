@@ -1,6 +1,6 @@
-# 🌱 EcoFuture (TerraCode) — Green Tomorrow: Building a Sustainable Future
+# 🌍 TerraHeal — Heal the Planet by Playing
 
-An interactive 3D scroll-driven planetary healing experience built for the web development competition themed **"Green Tomorrow - Building a Sustainable Future"**.
+An interactive 3D scroll-driven planetary healing experience and educational mini-game platform built for sustainable planetary restoration.
 
 ---
 

@@ -226,7 +226,7 @@ export const InteractiveSmog = ({ isInteractive = true }) => {
                   >
                     <ringGeometry args={[0.01, 0.045, 24]} />
                     <meshBasicMaterial
-                      color="#4ade80"
+                      color="#0becc2"
                       transparent
                       opacity={(1.0 - pulseProgress) * 0.85}
                       side={THREE.DoubleSide}

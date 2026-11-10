@@ -10,7 +10,8 @@ import { Atmosphere } from '../components/hero3d/Atmosphere';
 import { Smog } from '../components/hero3d/Smog';
 import { FloatingDebris, ForegroundDebris } from '../components/hero3d/FloatingDebris';
 import { Effects } from '../components/hero3d/Effects';
-import { ArrowRight, Leaf, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 
 // Camera & Earth target values per discrete beat
 const BEAT_CAMERA_TARGETS = [
@@ -28,7 +29,7 @@ const BEATS_DATA = [
     eyebrowColor: 'text-white/70',
     headline: (
       <>
-        Our <span className="text-[#4ade80]">Earth</span>
+        Our <span className="text-[#0becc2]">Earth</span>
         <br />
         is Drowning
       </>
@@ -307,12 +308,16 @@ export const Landing = () => {
     }
   };
 
+  useEffect(() => {
+    document.title = 'TerraHeal | Heal the Planet by Playing';
+  }, []);
+
   const currentBeatData = BEATS_DATA[activeBeat] || BEATS_DATA[0];
   const VIGNETTE_DENSITY = [0.52, 0.58, 0.64, 0.72];
   const vignetteDarkness = VIGNETTE_DENSITY[activeBeat] || 0.52;
 
   return (
-    <div className="relative bg-[#030712] text-white selection:bg-emerald-500 selection:text-black">
+    <div className="relative bg-[#050505] text-white selection:bg-[#0becc2] selection:text-black">
       
       {/* ── 4 Snap Sections (Total length = 4 x 100vh) ── */}
       <section className="snap-beat-section pointer-events-none" />
@@ -328,19 +333,13 @@ export const Landing = () => {
           transform: isTransitioning ? 'translateY(-20px)' : 'translateY(0)',
         }}
       >
-        {/* Left: Leaf Logo + EcoFuture (70% opacity on Beat 3) */}
+        {/* Left: TerraHeal Brand Logo (70% opacity on Beat 3) */}
         <div
-          onClick={() => goToBeat(0)}
-          className={`flex items-center gap-2 sm:gap-2.5 select-none cursor-pointer transition-opacity duration-150 ${
+          className={`select-none transition-opacity duration-150 ${
             activeBeat === 3 ? 'opacity-70' : 'opacity-100'
           }`}
         >
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#4ade80]" />
-          </div>
-          <span className="font-display font-extrabold text-lg sm:text-xl tracking-tight text-white">
-            EcoFuture
-          </span>
+          <TerraHealLogo markSize={28} textClass="text-lg sm:text-xl font-bold" onClick={() => goToBeat(0)} />
         </div>
 
         {/* Right: Nav items + Take Action pill (Fades out completely in 150ms on Beat 3) */}
@@ -355,7 +354,7 @@ export const Landing = () => {
             <button
               onClick={() => goToBeat(1)}
               className={`font-label uppercase text-[12px] tracking-[0.2em] transition-all duration-200 cursor-pointer ${
-                activeBeat === 1 ? 'text-[#4ade80]' : 'text-white/70 hover:text-[#4ade80]'
+                activeBeat === 1 ? 'text-[#0becc2]' : 'text-white/70 hover:text-[#0becc2]'
               }`}
             >
               About
@@ -363,7 +362,7 @@ export const Landing = () => {
             <button
               onClick={() => goToBeat(2)}
               className={`font-label uppercase text-[12px] tracking-[0.2em] transition-all duration-200 cursor-pointer ${
-                activeBeat === 2 ? 'text-[#4ade80]' : 'text-white/70 hover:text-[#4ade80]'
+                activeBeat === 2 ? 'text-[#0becc2]' : 'text-white/70 hover:text-[#0becc2]'
               }`}
             >
               Impact
@@ -371,7 +370,7 @@ export const Landing = () => {
             <button
               onClick={() => goToBeat(3)}
               className={`font-label uppercase text-[12px] tracking-[0.2em] transition-all duration-200 cursor-pointer ${
-                activeBeat === 3 ? 'text-[#4ade80]' : 'text-white/70 hover:text-[#4ade80]'
+                activeBeat === 3 ? 'text-[#0becc2]' : 'text-white/70 hover:text-[#0becc2]'
               }`}
             >
               Solutions
@@ -451,7 +450,7 @@ export const Landing = () => {
 
         {/* Click Transition Radial Green Flash */}
         {screenFlash && (
-          <div className="absolute inset-0 z-50 bg-gradient-radial from-[#4ade80] to-[#16a34a] animate-out fade-out duration-700 pointer-events-none" />
+          <div className="absolute inset-0 z-50 bg-gradient-radial from-[#0becc2] to-[#0ad0ab] animate-out fade-out duration-700 pointer-events-none" />
         )}
       </div>
 
@@ -480,24 +479,24 @@ export const Landing = () => {
 
             {/* c) The Button: bright green, tight glow around button only (no spill over Earth) */}
             <div className="relative flex items-center justify-center my-2 w-full max-w-xs sm:max-w-none">
-              {/* Main Glowing Green Pill Button */}
+              {/* Main Glowing Brand Pill Button */}
               <button
                 onClick={handleStartCleaning}
                 onMouseEnter={() => setIsBtnHovered(true)}
                 onMouseLeave={() => setIsBtnHovered(false)}
                 disabled={isTransitioning}
-                className="relative group overflow-hidden flex items-center justify-center gap-3 sm:gap-4 min-h-[58px] sm:min-h-[72px] w-full sm:w-auto sm:min-w-[340px] px-6 sm:px-10 py-3.5 sm:py-5 rounded-full bg-gradient-to-r from-[#4ade80] to-[#22c55e] text-[#052e16] font-bold text-base sm:text-lg tracking-[0.06em] uppercase hover:scale-[1.04] active:scale-[0.97] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-4 focus:ring-white select-none z-10"
+                className="relative group overflow-hidden flex items-center justify-center gap-3 sm:gap-4 min-h-[58px] sm:min-h-[72px] w-full sm:w-auto sm:min-w-[340px] px-6 sm:px-10 py-3.5 sm:py-5 rounded-full bg-gradient-to-r from-[#0becc2] to-[#0ad0ab] text-[#050505] font-bold text-base sm:text-lg tracking-[0.06em] uppercase hover:scale-[1.04] active:scale-[0.97] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-4 focus:ring-white select-none z-10"
                 style={{
                   boxShadow: isBtnHovered
-                    ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.90), 0 0 20px rgba(74, 222, 128, 0.55), 0 4px 14px rgba(0, 0, 0, 0.4)'
-                    : 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.75), 0 0 14px rgba(74, 222, 128, 0.40), 0 4px 10px rgba(0, 0, 0, 0.35)',
+                    ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.90), 0 0 24px rgba(11, 236, 194, 0.65), 0 4px 14px rgba(0, 0, 0, 0.4)'
+                    : 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.75), 0 0 16px rgba(11, 236, 194, 0.45), 0 4px 10px rgba(0, 0, 0, 0.35)',
                 }}
               >
                 {/* Light shine sweep across button every 4s */}
                 <div className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent btn-shine pointer-events-none" />
 
                 {/* Sparkle Icon */}
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-[#052e16] shrink-0" />
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-[#050505] shrink-0" />
 
                 {/* Label */}
                 <span className="font-extrabold text-[14px] sm:text-base tracking-[0.06em]">
@@ -505,7 +504,7 @@ export const Landing = () => {
                 </span>
 
                 {/* Arrow Icon */}
-                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#052e16] shrink-0 arrow-nudge group-hover:translate-x-2 transition-transform duration-200" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#050505] shrink-0 arrow-nudge group-hover:translate-x-2 transition-transform duration-200" />
               </button>
             </div>
 
@@ -569,7 +568,7 @@ export const Landing = () => {
                 key={b}
                 onClick={() => goToBeat(b)}
                 className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  b === activeBeat ? 'w-6 bg-[#4ade80]' : 'w-1.5 bg-white/20 hover:bg-white/50'
+                  b === activeBeat ? 'w-6 bg-[#0becc2]' : 'w-1.5 bg-white/20 hover:bg-white/50'
                 }`}
                 aria-label={`Jump to story beat ${b + 1}`}
               />

@@ -29,20 +29,20 @@ const StepIllustration: React.FC<{ icon: string }> = ({ icon }) => {
 
   if (icon === 'bolt') return (
     <svg className={common} viewBox="0 0 80 80" fill="none">
-      <circle cx="40" cy="40" r="36" fill="rgba(74,222,128,0.08)" stroke="rgba(74,222,128,0.2)" strokeWidth="1.5"/>
-      <path d="M46 14L28 44h16L30 70l26-34H40L46 14Z" fill="#4ADE80" opacity="0.9"/>
+      <circle cx="40" cy="40" r="36" fill="rgba(11,236,194,0.08)" stroke="rgba(11,236,194,0.2)" strokeWidth="1.5"/>
+      <path d="M46 14L28 44h16L30 70l26-34H40L46 14Z" fill="#0becc2" opacity="0.9"/>
     </svg>
   );
   if (icon === 'tree') return (
     <svg className={common} viewBox="0 0 80 80" fill="none">
-      <circle cx="40" cy="40" r="36" fill="rgba(74,222,128,0.08)" stroke="rgba(74,222,128,0.2)" strokeWidth="1.5"/>
-      <path d="M40 14L24 38h10L28 56h8v10h8V56h8L46 38h10L40 14Z" fill="#4ADE80" opacity="0.9"/>
+      <circle cx="40" cy="40" r="36" fill="rgba(11,236,194,0.08)" stroke="rgba(11,236,194,0.2)" strokeWidth="1.5"/>
+      <path d="M40 14L24 38h10L28 56h8v10h8V56h8L46 38h10L40 14Z" fill="#0becc2" opacity="0.9"/>
     </svg>
   );
   return (
     <svg className={common} viewBox="0 0 80 80" fill="none">
-      <circle cx="40" cy="40" r="36" fill="rgba(74,222,128,0.08)" stroke="rgba(74,222,128,0.2)" strokeWidth="1.5"/>
-      <path d="M40 16C40 16 22 36 22 48a18 18 0 0 0 36 0C58 36 40 16 40 16Z" fill="#4ADE80" opacity="0.9"/>
+      <circle cx="40" cy="40" r="36" fill="rgba(11,236,194,0.08)" stroke="rgba(11,236,194,0.2)" strokeWidth="1.5"/>
+      <path d="M40 16C40 16 22 36 22 48a18 18 0 0 0 36 0C58 36 40 16 40 16Z" fill="#0becc2" opacity="0.9"/>
     </svg>
   );
 };
@@ -96,7 +96,7 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
             </span>
             <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-white mb-4 tracking-tight">
               Three Levers to&nbsp;
-              <span className="text-[#4ADE80]">Heal the Planet</span>
+              <span className="text-[#0becc2]">Heal the Planet</span>
             </h2>
             <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
               Scroll through each intervention — watch the Earth heal in real-time on the opposite side.

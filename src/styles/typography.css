@@ -16,6 +16,7 @@
   --font-body: 'Barlow', 'Outfit', system-ui, -apple-system, sans-serif;
   --font-label: 'Outfit', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-pixel: 'Pixelify Sans', ui-monospace, monospace, sans-serif;
 }
 
 /* Option B (SpaceX Style): Michroma for labels & tracked caps, Outfit 800 for headlines, Barlow for body */
@@ -45,6 +46,10 @@ body.theme-spacex,
   font-family: var(--font-mono) !important;
   font-feature-settings: 'tnum' on, 'lnum' on;
   font-variant-numeric: tabular-nums;
+}
+
+.font-pixel {
+  font-family: var(--font-pixel) !important;
 }
 
 .tabular-nums {
@@ -89,15 +94,15 @@ body.theme-spacex,
   }
 }
 
-/* Primary Button: Uppercase 600, 14px, 0.12em spacing, green pill */
+/* Primary Button: Uppercase 600, 14px, 0.12em spacing, brand teal pill */
 .btn-aerospace-primary {
   font-family: var(--font-label);
   font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  background-color: #4ade80;
-  color: #030712;
+  background-color: var(--brand);
+  color: #050505;
   border-radius: 9999px;
   padding: 0.875rem 2rem;
   border: 1px solid transparent;
@@ -107,13 +112,13 @@ body.theme-spacex,
   justify-content: center;
   gap: 0.75rem;
   cursor: pointer;
-  box-shadow: 0 0 30px rgba(74, 222, 128, 0.35);
+  box-shadow: 0 0 30px rgba(11, 236, 194, 0.35);
 }
 
 .btn-aerospace-primary:hover {
-  background-color: #3ecb74;
+  background-color: var(--brand-strong);
   letter-spacing: 0.14em;
-  box-shadow: 0 0 45px rgba(74, 222, 128, 0.6);
+  box-shadow: 0 0 45px rgba(11, 236, 194, 0.6);
   transform: scale(1.02);
 }
 

@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- * ECOFUTURE — PROCEDURAL WEB AUDIO SYNTHESIZER & HAPTICS
+ * TERRAHEAL — PROCEDURAL WEB AUDIO SYNTHESIZER & HAPTICS
  * ═══════════════════════════════════════════════════════════════
  * 100% self-contained Web Audio API sound generator.
  * Zero external audio assets required. Zero network latency.

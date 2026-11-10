@@ -204,7 +204,7 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
       const label = res.combo > 1 ? `+${res.points} (x${res.combo})` : `+${res.points}`;
       setFloatingTexts((prev) => [
         ...prev,
-        { id: Date.now(), text: label, pos: itemPositions.current[item.id] || [0, 0, 0], color: '#4ade80' },
+        { id: Date.now(), text: label, pos: itemPositions.current[item.id] || [0, 0, 0], color: '#0becc2' },
       ]);
     }
   };
@@ -312,7 +312,7 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
             {isHinted && (
               <mesh scale={[item.scale * 2.8, item.scale * 2.8, item.scale * 2.8]}>
                 <ringGeometry args={[0.8, 1.0, 16]} />
-                <meshBasicMaterial color="#4ade80" side={THREE.DoubleSide} transparent opacity={0.65} />
+                <meshBasicMaterial color="#0becc2" side={THREE.DoubleSide} transparent opacity={0.75} />
               </mesh>
             )}
           </group>

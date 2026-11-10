@@ -71,7 +71,7 @@ export const GetInvolved: React.FC<GetInvolvedProps> = ({ cards }) => {
             </span>
             <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-white mb-4 tracking-tight">
               Your Action&nbsp;
-              <span className="text-[#4ADE80]">Matters</span>
+              <span className="text-[#0becc2]">Matters</span>
             </h2>
             <p className="text-slate-400 text-sm max-w-xl mx-auto leading-relaxed">
               You don't need to do everything — just one thing, consistently, is enough to contribute to systemic change.

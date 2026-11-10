@@ -9,8 +9,8 @@ import {
   getQuizProgressLine,
   QUIZ_RESULT_THRESHOLDS,
 } from '../config/quizResults';
+import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import {
-  Leaf,
   ArrowLeft,
   Volume2,
   VolumeX,
@@ -26,6 +26,10 @@ import {
 
 export const Quiz = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = 'TerraHeal | Zero-Waste Quiz';
+  }, []);
 
   const quiz = useGameStore((s) => s.quiz);
   const answerQuizQuestion = useGameStore((s) => s.answerQuizQuestion);
@@ -205,10 +209,10 @@ export const Quiz = () => {
   };
 
   const handleShare = async () => {
-    const text = `I scored ${quiz.score}/10 on the EcoFuture Zero-Waste Quiz and healed ${quiz.health}% of the Earth! Can you beat my score?`;
+    const text = `I scored ${quiz.score}/10 on the TerraHeal Zero-Waste Quiz and healed ${quiz.health}% of the Earth! Can you beat my score?`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'EcoFuture Zero-Waste Quiz', text, url: window.location.href });
+        await navigator.share({ title: 'TerraHeal Zero-Waste Quiz', text, url: window.location.href });
       } catch (_) {}
     } else {
       await navigator.clipboard.writeText(`${text} ${window.location.href}`);
@@ -218,7 +222,7 @@ export const Quiz = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#030712] text-white selection:bg-sky-500 selection:text-black">
+    <div className="relative min-h-screen bg-[#050505] text-white selection:bg-[#0becc2] selection:text-black">
       {/* ── Separate 3D Earth Driven ONLY by Quiz Health (Full Globe View in Results) ── */}
       <EarthBackground
         health={quiz.health}
@@ -232,7 +236,7 @@ export const Quiz = () => {
 
       {/* ── Soft Scrim Backdrop (Fades lighter on results to showcase the Earth) ── */}
       <div
-        className={`fixed inset-0 z-0 bg-radial from-transparent via-[#030712]/50 to-[#030712]/80 pointer-events-none transition-opacity duration-700 ${
+        className={`fixed inset-0 z-0 bg-radial from-transparent via-[#050505]/50 to-[#050505]/80 pointer-events-none transition-opacity duration-700 ${
           screen === 'results' ? 'opacity-40' : 'opacity-100'
         }`}
       />
@@ -240,11 +244,11 @@ export const Quiz = () => {
       {/* ── 100% Celebration Radiant Glow ── */}
       {screen === 'results' && quiz.health >= 100 && (
         <div className="fixed inset-0 pointer-events-none z-10 flex items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 bg-radial from-emerald-500/15 via-transparent to-transparent animate-pulse" />
+          <div className="absolute inset-0 bg-radial from-[#0becc2]/15 via-transparent to-transparent animate-pulse" />
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="absolute rounded-full border border-emerald-400/20"
+              className="absolute rounded-full border border-[#0becc2]/20"
               style={{
                 width: `${340 + i * 160}px`,
                 height: `${340 + i * 160}px`,
@@ -269,21 +273,14 @@ export const Quiz = () => {
             <span className="hidden sm:inline">Hub</span>
           </button>
 
-          <div className="flex items-center gap-1.5 pl-1 sm:pl-2">
-            <div className="w-7 h-7 rounded-full bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
-              <Leaf className="w-3.5 h-3.5 text-[#38bdf8]" />
-            </div>
-            <span className="font-display font-extrabold text-sm sm:text-base tracking-tight hidden md:inline">
-              Zero-Waste Quiz
-            </span>
-          </div>
+          <TerraHealLogo markSize={26} textClass="text-sm sm:text-base font-bold hidden md:inline" to="/solutions#play" />
         </div>
 
         {/* Center: Quiz Earth Health Meter */}
         <div className="flex-1 max-w-xs sm:max-w-sm px-2">
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className="font-label uppercase text-[10px] tracking-wider text-sky-400 font-semibold flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-sky-400" />
+            <span className="font-label uppercase text-[10px] tracking-wider text-[#0becc2] font-semibold flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-[#0becc2]" />
               Quiz Earth Health
             </span>
             <span className="font-mono font-bold text-white tabular-nums">
@@ -292,7 +289,7 @@ export const Quiz = () => {
           </div>
           <div className="relative w-full h-2 rounded-full bg-slate-900/80 border border-white/10 p-0.5 overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-sky-500 via-teal-400 to-emerald-400 shadow-[0_0_10px_rgba(56,189,248,0.5)] transition-all duration-500 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-[#0becc2] via-[#0ad0ab] to-[#5df7d9] shadow-[0_0_10px_rgba(11,236,194,0.5)] transition-all duration-500 ease-out"
               style={{ width: `${Math.max(quiz.health, 2)}%` }}
             />
           </div>
@@ -398,7 +395,7 @@ export const Quiz = () => {
               <div className="p-6 sm:p-8 rounded-2xl bg-slate-950/85 backdrop-blur-2xl border border-white/10 shadow-2xl space-y-6">
                 {/* Question Header & Micro-Progress */}
                 <div className="flex items-center justify-between text-xs pb-3 border-b border-white/10">
-                  <span className="font-label uppercase text-[11px] font-semibold tracking-wider text-sky-400">
+                  <span className="font-label uppercase text-[11px] font-semibold tracking-wider text-[#0becc2]">
                     Question {currentIndex + 1} of {questions.length}
                   </span>
                   <span className="font-mono text-white/60 text-[11px]">
@@ -422,8 +419,8 @@ export const Quiz = () => {
 
                     if (isAnswered) {
                       if (isCorrect) {
-                        btnStyle = 'bg-emerald-500/20 border-emerald-500/60 text-emerald-200 ring-1 ring-emerald-400/50';
-                        icon = <CheckCircle2 className="w-4 h-4 text-[#4ade80] shrink-0" />;
+                        btnStyle = 'bg-[#0becc2]/20 border-[#0becc2] text-white ring-1 ring-[#0becc2]/50';
+                        icon = <CheckCircle2 className="w-4 h-4 text-[#0becc2] shrink-0" />;
                       } else if (isSelected) {
                         btnStyle = 'bg-red-500/20 border-red-500/60 text-red-200 ring-1 ring-red-400/50';
                         icon = <XCircle className="w-4 h-4 text-red-400 shrink-0" />;
@@ -437,7 +434,7 @@ export const Quiz = () => {
                         key={optIdx}
                         onClick={() => handleSelectOption(option)}
                         disabled={isAnswered}
-                        className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between gap-3 text-xs sm:text-sm font-body transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400 ${btnStyle}`}
+                        className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between gap-3 text-xs sm:text-sm font-body transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0becc2] ${btnStyle}`}
                       >
                         <div className="flex items-center gap-3">
                           <span className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center font-mono text-[11px] font-semibold text-white/70 shrink-0">
@@ -456,7 +453,7 @@ export const Quiz = () => {
                   <div className="p-4 rounded-xl bg-slate-900/90 border border-white/10 space-y-3 animate-in fade-in duration-300">
                     <div className="flex items-center gap-1.5 font-label uppercase text-[10px] tracking-wider font-semibold">
                       {selectedOption === currentQ.correct ? (
-                        <span className="text-[#4ade80] flex items-center gap-1">
+                        <span className="text-[#0becc2] flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" /> Correct! Earth Healed +10%
                         </span>
                       ) : (
@@ -518,9 +515,9 @@ export const Quiz = () => {
                   />
                   <defs>
                     <linearGradient id="quizHealRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#38bdf8" />
-                      <stop offset="50%" stopColor="#2dd4bf" />
-                      <stop offset="100%" stopColor="#4ade80" />
+                      <stop offset="0%" stopColor="#0becc2" />
+                      <stop offset="50%" stopColor="#0ad0ab" />
+                      <stop offset="100%" stopColor="#5df7d9" />
                     </linearGradient>
                   </defs>
                 </svg>
@@ -531,7 +528,7 @@ export const Quiz = () => {
 
               {/* Label */}
               <div className="text-left">
-                <span className="font-label uppercase text-[9px] sm:text-[10px] tracking-wider text-sky-400 font-semibold block">
+                <span className="font-label uppercase text-[9px] sm:text-[10px] tracking-wider text-[#0becc2] font-semibold block">
                   Earth Healed
                 </span>
                 <span className="font-body text-[11px] sm:text-xs text-white/80">
@@ -550,13 +547,13 @@ export const Quiz = () => {
           <div className="order-2 md:order-1 w-full md:w-[380px] lg:w-[420px] xl:w-[440px] h-[50vh] md:h-full p-2.5 sm:p-5 md:p-8 flex flex-col justify-end md:justify-center z-30 pointer-events-auto">
             <div className="w-full max-h-full overflow-y-auto p-4 sm:p-6 md:p-8 rounded-2xl md:rounded-3xl bg-slate-950/90 backdrop-blur-2xl border border-white/10 shadow-2xl text-center space-y-3.5 sm:space-y-4 animate-in slide-in-from-bottom md:slide-in-from-left duration-500">
               {/* Icon */}
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-sky-500/10 border border-sky-500/30 mx-auto flex items-center justify-center text-sky-400 shrink-0">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#0becc2]/10 border border-[#0becc2]/30 mx-auto flex items-center justify-center text-[#0becc2] shrink-0">
                 <Globe2 className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
 
               {/* Title & Tier Quote */}
               <div className="space-y-1.5">
-                <span className="font-label uppercase text-[10px] sm:text-[11px] font-semibold tracking-[0.25em] text-sky-400">
+                <span className="font-label uppercase text-[10px] sm:text-[11px] font-semibold tracking-[0.25em] text-[#0becc2]">
                   Quiz Completed
                 </span>
                 <h2 className="font-display font-extrabold text-xl sm:text-2xl text-white">
@@ -588,7 +585,7 @@ export const Quiz = () => {
                   <span className="font-label uppercase text-[9px] sm:text-[10px] tracking-wider text-white/50 block mb-1">
                     Your Score
                   </span>
-                  <span className="font-mono font-bold text-lg sm:text-xl text-sky-400">
+                  <span className="font-mono font-bold text-lg sm:text-xl text-[#0becc2]">
                     {quiz.score} / 10
                   </span>
                 </div>
@@ -596,7 +593,7 @@ export const Quiz = () => {
                   <span className="font-label uppercase text-[9px] sm:text-[10px] tracking-wider text-white/50 block mb-1">
                     Earth Restored
                   </span>
-                  <span className="font-mono font-bold text-lg sm:text-xl text-[#4ade80]">
+                  <span className="font-mono font-bold text-lg sm:text-xl text-[#0becc2]">
                     {quiz.health}%
                   </span>
                 </div>

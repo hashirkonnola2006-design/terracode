@@ -77,17 +77,17 @@ export const EarthFallback2D: React.FC<EarthFallback2DProps> = ({ healProgress }
         {/* Glowing Healing Frontier Line when partially healed */}
         {healProgress > 0.05 && healProgress < 0.95 && (
           <div
-            className="absolute inset-0 rounded-full border-2 border-emerald-400 animate-pulse pointer-events-none"
+            className="absolute inset-0 rounded-full border-2 border-[#0becc2] animate-pulse pointer-events-none"
             style={{
               clipPath: `inset(0 ${(1 - healProgress) * 100}% 0 0)`,
-              boxShadow: '0 0 20px #4ade80',
+              boxShadow: '0 0 20px #0becc2',
             }}
           />
         )}
       </div>
 
       {/* Sustainable badge indicator */}
-      <div className="absolute -bottom-8 px-3 py-1 bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 text-xs rounded-full backdrop-blur-sm flex items-center gap-1.5 shadow-lg">
+      <div className="absolute -bottom-8 px-3 py-1 bg-black/80 border border-[#0becc2]/30 text-[#0becc2] text-xs rounded-full backdrop-blur-sm flex items-center gap-1.5 shadow-lg">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
         Low-Power Eco Mode Active (0 GPU Watts)
       </div>

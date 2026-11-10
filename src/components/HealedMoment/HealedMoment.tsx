@@ -69,10 +69,10 @@ export const HealedMoment: React.FC<HealedMomentProps> = ({ onEnter }) => {
           <h2
             className="font-display font-extrabold text-4xl sm:text-5xl md:text-6xl
               text-white tracking-tight leading-[1.08] mb-6"
-            style={{ textShadow: '0 0 60px rgba(74,222,128,0.35)' }}
+            style={{ textShadow: '0 0 60px rgba(11,236,194,0.35)' }}
           >
             This is the Tomorrow <br />
-            <span className="text-[#4ADE80]">We Can Build</span>
+            <span className="text-[#0becc2]">We Can Build</span>
           </h2>
 
           <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-10">
@@ -89,9 +89,9 @@ export const HealedMoment: React.FC<HealedMomentProps> = ({ onEnter }) => {
             }}
             className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full
               font-semibold text-sm text-[#030712]
-              bg-[#4ADE80] hover:bg-[#3bce74]
-              shadow-[0_0_28px_rgba(74,222,128,0.5)]
-              hover:shadow-[0_0_44px_rgba(74,222,128,0.75)]
+              bg-[#0becc2] hover:bg-[#0ad0ab]
+              shadow-[0_0_28px_rgba(11,236,194,0.5)]
+              hover:shadow-[0_0_44px_rgba(11,236,194,0.75)]
               transition-all duration-300 hover:-translate-y-0.5"
           >
             Join the Movement

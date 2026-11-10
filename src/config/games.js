@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- * ECOFUTURE — GAME CATALOG CONFIGURATION
+ * TERRAHEAL — GAME CATALOG CONFIGURATION
  * ═══════════════════════════════════════════════════════════════
  * Data-driven registry of all available and upcoming mini-games.
  * Adding a future game requires adding an entry here plus its route.

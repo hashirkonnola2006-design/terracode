@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- * ECOFUTURE — GAME CONFIGURATION & ENVIRONMENTAL BENCHMARKS
+ * TERRAHEAL — GAME CONFIGURATION & ENVIRONMENTAL BENCHMARKS
  * ═══════════════════════════════════════════════════════════════
  * Single source of truth for all game balancing, mission targets,
  * verified scientific facts, sources, and styling accents.
@@ -123,15 +123,16 @@ export const GAME_CONFIG = {
     },
   ],
 
-  // Visual Theme Accents
+  // Visual Theme Accents (TerraHeal Brand)
   COLORS: {
-    accentGreen: "#4ade80",
-    emeraldGlow: "#10b981",
+    brand: "#0becc2",
+    accentGreen: "#0becc2",
+    emeraldGlow: "#0ad0ab",
     pollutedHaze: "#887766",
     cleanAtmosphere: "#00b4ff",
     sunPolluted: "#ffcf9e",
     sunHealed: "#fff1dd",
-    bgDark: "#030712",
+    bgDark: "#050505",
   },
 };
 

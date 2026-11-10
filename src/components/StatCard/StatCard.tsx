@@ -64,7 +64,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   };
 
   const isNeg = value < 0;
-  const accentColor = changeType === 'positive' ? '#4ADE80' : '#f87171';
+  const accentColor = changeType === 'positive' ? '#0becc2' : '#f87171';
 
   /* ── Sparkline SVG ─ */
   const sparkSVG = sparkline && sparkline.length >= 2 ? (() => {
@@ -92,7 +92,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         relative group overflow-hidden
         rounded-2xl border border-white/10
         bg-slate-900/55 backdrop-blur-xl
-        hover:border-[#4ADE80]/25 hover:bg-slate-900/70
+        hover:border-[#0becc2]/25 hover:bg-slate-900/70
         transition-all duration-500 shadow-glass
         ${compact ? 'p-4' : 'p-5 sm:p-6'}
       `}

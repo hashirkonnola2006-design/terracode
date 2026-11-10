@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// ECOFUTURE ZERO-WASTE QUIZ — RESULTS CONFIGURATION
+// TERRAHEAL ZERO-WASTE QUIZ — RESULTS CONFIGURATION
 // ═══════════════════════════════════════════════════════════════
 
 /**

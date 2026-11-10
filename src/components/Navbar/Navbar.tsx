@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Leaf, ChevronRight, Zap, ZapOff, Menu, X } from 'lucide-react';
+import { ChevronRight, Zap, ZapOff, Menu, X } from 'lucide-react';
+import { TerraHealLogo } from '../brand/TerraHealLogo';
 
 interface NavbarProps {
   isLowPower: boolean;
@@ -30,15 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     >
       <div className="max-w-7xl mx-auto px-6 sm:px-8 flex items-center justify-between">
         
-        {/* Brand / Logo (matching Target Image B: Leaf icon + EcoFuture) */}
-        <a href="#" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center border border-emerald-500/25 group-hover:scale-105 transition-transform">
-            <Leaf className="w-4 h-4 text-emerald-400 fill-emerald-400" />
-          </div>
-          <span className="font-display font-bold text-lg tracking-tight text-white">
-            EcoFuture
-          </span>
-        </a>
+        {/* Brand / Logo: TerraHeal */}
+        <TerraHealLogo markSize={28} textClass="text-lg font-bold" />
 
         {/* Center Pill Navigation (matching Target Image B) */}
         <nav className="hidden md:flex items-center bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 shadow-glass">
@@ -63,7 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 {link}
                 {isActive && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] bg-emerald-400 rounded-full shadow-[0_0_8px_#4ade80]" />
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] bg-[#0becc2] rounded-full shadow-[0_0_8px_#0becc2]" />
                 )}
               </button>
             );
@@ -77,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={onToggleLowPower}
             className={`p-2 rounded-full border transition-all cursor-pointer ${
               isLowPower
-                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                ? 'bg-[#0becc2]/20 border-[#0becc2]/50 text-[#0becc2]'
                 : 'bg-slate-900/40 border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
             }`}
             title={isLowPower ? 'Eco Mode Active (Static 2D)' : 'High Performance 3D Globe'}
@@ -91,10 +85,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               const el = document.getElementById('get-involved');
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             })}
-            className="group flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-medium text-white border border-white/25 hover:border-emerald-400/60 bg-white/[0.03] hover:bg-emerald-500/10 transition-all duration-300 cursor-pointer"
+            className="group flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-medium text-white border border-white/25 hover:border-[#0becc2]/60 bg-white/[0.03] hover:bg-[#0becc2]/10 transition-all duration-300 cursor-pointer"
           >
             <span>Take Action</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0becc2] group-hover:translate-x-0.5 transition-all" />
           </button>
         </div>
 

@@ -57,7 +57,7 @@ export const AboutSection: React.FC = () => {
             </span>
             <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-white mb-5 tracking-tight">
               The Planet Is&nbsp;
-              <span className="text-[#4ADE80]">Asking for Help</span>
+              <span className="text-[#0becc2]">Asking for Help</span>
             </h2>
             <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
               The last decade was the hottest in recorded history. CO₂ levels are at a 3-million-year peak.

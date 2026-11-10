@@ -8,6 +8,13 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          light: '#5df7d9',
+          DEFAULT: '#0becc2',
+          strong: '#0ad0ab',
+          soft: 'rgba(11, 236, 194, 0.12)',
+          glow: 'rgba(11, 236, 194, 0.35)',
+        },
         space: {
           950: '#030712',
           900: '#060b16',
@@ -16,11 +23,11 @@ export default {
           700: '#112244',
         },
         eco: {
-          light: '#86efac',
-          DEFAULT: '#4ade80',
-          glow: '#22c55e',
-          dark: '#16a34a',
-          emerald: '#10b981',
+          light: '#5df7d9',
+          DEFAULT: '#0becc2',
+          glow: '#0becc2',
+          dark: '#0ad0ab',
+          emerald: '#0becc2',
           cyan: '#06b6d4',
         },
         polluted: {
@@ -37,10 +44,13 @@ export default {
         display: ['var(--font-display)', 'sans-serif'],
         label: ['var(--font-label)', 'sans-serif'],
         mono: ['var(--font-mono)', 'monospace'],
+        pixel: ['var(--font-pixel)', 'monospace'],
       },
       boxShadow: {
-        'glow-green': '0 0 40px -10px rgba(74, 222, 128, 0.45)',
-        'glow-green-lg': '0 0 60px -5px rgba(74, 222, 128, 0.6)',
+        'glow-brand': '0 0 40px -10px rgba(11, 236, 194, 0.45)',
+        'glow-brand-lg': '0 0 60px -5px rgba(11, 236, 194, 0.6)',
+        'glow-green': '0 0 40px -10px rgba(11, 236, 194, 0.45)',
+        'glow-green-lg': '0 0 60px -5px rgba(11, 236, 194, 0.6)',
         'glow-smog': '0 0 40px -10px rgba(180, 83, 9, 0.35)',
         'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
       },

@@ -6,12 +6,22 @@
 
 :root {
   color-scheme: dark;
+  --brand: #0becc2;
+  --brand-strong: #0ad0ab;
+  --brand-soft: rgba(11, 236, 194, 0.12);
+  --brand-glow: rgba(11, 236, 194, 0.35);
+  --brand-light: #5df7d9;
+  --bg: #050505;
+  --text: #ffffff;
+  --muted: #8a8a8a;
+  --danger: #ef4444;
+  --danger-strong: #dc2626;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #030712;
+  background-color: #050505;
   color: #f1f5f9;
   font-family: var(--font-body);
   overflow-x: hidden;
@@ -55,13 +65,13 @@ body {
   background: rgba(8, 20, 32, 0.78);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  border: 1px solid rgba(11, 236, 194, 0.25);
   border-radius: 12px;
   transition: all 200ms ease;
 }
 
 .glass-panel-glow:hover {
-  border-color: rgba(74, 222, 128, 0.45);
+  border-color: rgba(11, 236, 194, 0.45);
 }
 
 /* Accessibility: respect prefers-reduced-motion */

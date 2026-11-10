@@ -128,7 +128,7 @@ export const SolutionsHero = ({ liteMode = false, onScrollToPillars }) => {
             }}
           >
             <div className="text-white drop-shadow-md">Broken planet.</div>
-            <div className="text-[#4ade80] drop-shadow-lg">Your move.</div>
+            <div className="text-[#0becc2] drop-shadow-lg">Your move.</div>
           </h1>
 
           {/* Outlined Pill Button + Leaf Icon */}
@@ -139,9 +139,9 @@ export const SolutionsHero = ({ liteMode = false, onScrollToPillars }) => {
           >
             <button
               onClick={() => navigate('/clean')}
-              className="group inline-flex items-center gap-2.5 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full border border-white/80 hover:border-[#4ade80] bg-transparent hover:bg-[#4ade80] text-white hover:text-black font-mono uppercase text-xs sm:text-sm tracking-[0.16em] transition-all duration-300 cursor-pointer shadow-[0_0_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_35px_rgba(74,222,128,0.45)] hover:scale-[1.02] active:scale-[0.98]"
+              className="group inline-flex items-center gap-2.5 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full border border-white/80 hover:border-[#0becc2] bg-transparent hover:bg-[#0becc2] text-white hover:text-black font-mono uppercase text-xs sm:text-sm tracking-[0.16em] transition-all duration-300 cursor-pointer shadow-[0_0_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_35px_rgba(11,236,194,0.45)] hover:scale-[1.02] active:scale-[0.98]"
             >
-              <Leaf className="w-4 h-4 text-[#4ade80] group-hover:text-black transition-colors" />
+              <Leaf className="w-4 h-4 text-[#0becc2] group-hover:text-black transition-colors" />
               <span className="font-semibold">START CLEANING</span>
             </button>
           </div>
@@ -166,7 +166,7 @@ export const SolutionsHero = ({ liteMode = false, onScrollToPillars }) => {
         role="button"
         aria-label="Scroll to Six Pillars"
       >
-        <div className="w-[1px] h-10 bg-white/40 group-hover:bg-[#4ade80] transition-colors animate-pulse mb-2" />
+        <div className="w-[1px] h-10 bg-white/40 group-hover:bg-[#0becc2] transition-colors animate-pulse mb-2" />
         <span className="font-mono uppercase text-[10px] tracking-[0.25em] text-white/50 group-hover:text-white transition-colors">
           Scroll
         </span>

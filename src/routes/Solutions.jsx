@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { GAMES } from '../config/games';
 import { SolutionsHero } from '../components/solutions/SolutionsHero';
+import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import {
   Leaf,
   Sparkles,
@@ -87,6 +88,10 @@ export const Solutions = () => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
 
+  useEffect(() => {
+    document.title = 'TerraHeal | Solutions';
+  }, []);
+
   // Scroll listener for top header transparency vs border
   useEffect(() => {
     const handleScroll = () => {
@@ -119,7 +124,7 @@ export const Solutions = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#050505] text-white selection:bg-emerald-500 selection:text-black">
+    <div className="relative min-h-screen bg-[#050505] text-white selection:bg-[#0becc2] selection:text-black">
       {/* ── Fixed Top Header (Transparent over hero, border appears after scrolling) ── */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between transition-all duration-300 ${
@@ -129,17 +134,7 @@ export const Solutions = () => {
         }`}
       >
         {/* Logo */}
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-white hover:text-emerald-400 transition-colors cursor-pointer"
-        >
-          <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Leaf className="w-4 h-4 text-[#4ade80]" />
-          </div>
-          <span className="font-display font-extrabold text-base tracking-tight">
-            EcoFuture
-          </span>
-        </button>
+        <TerraHealLogo markSize={28} textClass="text-base sm:text-lg font-bold" />
 
         {/* Nav Links */}
         <nav className="hidden md:flex items-center gap-8 font-label uppercase text-xs tracking-[0.18em]">
@@ -157,7 +152,7 @@ export const Solutions = () => {
           </button>
           <button
             onClick={() => scrollToSection('play')}
-            className="text-[#4ade80] hover:text-emerald-300 font-semibold transition-colors cursor-pointer"
+            className="text-[#0becc2] hover:text-[#5df7d9] font-semibold transition-colors cursor-pointer"
           >
             Play Games
           </button>
@@ -207,7 +202,7 @@ export const Solutions = () => {
           {/* ── 2. Solutions Grid (6 Glass Cards) ── */}
           <section id="solutions-grid" className="space-y-8 scroll-mt-24">
           <div className="text-center space-y-2">
-            <span className="font-label uppercase text-[11px] font-semibold tracking-[0.25em] text-[#4ade80]">
+            <span className="font-label uppercase text-[11px] font-semibold tracking-[0.25em] text-[#0becc2]">
               The Restoration Playbook
             </span>
             <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-white tracking-tight">
@@ -221,13 +216,13 @@ export const Solutions = () => {
               return (
                 <div
                   key={item.id}
-                  className="p-6 rounded-2xl bg-slate-950/70 backdrop-blur-xl border border-white/10 hover:border-emerald-500/40 hover:bg-slate-950/85 transition-all duration-300 flex flex-col justify-between group"
+                  className="p-6 rounded-2xl bg-slate-950/70 backdrop-blur-xl border border-white/10 hover:border-[#0becc2]/40 hover:bg-slate-950/85 transition-all duration-300 flex flex-col justify-between group"
                 >
                   <div className="space-y-4">
-                    <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-[#4ade80] group-hover:scale-105 transition-transform duration-200">
+                    <div className="w-11 h-11 rounded-xl bg-[#0becc2]/10 border border-[#0becc2]/25 flex items-center justify-center text-[#0becc2] group-hover:scale-105 transition-transform duration-200">
                       <Icon className="w-5 h-5" />
                     </div>
-                    <h3 className="font-display font-bold text-lg text-white group-hover:text-emerald-300 transition-colors">
+                    <h3 className="font-display font-bold text-lg text-white group-hover:text-[#5df7d9] transition-colors">
                       {item.title}
                     </h3>
                     <p className="font-body font-light text-xs sm:text-sm text-white/70 leading-relaxed">
@@ -237,7 +232,7 @@ export const Solutions = () => {
 
                   {(item.source || item.fact) && (
                     <div className="pt-5 mt-4 border-t border-white/5">
-                      <span className="font-mono text-[10px] text-emerald-400/80 block">
+                      <span className="font-mono text-[10px] text-[#0becc2]/80 block">
                         {item.source ? `Data: ${item.source}` : `Key: ${item.fact}`}
                       </span>
                     </div>
@@ -251,8 +246,8 @@ export const Solutions = () => {
         {/* ── 3. Interactive Games Section (#play) ── */}
         <section id="play" className="space-y-8 scroll-mt-24 pt-6">
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[#4ade80] font-label text-[10px] font-semibold tracking-[0.2em] uppercase">
-              <Sparkles className="w-3 h-3 text-[#4ade80]" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0becc2]/10 border border-[#0becc2]/25 text-[#0becc2] font-label text-[10px] font-semibold tracking-[0.2em] uppercase">
+              <Sparkles className="w-3 h-3 text-[#0becc2]" />
               Interactive Restorations
             </div>
             <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-white tracking-tight">
@@ -265,15 +260,15 @@ export const Solutions = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1: Cleanup Mission */}
-            <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_0_24px_rgba(74,222,128,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
+            <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-[#0becc2]/30 shadow-[0_0_24px_rgba(11,236,194,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
               {cleanup.completed && (
-                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-label font-bold uppercase tracking-wider">
-                  <Check className="w-3 h-3 text-[#4ade80]" /> Restored
+                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#0becc2]/20 border border-[#0becc2]/40 text-[#5df7d9] text-[10px] font-label font-bold uppercase tracking-wider">
+                  <Check className="w-3 h-3 text-[#0becc2]" /> Restored
                 </div>
               )}
 
               <div className="space-y-3">
-                <span className="font-label uppercase text-[10px] tracking-[0.2em] text-[#4ade80] font-semibold">
+                <span className="font-label uppercase text-[10px] tracking-[0.2em] text-[#0becc2] font-semibold">
                   Game 1 • Hands-on Sim
                 </span>
                 <h3 className="font-display font-extrabold text-xl text-white">
@@ -290,13 +285,13 @@ export const Solutions = () => {
                   <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
                     Planet Health
                   </span>
-                  <span className="font-mono font-bold text-[#4ade80]">
+                  <span className="font-mono font-bold text-[#0becc2]">
                     {cleanup.health}%
                   </span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-[#0becc2] to-[#5df7d9] transition-all duration-500"
                     style={{ width: `${Math.max(cleanup.health, 2)}%` }}
                   />
                 </div>
@@ -392,7 +387,7 @@ export const Solutions = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
               <span className="font-display font-bold text-sm text-white block">
-                EcoFuture Platform
+                TerraHeal Platform: heal the planet by playing.
               </span>
               <p className="font-body text-xs text-white/60 leading-relaxed">
                 An interactive environmental simulation dedicated to raising awareness for zero-waste practices and clean renewable energy.
@@ -428,7 +423,7 @@ export const Solutions = () => {
                 href="https://github.com/hashirkonnola2006-design/terracode"
                 target="_blank"
                 rel="noreferrer"
-                className="font-label uppercase text-[11px] tracking-wider hover:text-[#4ade80] transition-colors inline-flex items-center gap-1.5"
+                className="font-label uppercase text-[11px] tracking-wider hover:text-[#0becc2] transition-colors inline-flex items-center gap-1.5"
               >
                 <Code2 className="w-4 h-4" /> GitHub Repository
               </a>

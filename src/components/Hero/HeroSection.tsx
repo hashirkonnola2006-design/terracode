@@ -39,8 +39,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToHeal }) => {
           Green Tomorrow<br />
           Starts{' '}
           <span
-            className="text-[#4ADE80]"
-            style={{ textShadow: '0 0 35px rgba(74,222,128,0.65), 0 0 70px rgba(74,222,128,0.30)' }}
+            className="text-[#0becc2]"
+            style={{ textShadow: '0 0 35px rgba(11,236,194,0.65), 0 0 70px rgba(11,236,194,0.30)' }}
           >
             Here
           </span>
@@ -51,11 +51,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToHeal }) => {
           Together, let&apos;s build a cleaner, greener and healthier planet.
         </p>
 
-        {/* Glowing Green Button + Scroll Indicator */}
+        {/* Glowing Teal Button + Scroll Indicator */}
         <div className="pointer-events-auto flex flex-col items-center gap-5">
           <button
             onClick={scrollDown}
-            className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full font-semibold text-sm text-[#030712] bg-[#4ADE80] hover:bg-[#3bce74] shadow-[0_0_28px_rgba(74,222,128,0.55)] hover:shadow-[0_0_44px_rgba(74,222,128,0.80)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+            className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full font-semibold text-sm text-[#030712] bg-[#0becc2] hover:bg-[#0ad0ab] shadow-[0_0_28px_rgba(11,236,194,0.55)] hover:shadow-[0_0_44px_rgba(11,236,194,0.80)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
           >
             <span>Scroll to Heal</span>
             <ArrowDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
@@ -64,12 +64,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToHeal }) => {
           {/* Mouse scroll indicator pill */}
           <div
             onClick={scrollDown}
-            className="w-5 h-8 rounded-full border-2 border-white/30 hover:border-[#4ADE80]/70 flex items-start justify-center p-1 cursor-pointer transition-colors backdrop-blur-sm"
+            className="w-5 h-8 rounded-full border-2 border-white/30 hover:border-[#0becc2]/70 flex items-start justify-center p-1 cursor-pointer transition-colors backdrop-blur-sm"
             title="Scroll down"
           >
             <span
-              className="w-1.5 h-2 rounded-full bg-[#4ADE80] animate-bounce"
-              style={{ boxShadow: '0 0 8px #4ade80' }}
+              className="w-1.5 h-2 rounded-full bg-[#0becc2] animate-bounce"
+              style={{ boxShadow: '0 0 8px #0becc2' }}
             />
           </div>
         </div>

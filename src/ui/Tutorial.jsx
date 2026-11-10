@@ -52,12 +52,12 @@ export const Tutorial = () => {
         </button>
 
         {/* Step Indicator */}
-        <span className="text-[11px] font-mono tracking-[0.2em] text-[#4ade80] uppercase block mb-3">
+        <span className="text-[11px] font-mono tracking-[0.2em] text-[#0becc2] uppercase block mb-3">
           How to Play ({step + 1} of 3)
         </span>
 
         {/* Step Icon */}
-        <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-[#4ade80]">
+        <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-[#0becc2]/10 border-[#0becc2]/30 flex items-center justify-center text-[#0becc2]">
           <Icon className="w-7 h-7" />
         </div>
 
@@ -75,7 +75,7 @@ export const Tutorial = () => {
             <div
               key={idx}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                idx === step ? 'w-6 bg-[#4ade80]' : 'w-1.5 bg-white/20'
+                idx === step ? 'w-6 bg-[#0becc2]' : 'w-1.5 bg-white/20'
               }`}
             />
           ))}

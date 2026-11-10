@@ -42,7 +42,7 @@ export const EndingScreen = () => {
       if (canvas) {
         const dataUrl = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = `EcoFuture-Clean-Earth-${Date.now()}.png`;
+        link.download = `TerraHeal-Clean-Earth-${Date.now()}.png`;
         link.href = dataUrl;
         link.click();
       }
@@ -55,11 +55,11 @@ export const EndingScreen = () => {
 
   // Share impact
   const handleShare = async () => {
-    const text = `I just restored Earth to 100% on EcoFuture! Cleaned ${itemsCollected} items and planted ${m3.plantedPatches.length} forests. Together we can build a green tomorrow.`;
+    const text = `I just restored Earth to 100% on TerraHeal! Cleaned ${itemsCollected} items and planted ${m3.plantedPatches.length} forests. Together we can heal our planet.`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'EcoFuture — Green Tomorrow',
+          title: 'TerraHeal — Green Tomorrow',
           text,
           url: window.location.href,
         });
@@ -77,15 +77,15 @@ export const EndingScreen = () => {
         
         {/* ── 1. Victory Headline & Subtext ── */}
         <div className="text-center space-y-2.5 sm:space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[#4ade80] font-label text-[10px] sm:text-[11px] font-semibold tracking-[0.2em] sm:tracking-[0.25em] uppercase">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#0becc2]/10 border border-[#0becc2]/30 text-[#0becc2] font-label text-[10px] sm:text-[11px] font-semibold tracking-[0.2em] sm:tracking-[0.25em] uppercase">
             <Globe2 className="w-3.5 h-3.5" /> Planet Earth Fully Restored
           </div>
           <h2 className="font-display font-extrabold text-2xl sm:text-4xl md:text-5xl text-white tracking-tight leading-[1.08] sm:leading-[1.05]">
             This is the Tomorrow We Can Build
           </h2>
           <p className="font-body font-light text-xs sm:text-base text-white/70 max-w-xl mx-auto leading-relaxed">
-            You cleaned <span className="text-[#4ade80] font-semibold font-mono tabular-nums">{itemsCollected}</span> orbital debris items and restored{' '}
-            <span className="text-[#4ade80] font-semibold font-mono tabular-nums">{m3.plantedPatches.length}</span> native forest biomes. Imagine what we can achieve together.
+            You cleaned <span className="text-[#0becc2] font-semibold font-mono tabular-nums">{itemsCollected}</span> orbital debris items and restored{' '}
+            <span className="text-[#0becc2] font-semibold font-mono tabular-nums">{m3.plantedPatches.length}</span> native forest biomes. Imagine what we can achieve together.
           </p>
         </div>
 
@@ -94,7 +94,7 @@ export const EndingScreen = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 text-center mb-6">
             <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
               <span className="font-label uppercase text-[11px] tracking-[0.2em] text-white/60 block mb-1">Global Health</span>
-              <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-[#4ade80]">100%</span>
+              <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-[#0becc2]">100%</span>
             </div>
             <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
               <span className="font-label uppercase text-[11px] tracking-[0.2em] text-white/60 block mb-1">Items Collected</span>
@@ -142,7 +142,7 @@ export const EndingScreen = () => {
 
             <button
               onClick={() => navigate('/solutions#play')}
-              className="px-5 py-2.5 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-label text-[12px] font-semibold tracking-[0.12em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-2 border border-emerald-500/40"
+              className="px-5 py-2.5 rounded-full bg-[#0becc2]/20 hover:bg-[#0becc2]/30 text-[#0becc2] font-label text-[12px] font-semibold tracking-[0.12em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-2 border border-[#0becc2]/40"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Hub
             </button>
@@ -152,7 +152,7 @@ export const EndingScreen = () => {
         {/* ── 3. Real-World Action Cards with Pledges ── */}
         <div className="space-y-3">
           <div className="text-center">
-            <span className="font-label uppercase text-[12px] tracking-[0.25em] text-[#4ade80] font-semibold">
+            <span className="font-label uppercase text-[12px] tracking-[0.25em] text-[#0becc2] font-semibold">
               Take Real-World Action Today
             </span>
           </div>
@@ -166,11 +166,11 @@ export const EndingScreen = () => {
                   key={item.id}
                   className={`p-5 rounded-2xl backdrop-blur-xl border transition-all duration-200 ${
                     isPledged
-                      ? 'bg-emerald-950/30 border-emerald-500/40 ring-1 ring-emerald-500/20'
+                      ? 'bg-[#0becc2]/10 border-[#0becc2]/40 ring-1 ring-[#0becc2]/20'
                       : 'bg-slate-950/70 border-white/10 hover:border-white/20'
                   }`}
                 >
-                  <span className="font-label uppercase text-[11px] tracking-[0.2em] text-[#4ade80] font-semibold block mb-1">
+                  <span className="font-label uppercase text-[11px] tracking-[0.2em] text-[#0becc2] font-semibold block mb-1">
                     {item.category}
                   </span>
                   <h4 className="font-display font-bold text-base text-white mb-2">{item.action}</h4>
@@ -186,8 +186,8 @@ export const EndingScreen = () => {
                     disabled={isPledged}
                     className={`w-full py-2 px-3 rounded-full font-label text-[12px] font-semibold tracking-[0.12em] uppercase transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
                       isPledged
-                        ? 'bg-emerald-500/20 text-[#4ade80] border border-emerald-500/40 cursor-default'
-                        : 'bg-white/[0.05] hover:bg-[#4ade80] hover:text-slate-950 text-white border border-white/20'
+                        ? 'bg-[#0becc2]/20 text-[#0becc2] border border-[#0becc2]/40 cursor-default'
+                        : 'bg-white/[0.05] hover:bg-[#0becc2] hover:text-black text-white border border-white/20'
                     }`}
                   >
                     {isPledged ? (
@@ -213,16 +213,16 @@ export const EndingScreen = () => {
               href="https://github.com/hashirkonnola2006-design/terracode"
               target="_blank"
               rel="noreferrer"
-              className="font-label uppercase text-[11px] tracking-[0.14em] inline-flex items-center gap-1.5 hover:text-[#4ade80] transition-colors"
+              className="font-label uppercase text-[11px] tracking-[0.14em] inline-flex items-center gap-1.5 hover:text-[#0becc2] transition-colors"
             >
               <Code2 className="w-4 h-4" /> GitHub Repository
             </a>
             <span className="font-label uppercase text-[11px] tracking-[0.14em] inline-flex items-center gap-1.5 text-white/80 font-semibold">
-              <Zap className="w-3.5 h-3.5 text-[#4ade80]" /> Built for TerraCode 2026
+              <Zap className="w-3.5 h-3.5 text-[#0becc2]" /> Built for TerraCode 2026
             </span>
             <button
               onClick={toggleLiteMode}
-              className="font-label uppercase text-[11px] tracking-[0.14em] hover:text-[#4ade80] transition-colors cursor-pointer"
+              className="font-label uppercase text-[11px] tracking-[0.14em] hover:text-[#0becc2] transition-colors cursor-pointer"
             >
               Display: {liteMode ? 'Lite Mode' : 'Cinematic High-DPI'}
             </button>

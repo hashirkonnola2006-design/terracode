@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * EcoFuture — Root Application Router
+ * TerraHeal — Root Application Router
  *
  * Route 1 ("/")          : Landing Page ("Witness the damage")
  * Route 2 ("/solutions") : Solutions & Restoration Hub ("Learn & Choose Game")

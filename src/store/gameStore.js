@@ -764,6 +764,7 @@ export const useGameStore = create(
       },
     }),
     {
+      // Preserved storage key during rebrand to TerraHeal to keep all existing saved user progress intact
       name: 'ecofuture_game_storage',
       version: 2, // Bumped version for independent game slices
       storage: createJSONStorage(() => localStorage),

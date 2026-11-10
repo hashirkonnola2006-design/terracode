@@ -77,7 +77,7 @@ export const MissionPanel = () => {
           className="w-full flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 bg-white/[0.03] hover:bg-white/[0.06] text-left transition-colors duration-200 cursor-pointer border-b border-white/10"
         >
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0becc2]" />
             <span className="font-label uppercase text-[11px] sm:text-[12px] tracking-[0.18em] sm:tracking-[0.22em] text-white/80 font-semibold">
               Restoration Missions
             </span>
@@ -106,7 +106,7 @@ export const MissionPanel = () => {
                   }}
                   className={`relative p-2.5 rounded-lg transition-all duration-200 cursor-pointer border ${
                     isActive
-                      ? 'bg-emerald-950/30 border-emerald-500/40 ring-1 ring-emerald-500/20'
+                      ? 'bg-[#0becc2]/10 border-[#0becc2]/40 ring-1 ring-[#0becc2]/20'
                       : m.completed
                       ? 'bg-white/[0.03] border-white/10 hover:border-white/20'
                       : 'bg-white/[0.015] border-white/5 hover:border-white/15'
@@ -123,7 +123,7 @@ export const MissionPanel = () => {
                             {m.title}
                           </span>
                           {m.tag && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-[#4ade80] font-mono tabular-nums">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#0becc2]/20 text-[#0becc2] font-mono tabular-nums">
                               {m.tag}
                             </span>
                           )}
@@ -136,7 +136,7 @@ export const MissionPanel = () => {
 
                     <div className="text-right">
                       {m.completed ? (
-                        <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
+                        <CheckCircle2 className="w-4 h-4 text-[#0becc2]" />
                       ) : (
                         <span className="font-mono tabular-nums text-[12px] font-semibold text-white/80">
                           {m.countLabel}
@@ -149,7 +149,7 @@ export const MissionPanel = () => {
                   <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
-                        m.completed ? 'bg-[#4ade80]' : 'bg-gradient-to-r from-emerald-500 to-[#4ade80]'
+                        m.completed ? 'bg-[#0becc2]' : 'bg-gradient-to-r from-[#0becc2] to-[#5df7d9]'
                       }`}
                       style={{ width: `${m.progress}%` }}
                     />

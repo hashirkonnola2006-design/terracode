@@ -38,8 +38,8 @@ export const Toast = () => {
       {/* ── 1. Milestone Glass Toast (25%, 50%, 75%, 100%) ── */}
       {milestoneToast && (
         <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 w-96 max-w-[92vw] select-none pointer-events-auto animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/85 backdrop-blur-2xl border border-emerald-400/40 shadow-[0_0_24px_rgba(74,222,128,0.25)] flex items-center justify-between gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-[#4ade80] shrink-0">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/85 backdrop-blur-2xl border border-[#0becc2]/40 shadow-[0_0_24px_rgba(11,236,194,0.25)] flex items-center justify-between gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0becc2]/15 border border-[#0becc2]/30 flex items-center justify-center text-[#0becc2] shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
@@ -64,12 +64,12 @@ export const Toast = () => {
       {/* ── 2. Floating Fact Toast (Triggered every 10 items) ── */}
       {activeToast && !milestoneToast && (
         <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 w-88 max-w-[92vw] select-none pointer-events-auto animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="p-3.5 rounded-xl bg-slate-950/90 backdrop-blur-2xl border border-emerald-500/30 flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-300 shrink-0">
-              <Info className="w-4 h-4 text-[#4ade80]" />
+          <div className="p-3.5 rounded-xl bg-slate-950/90 backdrop-blur-2xl border border-[#0becc2]/30 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-[#0becc2]/10 text-[#5df7d9] shrink-0">
+              <Info className="w-4 h-4 text-[#0becc2]" />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="font-label uppercase text-[11px] font-semibold tracking-[0.2em] text-[#4ade80] block mb-0.5">
+              <span className="font-label uppercase text-[11px] font-semibold tracking-[0.2em] text-[#0becc2] block mb-0.5">
                 Verified Global Benchmark
               </span>
               <p className="font-body font-normal text-xs text-white/90 leading-snug">
@@ -92,13 +92,13 @@ export const Toast = () => {
       {/* ── 3. Mission Completed Infographic Modal ── */}
       {missionReveal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300 select-none pointer-events-auto">
-          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 rounded-2xl bg-slate-950/95 border border-emerald-500/40 text-center shadow-2xl">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 rounded-2xl bg-slate-950/95 border border-[#0becc2]/40 text-center shadow-2xl">
             {/* Celebration Icon */}
-            <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-[#4ade80]">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-[#0becc2]/10 border border-[#0becc2]/30 flex items-center justify-center text-[#0becc2]">
               <CheckCircle2 className="w-7 h-7" />
             </div>
 
-            <span className="font-label uppercase text-[11px] font-semibold tracking-[0.25em] text-[#4ade80] mb-1 block">
+            <span className="font-label uppercase text-[11px] font-semibold tracking-[0.25em] text-[#0becc2] mb-1 block">
               Mission {completedModalMission} Completed
             </span>
 
@@ -108,7 +108,7 @@ export const Toast = () => {
 
             {/* Stat Card */}
             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 mb-4 text-left">
-              <p className="font-display font-bold text-sm text-emerald-200 mb-1 leading-snug">
+              <p className="font-display font-bold text-sm text-[#5df7d9] mb-1 leading-snug">
                 "{missionReveal.stat}"
               </p>
               <p className="font-body font-light text-xs text-white/70 mb-2 leading-relaxed">
@@ -120,7 +120,7 @@ export const Toast = () => {
             </div>
 
             <p className="font-label uppercase text-[11px] tracking-[0.14em] text-white/50 mb-5 flex items-center justify-center gap-1.5">
-              <ArrowRight className="w-3.5 h-3.5 text-[#4ade80]" />
+              <ArrowRight className="w-3.5 h-3.5 text-[#0becc2]" />
               {missionReveal.nextPrompt}
             </p>
 

@@ -221,7 +221,7 @@ export const InteractiveForests = ({ isInteractive = true }) => {
                     <mesh rotation={[-Math.PI / 2, 0, 0]}>
                       <ringGeometry args={[0.015, 0.038, 16]} />
                       <meshBasicMaterial
-                        color={isHovered ? '#4ade80' : '#a3e635'}
+                        color={isHovered ? '#0becc2' : '#a3e635'}
                         transparent
                         opacity={isHovered ? 0.85 : 0.45}
                         side={THREE.DoubleSide}
