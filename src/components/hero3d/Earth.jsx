@@ -29,6 +29,7 @@ export const Earth = ({
   autoRotate = true,
   noGroupTilt = false,
   healMaskManager = null,
+  heroSolutions = false,
 }) => {
   const { gl } = useThree();
   const earthRef = useRef(null);
@@ -64,6 +65,24 @@ export const Earth = ({
     });
   }, [dayMap2k, normalMap, specularMap, lightsMap, gl, isLowEnd]);
 
+  // Load 8K Earth Day texture if in Hero Solutions Mode
+  useEffect(() => {
+    if (heroSolutions && !isLowEnd) {
+      const loader = new THREE.TextureLoader();
+      loader.load('/textures/earth_day_8k.jpg', (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = gl.capabilities ? gl.capabilities.getMaxAnisotropy() : 8;
+        tex.minFilter = THREE.LinearMipmapLinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.generateMipmaps = true;
+        tex.needsUpdate = true;
+        if (shaderMatRef.current) {
+          shaderMatRef.current.uniforms.uDayMap.value = tex;
+        }
+      });
+    }
+  }, [heroSolutions, isLowEnd, gl]);
+
   // Listen to milestone pulse triggers
   useEffect(() => {
     if (planetPulseTrigger && planetPulseTrigger !== lastPulseRef.current) {
@@ -84,8 +103,9 @@ export const Earth = ({
     u.uPollution.value = initialPollution;
     u.uHeal.value = 1.0 - initialPollution;
     u.uPulse.value = 0.0;
+    u.uHeroSolutions.value = heroSolutions ? 1.0 : 0.0;
     return u;
-  }, [dayMap2k, normalMap, specularMap, lightsMap]);
+  }, [dayMap2k, normalMap, specularMap, lightsMap, heroSolutions]);
 
   const smoothPollutionRef = useRef(initialPollution);
 
@@ -108,6 +128,7 @@ export const Earth = ({
       shaderMatRef.current.uniforms.uHeal.value = 1.0 - smoothPollutionRef.current;
       shaderMatRef.current.uniforms.uPulse.value = pulseIntensityRef.current;
       shaderMatRef.current.uniforms.uTime.value = t;
+      shaderMatRef.current.uniforms.uHeroSolutions.value = heroSolutions ? 1.0 : 0.0;
       shaderMatRef.current.uniforms.uHealMask.value = activeMask.getTexture();
       shaderMatRef.current.uniforms.uDim.value = THREE.MathUtils.lerp(
         shaderMatRef.current.uniforms.uDim.value,

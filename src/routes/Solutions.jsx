@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { GAMES } from '../config/games';
-import { EarthBackground } from '../three/EarthBackground';
-import { hubHealMask } from '../three/HealMask';
+import { SolutionsHero } from '../components/solutions/SolutionsHero';
 import {
   Leaf,
   Sparkles,
@@ -86,6 +85,16 @@ export const Solutions = () => {
   const resetAllProgress = useGameStore((s) => s.resetAllProgress);
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+
+  // Scroll listener for top header transparency vs border
+  useEffect(() => {
+    const handleScroll = () => {
+      setHeaderScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Smooth scroll to #play if URL hash matches
   useEffect(() => {
@@ -110,22 +119,15 @@ export const Solutions = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#030712] text-white selection:bg-emerald-500 selection:text-black">
-      {/* ── Fixed Decorative 3D Earth (Always Polluted, Slow Spin, Zero Game Progress) ── */}
-      <EarthBackground
-        health={0}
-        healMaskManager={hubHealMask}
-        liteMode={liteMode}
-        enableOrbit={false}
-        customCameraZ={3.2}
-        spinRate={0.010}
-      />
-
-      {/* ── Scrim Vignette Overlay for Crisp Readability ── */}
-      <div className="fixed inset-0 z-0 bg-radial from-transparent via-[#030712]/75 to-[#030712]/95 pointer-events-none" />
-
-      {/* ── Fixed Top Header ── */}
-      <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between backdrop-blur-md bg-slate-950/40 border-b border-white/5">
+    <div className="relative min-h-screen bg-[#050505] text-white selection:bg-emerald-500 selection:text-black">
+      {/* ── Fixed Top Header (Transparent over hero, border appears after scrolling) ── */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between transition-all duration-300 ${
+          headerScrolled
+            ? 'backdrop-blur-md bg-slate-950/70 border-b border-white/10 shadow-lg'
+            : 'bg-transparent border-b border-transparent'
+        }`}
+      >
         {/* Logo */}
         <button
           onClick={() => navigate('/')}
@@ -140,7 +142,13 @@ export const Solutions = () => {
         </button>
 
         {/* Nav Links */}
-        <nav className="flex items-center gap-4 sm:gap-6 font-label uppercase text-xs tracking-[0.18em]">
+        <nav className="hidden md:flex items-center gap-8 font-label uppercase text-xs tracking-[0.18em]">
+          <button
+            onClick={() => navigate('/')}
+            className="text-white/70 hover:text-white transition-colors cursor-pointer"
+          >
+            Home
+          </button>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="text-white/70 hover:text-white transition-colors cursor-pointer"
@@ -187,36 +195,17 @@ export const Solutions = () => {
         </div>
       </header>
 
-      {/* ── Main Scrolling Content ── */}
-      <main className="relative z-10 pt-28 sm:pt-36 pb-20 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
-        {/* ── 1. Hero Section ── */}
-        <section className="text-center space-y-4 max-w-3xl mx-auto pt-6 sm:pt-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[#4ade80] font-label text-[11px] font-semibold tracking-[0.22em] uppercase">
-            <Sparkles className="w-3.5 h-3.5 text-[#4ade80]" />
-            Proven Climate Action
-          </div>
+      {/* ── 1. Rebuilt Full-Screen Solutions Hero (Reference Match) ── */}
+      <SolutionsHero
+        liteMode={liteMode}
+        onScrollToPillars={() => scrollToSection('solutions-grid')}
+      />
 
-          <h1 className="font-display font-extrabold text-3xl sm:text-5xl md:text-6xl text-white tracking-tight leading-[1.05]">
-            Solutions that <span className="text-[#4ade80]">already work.</span>
-          </h1>
-
-          <p className="font-body font-light text-base sm:text-lg text-white/75 max-w-2xl mx-auto leading-relaxed">
-            Practical, scalable strategies to eliminate waste, restore nature, and reverse planetary decline.
-          </p>
-
-          <div className="pt-8">
-            <button
-              onClick={() => scrollToSection('solutions-grid')}
-              className="inline-flex flex-col items-center gap-2 text-white/50 hover:text-[#4ade80] transition-colors cursor-pointer text-xs font-label uppercase tracking-[0.18em]"
-            >
-              <span>Explore Solutions</span>
-              <ChevronDown className="w-4 h-4 animate-bounce" />
-            </button>
-          </div>
-        </section>
-
-        {/* ── 2. Solutions Grid (6 Glass Cards) ── */}
-        <section id="solutions-grid" className="space-y-8 scroll-mt-24">
+      {/* ── Content Below Hero: Solid #050505 Background (No WebGL) ── */}
+      <div className="relative z-20 bg-[#050505]">
+        <main className="pt-20 sm:pt-28 pb-20 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
+          {/* ── 2. Solutions Grid (6 Glass Cards) ── */}
+          <section id="solutions-grid" className="space-y-8 scroll-mt-24">
           <div className="text-center space-y-2">
             <span className="font-label uppercase text-[11px] font-semibold tracking-[0.25em] text-[#4ade80]">
               The Restoration Playbook
@@ -460,6 +449,7 @@ export const Solutions = () => {
           </div>
         </footer>
       </main>
+    </div>
 
       {/* ── Reset Confirmation Dialog ── */}
       {showResetConfirm && (

@@ -15,6 +15,7 @@ const AtmosphereShader = {
     uHeal:      { value: 0.0 },
     uIntensity: { value: ATMOSPHERE_INTENSITY },
     uCameraPos: { value: new THREE.Vector3(0, 0, 3.65) },
+    uColdRim:   { value: 0.0 },
   },
 
   vertexShader: `
@@ -33,6 +34,7 @@ const AtmosphereShader = {
     uniform float uHeal;
     uniform float uIntensity;
     uniform vec3  uCameraPos;
+    uniform float uColdRim;
 
     varying vec3 vWorldNormal;
     varying vec3 vWorldPos;
@@ -48,15 +50,18 @@ const AtmosphereShader = {
       float fresnel = 1.0 - NdotV;
       float rim = pow(fresnel, 5.6);
 
-      // Light direction
-      vec3 lightDir = normalize(vec3(-0.55, 0.65, 0.52));
+      // Light direction (cool rim from upper left in cold mode)
+      vec3 lightDir = normalize(mix(vec3(-0.55, 0.65, 0.52), vec3(-0.75, 0.58, 0.32), uColdRim));
       float sunDot = max(dot(wn, lightDir), 0.0);
       float rimMod = 0.50 + 0.55 * pow(sunDot, 1.5);
 
-      // Colors: Muted rust-gray when polluted (low brightness, NO yellow/orange); bright cyan when clean
-      vec3 colPolluted   = vec3(0.42, 0.28, 0.22); // Muted rust-ash
+      // Colors: Muted rust-gray when polluted standard; cold blue-grey when coldRim=1; bright cyan when clean
+      vec3 colStandardPolluted = vec3(0.42, 0.28, 0.22);
+      vec3 colColdPolluted     = vec3(0.24, 0.38, 0.58);
+      vec3 colPolluted   = mix(colStandardPolluted, colColdPolluted, uColdRim);
+
       vec3 colClean      = vec3(0.00, 0.78, 1.00); // Bright electric cyan
-      vec3 crestPolluted = vec3(0.50, 0.35, 0.26);
+      vec3 crestPolluted = mix(vec3(0.50, 0.35, 0.26), vec3(0.35, 0.52, 0.72), uColdRim);
       vec3 crestClean    = vec3(0.72, 0.90, 1.00);
 
       vec3 atmoColor = mix(colClean, colPolluted, pollution);
@@ -71,7 +76,7 @@ const AtmosphereShader = {
   `
 };
 
-export const Atmosphere = ({ healProgress = 0, pollution = 1.0 }) => {
+export const Atmosphere = ({ healProgress = 0, pollution = 1.0, coldRim = false }) => {
   const atmoRef = useRef(null);
   const atmoMatRef = useRef(null);
   const { camera } = useThree();
@@ -82,14 +87,16 @@ export const Atmosphere = ({ healProgress = 0, pollution = 1.0 }) => {
     const u = THREE.UniformsUtils.clone(AtmosphereShader.uniforms);
     u.uPollution.value = initialPollution;
     u.uHeal.value = 1.0 - initialPollution;
+    u.uColdRim.value = coldRim ? 1.0 : 0.0;
     return u;
-  }, []);
+  }, [coldRim]);
 
   useFrame((_, delta) => {
     const targetPollution = pollution !== undefined ? pollution : 1.0 - healProgress;
     
     if (atmoMatRef.current) {
       atmoMatRef.current.uniforms.uCameraPos.value.copy(camera.position);
+      atmoMatRef.current.uniforms.uColdRim.value = coldRim ? 1.0 : 0.0;
       atmoMatRef.current.uniforms.uPollution.value = THREE.MathUtils.lerp(
         atmoMatRef.current.uniforms.uPollution.value,
         targetPollution,

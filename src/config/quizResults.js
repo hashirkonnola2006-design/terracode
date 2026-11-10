@@ -81,3 +81,4 @@ export function getQuizProgressLine(health) {
   const remaining = Math.max(0, 100 - health);
   return `${remaining}% more to fully heal the Earth`;
 }
+

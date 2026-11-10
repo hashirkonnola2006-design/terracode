@@ -21,6 +21,8 @@ export const EarthShader = {
     uDim:         { value: 1.0 },
     uHover:       { value: 0.0 },
     uCameraPos:   { value: new THREE.Vector3(0, 0, 3.65) },
+    uHeroSolutions: { value: 0.0 }, // 1.0 = specialized /solutions hero mode (cracked, fires, ice cap, cyclone)
+    uFireFlicker: { value: 1.0 },
   },
 
   vertexShader: `
@@ -52,6 +54,8 @@ export const EarthShader = {
     uniform float     uPulse;
     uniform float     uDim;
     uniform float     uHover;
+    uniform float     uHeroSolutions;
+    uniform float     uFireFlicker;
 
     varying vec2 vUv;
     varying vec3 vViewNormal;
@@ -80,23 +84,30 @@ export const EarthShader = {
       vec3 B_world = normalize(cross(wn, T_world));
 
       vec3 normMap = texture2D(uNormalMap, vUv).rgb * 2.0 - 1.0;
-      vec3 perturbedWorld = normalize(wn + (T_world * normMap.x + B_world * normMap.y) * 0.30);
+      // Boost normal roughness in hero mode for cracked terrain
+      float normStrength = mix(0.30, 0.58, uHeroSolutions);
+      vec3 perturbedWorld = normalize(wn + (T_world * normMap.x + B_world * normMap.y) * normStrength);
       vec3 N = normalize((viewMatrix * vec4(perturbedWorld, 0.0)).xyz);
 
-      // Key light offset slightly up and left in view space for gentle form definition
-      vec3 keyDir = normalize(vec3(-0.35, 0.42, 0.84));
+      // Key light: in standard mode keyDir = normalize(vec3(-0.35, 0.42, 0.84))
+      // In hero solutions mode: strong cold rim light from upper left with deep shadow on right
+      vec3 standardKeyDir = normalize(vec3(-0.35, 0.42, 0.84));
+      vec3 heroKeyDir     = normalize(vec3(-0.62, 0.52, 0.58));
+      vec3 keyDir = normalize(mix(standardKeyDir, heroKeyDir, uHeroSolutions));
       float NdotL = dot(N, keyDir);
 
       // Eased diffuse curve:
       // Clean: fully lit hemisphere with gentle falloff (min 0.65)
-      // Polluted: darker night side (down to 0.06)
+      // Polluted: darker night side (down to 0.06 standard, down to 0.05 in hero mode)
       float cleanDiffuse = 0.65 + 0.35 * clamp(NdotL, 0.0, 1.0);
-      float pollutedDiffuse = clamp(NdotL * 0.84 + 0.16, 0.06, 1.0);
+      float standardPollutedDiffuse = clamp(NdotL * 0.84 + 0.16, 0.06, 1.0);
+      float heroPollutedDiffuse     = clamp(NdotL * 0.92 + 0.14, 0.05, 1.0);
+      float pollutedDiffuse = mix(standardPollutedDiffuse, heroPollutedDiffuse, uHeroSolutions);
       float diffuse = mix(pollutedDiffuse, cleanDiffuse, effectiveClean);
 
       // Soft limb darkening preserving 3D depth and spherical mass
       float NdotV = clamp(dot(N, V), 0.0, 1.0);
-      float limb = pow(NdotV, 0.28);
+      float limb = pow(NdotV, mix(0.28, 0.34, uHeroSolutions));
 
       // NASA Blue Marble textures
       vec3 dayTex = texture2D(uDayMap, vUv).rgb;
@@ -115,7 +126,9 @@ export const EarthShader = {
       float landLuma = dot(dayTex, vec3(0.299, 0.587, 0.114));
       vec3 desatLand = mix(dayTex, vec3(landLuma), 0.82);
       vec3 deadDustyBrown = vec3(0.24, 0.20, 0.16);
-      vec3 pollutedLand = mix(desatLand * 0.64, deadDustyBrown, 0.55);
+      vec3 heroScorchedBrown = vec3(0.18, 0.14, 0.11); // Burnt arid tone
+      vec3 targetDeadLand = mix(deadDustyBrown, heroScorchedBrown, uHeroSolutions);
+      vec3 pollutedLand = mix(desatLand * mix(0.64, 0.52, uHeroSolutions), targetDeadLand, mix(0.55, 0.68, uHeroSolutions));
 
       // Oceans: Murkier, darker, greenish-gray
       vec3 murkyOcean = vec3(0.016, 0.038, 0.032);
@@ -123,15 +136,77 @@ export const EarthShader = {
       vec3 pollutedOcean = mix(murkyOcean, murkyCoast, shallowShelf * 0.40);
 
       // Eased Sub-Values for Global & Local Milestones:
-      // oceanClarity curve (0% -> murky, 25% -> clearing, 50%+ -> rich blue)
       float oceanClarity = smoothstep(0.05, 0.65, effectiveClean);
       vec3 currentOcean = mix(pollutedOcean, cleanOcean, oceanClarity);
 
-      // landGreen curve (0% -> dusty brown, 50% -> green patches, 75%+ -> rich foliage)
       float landGreen = smoothstep(0.12, 0.80, effectiveClean);
       vec3 currentLand = mix(pollutedLand, cleanLand, landGreen);
 
+      // ── 2B. PROCEDURAL TECTONIC FISSURES & LAVA CRACKS (Hero Solutions Mode) ──
+      vec3 heroFissureEmission = vec3(0.0);
+      if (uHeroSolutions > 0.01 && oceanMask < 0.35) {
+        // Continuous organic fractal ridge fissures
+        vec2 p = vUv * vec2(60.0, 30.0);
+        float w1 = sin(p.y * 1.8 + vUv.x * 12.0) * cos(p.x * 1.4);
+        float w2 = sin(p.x * 2.4 - p.y * 1.6);
+        vec2 st = p + vec2(w1, w2) * 0.65;
+        
+        // Multi-frequency ridge noise for natural volcanic fracture canyons
+        float r1 = 1.0 - abs(sin(st.x * 2.0 + cos(st.y * 2.0)) * sin(st.y * 2.0 + cos(st.x * 2.0)));
+        float r2 = 1.0 - abs(sin(st.x * 4.5 + 1.2) * cos(st.y * 4.5 + 2.1));
+        float ridgeVal = pow(r1 * 0.65 + r2 * 0.35, 4.2);
+
+        float crackEdge = smoothstep(0.15, 0.85, ridgeVal);
+        float crackCore = smoothstep(0.65, 0.98, ridgeVal);
+
+        // Darken scorched borders along crack canyons
+        currentLand = mix(currentLand, vec3(0.04, 0.03, 0.02), crackEdge * 0.85 * uHeroSolutions);
+
+        // Volcanic regional mask concentrating magma in active rift corridors
+        float riftRegion = smoothstep(0.15, 0.70, sin(vUv.x * 24.0 + 1.4) * cos(vUv.y * 18.0 + 0.8) + 0.3);
+        float activeMagma = crackCore * riftRegion;
+
+        // Lava pulse and intense glow
+        float lavaPulse = 0.82 + 0.18 * sin(uTime * 3.4 + vUv.x * 60.0 + vUv.y * 60.0);
+        vec3 lavaColor = mix(vec3(1.0, 0.16, 0.02), vec3(1.0, 0.72, 0.12), crackCore);
+        heroFissureEmission = lavaColor * activeMagma * lavaPulse * 4.2 * uHeroSolutions;
+      }
+
       vec3 surfaceColor = mix(currentLand, currentOcean, oceanMask);
+
+      // ── 2C. DIRTY MELTING POLAR ICE CAP (Hero Solutions Mode) ──
+      if (uHeroSolutions > 0.01) {
+        float polarY = vUv.y;
+        float iceDist = smoothstep(0.70, 0.88, polarY);
+        if (iceDist > 0.01) {
+          float gn = sin(vUv.x * 22.0 + sin(vUv.y * 16.0) * 1.5) * 0.5 + 0.5;
+          float iceCoverage = smoothstep(0.25, 0.75, gn * iceDist);
+          vec3 glaciatedWhite = vec3(0.86, 0.89, 0.94);
+          vec3 glacierMelt    = vec3(0.18, 0.46, 0.60);
+          vec3 glacierMoraine = vec3(0.30, 0.28, 0.26);
+          float moraineVar = sin(vUv.x * 38.0 + vUv.y * 22.0) * 0.5 + 0.5;
+          vec3 glacierColor = mix(glaciatedWhite, glacierMoraine, moraineVar * 0.45);
+          glacierColor = mix(glacierColor, glacierMelt, 0.22 * (1.0 - oceanMask));
+          surfaceColor = mix(surfaceColor, glacierColor, iceCoverage * 0.85 * uHeroSolutions);
+        }
+      }
+
+      // ── 2D. HURRICANE / CYCLONE SWIRL ON RIGHT OCEAN (Hero Solutions Mode) ──
+      if (uHeroSolutions > 0.01 && oceanMask > 0.3) {
+        vec2 stormCenter = vec2(0.76, 0.54);
+        vec2 sc = (vUv - stormCenter) * vec2(2.0, 1.0);
+        float sDist = length(sc);
+        if (sDist < 0.18) {
+          float sAngle = atan(sc.y, sc.x);
+          // Logarithmic spiral cloud bands
+          float sSpiral = sin(sAngle * 4.0 - sDist * 42.0 + uTime * 0.45);
+          float spiralBands = smoothstep(-0.15, 0.90, sSpiral) * smoothstep(0.18, 0.025, sDist);
+          // Crisp cyclone eye
+          float eye = smoothstep(0.010, 0.032, sDist);
+          vec3 stormCloud = vec3(0.88, 0.91, 0.95) * (0.65 + 0.35 * sSpiral);
+          surfaceColor = mix(surfaceColor, stormCloud, spiralBands * eye * 0.92 * uHeroSolutions);
+        }
+      }
 
       // ── 3. SURFACE FIRES (Active at 0-25%, extinguishes by 50-60%) ──
       vec3 fireEmission = vec3(0.0);
@@ -159,7 +234,9 @@ export const EarthShader = {
 
         float fireTotal = (s1 + s2 + s3 + s4 + s5) * flicker * fireFactor;
         vec3 fireColor = mix(vec3(0.95, 0.24, 0.02), vec3(0.95, 0.60, 0.10), 0.30);
-        fireEmission = fireColor * fireTotal * 1.25;
+        fireEmission = fireColor * fireTotal * 1.25 + heroFissureEmission;
+      } else if (uHeroSolutions > 0.01) {
+        fireEmission = heroFissureEmission;
       }
 
       // ── 4. NIGHT SIDE CITY LIGHTS (Fades in at 50%+, bright at 75-100%) ──
@@ -182,8 +259,14 @@ export const EarthShader = {
       // ── 6. MILESTONE RADIANT PULSE ──
       vec3 pulseGlow = vec3(0.20, 0.85, 0.45) * uPulse * 0.40;
 
+      // ── 6B. COLD BLUE-WHITE RIM LIGHT (Hero Mode) ──
+      float rimDot = 1.0 - clamp(dot(N, V), 0.0, 1.0);
+      float rimPower = pow(rimDot, 3.6);
+      float rimFacing = clamp(dot(N, keyDir) * 0.5 + 0.5, 0.0, 1.0);
+      vec3 coldRimLight = vec3(0.35, 0.55, 0.82) * rimPower * rimFacing * 0.85 * uHeroSolutions;
+
       // ── 7. FINAL COMPOSITION ──
-      vec3 litColor = (surfaceColor * diffuse * limb + sheenColor) * uDim + fireEmission + cityLightsEmission + pulseGlow;
+      vec3 litColor = (surfaceColor * diffuse * limb + sheenColor) * uDim + fireEmission + cityLightsEmission + pulseGlow + coldRimLight;
 
       gl_FragColor = vec4(litColor, 1.0);
     }
