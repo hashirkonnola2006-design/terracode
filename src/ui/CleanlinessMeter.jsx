@@ -3,7 +3,7 @@ import { useGameStore } from '../store/gameStore';
 import { Sparkles, CheckCircle2 } from 'lucide-react';
 
 export const CleanlinessMeter = () => {
-  const cleanliness = useGameStore((s) => s.cleanliness);
+  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
   const [displayValue, setDisplayValue] = useState(cleanliness);
 
   // Smooth number ticker animation

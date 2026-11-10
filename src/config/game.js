@@ -7,11 +7,11 @@
  */
 
 export const GAME_CONFIG = {
-  // Mission Target Thresholds
-  MISSION_1_TARGET: 40,   // Floating orbit debris items to collect
-  MISSION_2_TARGET: 8,    // Smog / industrial emission sources to convert
-  MISSION_3_TARGET: 10,   // Continental forest patches to plant & restore
-  MISSION_4_TARGET: 85,   // Percent of ocean plastic swept (85% required)
+  // Mission Target Thresholds (balanced for fast, engaging gameplay)
+  MISSION_1_TARGET: 12,   // Floating orbit debris items to collect (reduced from 40)
+  MISSION_2_TARGET: 4,    // Smog / industrial emission sources to convert (reduced from 8)
+  MISSION_3_TARGET: 4,    // Continental forest patches to plant & restore (reduced from 10)
+  MISSION_4_TARGET: 50,   // Percent of ocean plastic swept (50% required, reduced from 85%)
 
   // Mission Cleanliness Weights (Total = 100%)
   WEIGHT_MISSION_1: 25,   // Orbit Cleanup = 25%
@@ -30,39 +30,33 @@ export const GAME_CONFIG = {
   // Timing & Interactivity
   COMBO_RESET_SECONDS: 2.2, // Combo decays after 2.2s idle
   IDLE_HINT_SECONDS: 8.0,   // Soft pulse hints appear after 8s of inactivity
-  SWEEP_RADIUS_WORLD: 0.28, // Ocean plastic sweep net radius
+  SWEEP_RADIUS_WORLD: 0.38, // Ocean plastic sweep net radius (expanded for smoother sweep)
 
-  // Verified Climate & Plastic Facts (shown every 10 items collected)
+  // Verified Climate & Plastic Facts (shown every 3 items collected)
   COLLECTION_FACTS: [
     {
-      milestone: 10,
+      milestone: 3,
       stat: "Over 400 million tonnes of plastic are produced globally every year.",
       source: "UN Environment Programme (UNEP)",
       year: "2024",
     },
     {
-      milestone: 20,
+      milestone: 6,
       stat: "Less than 10% of all plastic ever manufactured has been recycled.",
       source: "OECD Global Plastics Outlook",
       year: "2023",
     },
     {
-      milestone: 30,
+      milestone: 9,
       stat: "Clean renewables accounted for 86% of all global power capacity additions in 2023.",
       source: "IRENA Renewable Capacity Statistics",
       year: "2024",
     },
     {
-      milestone: 40,
+      milestone: 12,
       stat: "Marine debris threatens more than 800 animal species through ingestion and entanglement.",
       source: "IUCN Marine Plastic Pollution Brief",
       year: "2024",
-    },
-    {
-      milestone: 50,
-      stat: "Protecting existing forests and replanting degraded lands can deliver up to 30% of climate solutions.",
-      source: "IPCC Climate & Land Assessment",
-      year: "2023",
     },
   ],
 

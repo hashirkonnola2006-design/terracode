@@ -44,10 +44,14 @@ const MILESTONE_MESSAGES = {
 };
 
 function calculateCleanupHealth(m1, m2, m3, m4) {
-  const p1 = Math.min(1.0, m1.count / m1.target) * GAME_CONFIG.WEIGHT_MISSION_1;
-  const p2 = Math.min(1.0, m2.convertedSources.length / m2.target) * GAME_CONFIG.WEIGHT_MISSION_2;
-  const p3 = Math.min(1.0, m3.plantedPatches.length / m3.target) * GAME_CONFIG.WEIGHT_MISSION_3;
-  const p4 = Math.min(1.0, m4.sweptPercent / m4.target) * GAME_CONFIG.WEIGHT_MISSION_4;
+  const t1 = GAME_CONFIG.MISSION_1_TARGET;
+  const t2 = GAME_CONFIG.MISSION_2_TARGET;
+  const t3 = GAME_CONFIG.MISSION_3_TARGET;
+  const t4 = GAME_CONFIG.MISSION_4_TARGET;
+  const p1 = Math.min(1.0, (m1?.count ?? 0) / t1) * GAME_CONFIG.WEIGHT_MISSION_1;
+  const p2 = Math.min(1.0, (m2?.convertedSources?.length ?? 0) / t2) * GAME_CONFIG.WEIGHT_MISSION_2;
+  const p3 = Math.min(1.0, (m3?.plantedPatches?.length ?? 0) / t3) * GAME_CONFIG.WEIGHT_MISSION_3;
+  const p4 = Math.min(1.0, (m4?.sweptPercent ?? 0) / t4) * GAME_CONFIG.WEIGHT_MISSION_4;
   return Math.min(100, Math.round(p1 + p2 + p3 + p4));
 }
 
@@ -149,39 +153,65 @@ export const useGameStore = create(
       factsShownMilestones: [],
       planetPulseTrigger: 0,
 
-      // ── Convenience Getters for Backwards Compatibility on /clean ──
-      get cleanliness() {
-        return get().cleanup.health;
+      // ── Convenience Mirrors for Backwards Compatibility on /clean ──
+      cleanliness: 0,
+      mission1: {
+        progress: 0,
+        target: GAME_CONFIG.MISSION_1_TARGET,
+        completed: false,
+        count: 0,
+        collectedIds: [],
       },
-      get mission1() {
-        return get().cleanup.mission1;
+      mission2: {
+        progress: 0,
+        target: GAME_CONFIG.MISSION_2_TARGET,
+        completed: false,
+        convertedSources: [],
       },
-      get mission2() {
-        return get().cleanup.mission2;
+      mission3: {
+        progress: 0,
+        target: GAME_CONFIG.MISSION_3_TARGET,
+        completed: false,
+        plantedPatches: [],
       },
-      get mission3() {
-        return get().cleanup.mission3;
+      mission4: {
+        progress: 0,
+        target: GAME_CONFIG.MISSION_4_TARGET,
+        completed: false,
+        sweptPercent: 0,
       },
-      get mission4() {
-        return get().cleanup.mission4;
-      },
-      get activeMissionId() {
-        return get().cleanup.activeMissionId;
-      },
-      get itemsCollected() {
-        return get().cleanup.itemsCollected;
-      },
-      get co2Absorbed() {
-        return get().cleanup.co2Absorbed;
-      },
-      get combo() {
-        return get().cleanup.combo;
-      },
-      get healRegions() {
-        return get().cleanup.healRegions;
-      },
-      get finished() {
-        return get().cleanup.completed;
+      activeMissionId: 1,
+      itemsCollected: 0,
+      co2Absorbed: 0,
+      combo: 1,
+      healRegions: [],
+      finished: false,
+
+      // Centralized helper ensuring atomic, reactive updates for both cleanup slice and root mirrors
+      setCleanupState: (cleanupUpdates, extraUpdates = {}) => {
+        const state = get();
+        const nextCleanup =
+          typeof cleanupUpdates === 'function'
+            ? cleanupUpdates(state.cleanup)
+            : { ...state.cleanup, ...cleanupUpdates };
+
+        set({
+          ...extraUpdates,
+          cleanup: nextCleanup,
+          cleanliness: nextCleanup.health,
+          mission1: nextCleanup.mission1,
+          mission2: nextCleanup.mission2,
+          mission3: nextCleanup.mission3,
+          mission4: nextCleanup.mission4,
+          activeMissionId: nextCleanup.activeMissionId,
+          itemsCollected: nextCleanup.itemsCollected,
+          co2Absorbed: nextCleanup.co2Absorbed,
+          combo: nextCleanup.combo,
+          healRegions: nextCleanup.healRegions,
+          finished: nextCleanup.completed,
+        });
+
+        return nextCleanup;
       },
 
       // ── Shared Milestone Trigger ──
@@ -195,14 +225,15 @@ export const useGameStore = create(
             achieved.push(m);
             const msg = MILESTONE_MESSAGES[m];
             sound.playMilestone();
-            set({
-              cleanup: {
-                ...state.cleanup,
+            get().setCleanupState(
+              {
                 milestonesAchieved: achieved,
               },
-              milestoneToast: { level: m, ...msg },
-              planetPulseTrigger: Date.now(),
-            });
+              {
+                milestoneToast: { level: m, ...msg },
+                planetPulseTrigger: Date.now(),
+              }
+            );
             break;
           }
         }
@@ -212,7 +243,7 @@ export const useGameStore = create(
       dismissToast: () => set({ activeToast: null }),
 
       // ═══════════════════════════════════════════════════════════
-      // CLEANUP ACTIONS (affects cleanup slice only)
+      // CLEANUP ACTIONS (affects cleanup slice and root mirrors)
       // ═══════════════════════════════════════════════════════════
       collectDebrisItem: (id, type = 'bottle', points = 1) => {
         const state = get();
@@ -222,16 +253,18 @@ export const useGameStore = create(
         const timeDiff = (now - state.cleanup.lastCollectTime) / 1000;
         const newCombo = timeDiff < GAME_CONFIG.COMBO_RESET_SECONDS ? Math.min(state.cleanup.combo + 1, 5) : 1;
 
+        const target = GAME_CONFIG.MISSION_1_TARGET;
         const newCount = state.cleanup.mission1.count + 1;
         const newCollectedIds = [...state.cleanup.mission1.collectedIds, id];
-        const isComplete = newCount >= state.cleanup.mission1.target;
+        const isComplete = newCount >= target;
         const wasComplete = state.cleanup.mission1.completed;
 
         const newM1 = {
           ...state.cleanup.mission1,
+          target,
           count: newCount,
           collectedIds: newCollectedIds,
-          progress: Math.min(100, Math.round((newCount / state.cleanup.mission1.target) * 100)),
+          progress: Math.min(100, Math.round((newCount / target) * 100)),
           completed: isComplete,
         };
 
@@ -271,9 +304,8 @@ export const useGameStore = create(
 
         const isFinished = newHealth >= 100;
 
-        set({
-          cleanup: {
-            ...state.cleanup,
+        get().setCleanupState(
+          {
             health: newHealth,
             completed: isFinished,
             mission1: newM1,
@@ -282,10 +314,12 @@ export const useGameStore = create(
             lastCollectTime: now,
             activeMissionId: nextActive,
           },
-          activeToast: newToast,
-          factsShownMilestones: newFactsShown,
-          completedModalMission: modalMission,
-        });
+          {
+            activeToast: newToast,
+            factsShownMilestones: newFactsShown,
+            completedModalMission: modalMission,
+          }
+        );
 
         get().checkCleanupMilestones(newHealth);
 
@@ -296,14 +330,16 @@ export const useGameStore = create(
         const state = get();
         if (state.cleanup.mission2.convertedSources.includes(sourceId)) return;
 
+        const target = GAME_CONFIG.MISSION_2_TARGET;
         const newSources = [...state.cleanup.mission2.convertedSources, sourceId];
-        const isComplete = newSources.length >= state.cleanup.mission2.target;
+        const isComplete = newSources.length >= target;
         const wasComplete = state.cleanup.mission2.completed;
 
         const newM2 = {
           ...state.cleanup.mission2,
+          target,
           convertedSources: newSources,
-          progress: Math.min(100, Math.round((newSources.length / state.cleanup.mission2.target) * 100)),
+          progress: Math.min(100, Math.round((newSources.length / target) * 100)),
           completed: isComplete,
         };
 
@@ -333,17 +369,18 @@ export const useGameStore = create(
 
         const isFinished = newHealth >= 100;
 
-        set({
-          cleanup: {
-            ...state.cleanup,
+        get().setCleanupState(
+          {
             health: newHealth,
             completed: isFinished,
             mission2: newM2,
             healRegions: updatedRegions,
             activeMissionId: nextActive,
           },
-          completedModalMission: modalMission,
-        });
+          {
+            completedModalMission: modalMission,
+          }
+        );
 
         get().checkCleanupMilestones(newHealth);
       },
@@ -352,14 +389,16 @@ export const useGameStore = create(
         const state = get();
         if (state.cleanup.mission3.plantedPatches.includes(patchId)) return;
 
+        const target = GAME_CONFIG.MISSION_3_TARGET;
         const newPatches = [...state.cleanup.mission3.plantedPatches, patchId];
-        const isComplete = newPatches.length >= state.cleanup.mission3.target;
+        const isComplete = newPatches.length >= target;
         const wasComplete = state.cleanup.mission3.completed;
 
         const newM3 = {
           ...state.cleanup.mission3,
+          target,
           plantedPatches: newPatches,
-          progress: Math.min(100, Math.round((newPatches.length / state.cleanup.mission3.target) * 100)),
+          progress: Math.min(100, Math.round((newPatches.length / target) * 100)),
           completed: isComplete,
         };
 
@@ -390,9 +429,8 @@ export const useGameStore = create(
 
         const isFinished = newHealth >= 100;
 
-        set({
-          cleanup: {
-            ...state.cleanup,
+        get().setCleanupState(
+          {
             health: newHealth,
             completed: isFinished,
             mission3: newM3,
@@ -400,22 +438,26 @@ export const useGameStore = create(
             co2Absorbed: newCo2,
             activeMissionId: nextActive,
           },
-          completedModalMission: modalMission,
-        });
+          {
+            completedModalMission: modalMission,
+          }
+        );
 
         get().checkCleanupMilestones(newHealth);
       },
 
       updateOceanSweep: (sweptPercent) => {
         const state = get();
+        const target = GAME_CONFIG.MISSION_4_TARGET;
         const currentSwept = Math.max(state.cleanup.mission4.sweptPercent, sweptPercent);
-        const isComplete = currentSwept >= state.cleanup.mission4.target;
+        const isComplete = currentSwept >= target;
         const wasComplete = state.cleanup.mission4.completed;
 
         const newM4 = {
           ...state.cleanup.mission4,
+          target,
           sweptPercent: currentSwept,
-          progress: Math.min(100, Math.round((currentSwept / state.cleanup.mission4.target) * 100)),
+          progress: Math.min(100, Math.round((currentSwept / target) * 100)),
           completed: isComplete,
         };
 
@@ -445,22 +487,23 @@ export const useGameStore = create(
 
         const isFinished = newHealth >= 100;
 
-        set({
-          cleanup: {
-            ...state.cleanup,
+        get().setCleanupState(
+          {
             health: newHealth,
             completed: isFinished,
             mission4: newM4,
             healRegions: updatedRegions,
           },
-          completedModalMission: modalMission,
-        });
+          {
+            completedModalMission: modalMission,
+          }
+        );
 
         get().checkCleanupMilestones(newHealth);
       },
 
       setActiveMission: (id) =>
-        set((s) => ({ cleanup: { ...s.cleanup, activeMissionId: id } })),
+        get().setCleanupState({ activeMissionId: id }),
 
       setCompletedModalMission: (id) => set({ completedModalMission: id }),
       closeCompletedModal: () => set({ completedModalMission: null }),
@@ -488,16 +531,15 @@ export const useGameStore = create(
           const eased = 0.5 - 0.5 * Math.cos(p * Math.PI);
           const currentVal = Math.round(startHealth + (targetHealth - startHealth) * eased);
 
-          set((s) => ({ cleanup: { ...s.cleanup, health: currentVal } }));
+          get().setCleanupState({ health: currentVal });
           get().checkCleanupMilestones(currentVal);
 
           if (p < 1.0) {
             requestAnimationFrame(animateStep);
           } else {
             cleanupHealMask.fill();
-            set((s) => ({
-              cleanup: {
-                ...s.cleanup,
+            get().setCleanupState(
+              {
                 health: 100,
                 completed: true,
                 healRegions: allRegions,
@@ -529,8 +571,10 @@ export const useGameStore = create(
                   sweptPercent: 100,
                 },
               },
-              completedModalMission: null,
-            }));
+              {
+                completedModalMission: null,
+              }
+            );
             sound.playMilestone();
           }
         };
@@ -541,8 +585,8 @@ export const useGameStore = create(
       // Restart ONLY Cleanup Game
       restartCleanup: () => {
         cleanupHealMask.clear();
-        set((s) => ({
-          cleanup: {
+        get().setCleanupState(
+          {
             health: 0,
             completed: false,
             itemsCollected: 0,
@@ -578,10 +622,12 @@ export const useGameStore = create(
               sweptPercent: 0,
             },
           },
-          completedModalMission: null,
-          milestoneToast: null,
-          planetPulseTrigger: 0,
-        }));
+          {
+            completedModalMission: null,
+            milestoneToast: null,
+            planetPulseTrigger: 0,
+          }
+        );
         sound.updateAmbientProgress(0);
       },
 
@@ -766,7 +812,7 @@ export const useGameStore = create(
     {
       // Preserved storage key during rebrand to TerraHeal to keep all existing saved user progress intact
       name: 'ecofuture_game_storage',
-      version: 2, // Bumped version for independent game slices
+      version: 3, // Bumped version for reduced mission targets and synced reactive mirrors
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         cleanup: state.cleanup,
@@ -779,9 +825,10 @@ export const useGameStore = create(
       }),
       migrate: (persistedState, version) => {
         if (!persistedState) return persistedState;
+        let state = persistedState;
         if (version < 2) {
           const old = persistedState;
-          return {
+          state = {
             cleanup: {
               health: old.cleanliness || 0,
               completed: old.finished || (old.cleanliness >= 100),
@@ -839,10 +886,67 @@ export const useGameStore = create(
             tutorialDismissed: old.tutorialDismissed || false,
           };
         }
-        return persistedState;
+        if (version < 3) {
+          if (state && state.cleanup) {
+            if (state.cleanup.mission1) {
+              state.cleanup.mission1.target = GAME_CONFIG.MISSION_1_TARGET;
+              state.cleanup.mission1.progress = Math.min(100, Math.round(((state.cleanup.mission1.count || 0) / GAME_CONFIG.MISSION_1_TARGET) * 100));
+              state.cleanup.mission1.completed = (state.cleanup.mission1.count || 0) >= GAME_CONFIG.MISSION_1_TARGET;
+            }
+            if (state.cleanup.mission2) {
+              state.cleanup.mission2.target = GAME_CONFIG.MISSION_2_TARGET;
+              const converted = state.cleanup.mission2.convertedSources?.length || 0;
+              state.cleanup.mission2.progress = Math.min(100, Math.round((converted / GAME_CONFIG.MISSION_2_TARGET) * 100));
+              state.cleanup.mission2.completed = converted >= GAME_CONFIG.MISSION_2_TARGET;
+            }
+            if (state.cleanup.mission3) {
+              state.cleanup.mission3.target = GAME_CONFIG.MISSION_3_TARGET;
+              const planted = state.cleanup.mission3.plantedPatches?.length || 0;
+              state.cleanup.mission3.progress = Math.min(100, Math.round((planted / GAME_CONFIG.MISSION_3_TARGET) * 100));
+              state.cleanup.mission3.completed = planted >= GAME_CONFIG.MISSION_3_TARGET;
+            }
+            if (state.cleanup.mission4) {
+              state.cleanup.mission4.target = GAME_CONFIG.MISSION_4_TARGET;
+              const swept = state.cleanup.mission4.sweptPercent || 0;
+              state.cleanup.mission4.progress = Math.min(100, Math.round((swept / GAME_CONFIG.MISSION_4_TARGET) * 100));
+              state.cleanup.mission4.completed = swept >= GAME_CONFIG.MISSION_4_TARGET;
+            }
+            state.cleanup.health = calculateCleanupHealth(
+              state.cleanup.mission1,
+              state.cleanup.mission2,
+              state.cleanup.mission3,
+              state.cleanup.mission4
+            );
+          }
+        }
+        return state;
+      },
+      onRehydrateStorage: () => (state) => {
+        if (state && state.cleanup) {
+          // Keep targets normalized with latest GAME_CONFIG
+          state.cleanup.mission1.target = GAME_CONFIG.MISSION_1_TARGET;
+          state.cleanup.mission2.target = GAME_CONFIG.MISSION_2_TARGET;
+          state.cleanup.mission3.target = GAME_CONFIG.MISSION_3_TARGET;
+          state.cleanup.mission4.target = GAME_CONFIG.MISSION_4_TARGET;
+          // Synchronize root mirrors
+          state.cleanliness = state.cleanup.health;
+          state.mission1 = state.cleanup.mission1;
+          state.mission2 = state.cleanup.mission2;
+          state.mission3 = state.cleanup.mission3;
+          state.mission4 = state.cleanup.mission4;
+          state.activeMissionId = state.cleanup.activeMissionId;
+          state.itemsCollected = state.cleanup.itemsCollected;
+          state.co2Absorbed = state.cleanup.co2Absorbed;
+          state.combo = state.cleanup.combo;
+          state.healRegions = state.cleanup.healRegions;
+          state.finished = state.cleanup.completed;
+        }
       },
     }
   )
 );
 
 export default useGameStore;
+if (typeof window !== 'undefined') {
+  window.useGameStore = useGameStore;
+}

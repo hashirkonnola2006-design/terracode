@@ -18,10 +18,10 @@ import {
 
 export const EndingScreen = () => {
   const navigate = useNavigate();
-  const cleanliness = useGameStore((s) => s.cleanliness);
-  const itemsCollected = useGameStore((s) => s.itemsCollected);
-  const co2Absorbed = useGameStore((s) => s.co2Absorbed);
-  const m3 = useGameStore((s) => s.mission3);
+  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
+  const itemsCollected = useGameStore((s) => s.cleanup?.itemsCollected ?? s.itemsCollected ?? 0);
+  const co2Absorbed = useGameStore((s) => s.cleanup?.co2Absorbed ?? s.co2Absorbed ?? 0);
+  const m3 = useGameStore((s) => s.cleanup?.mission3 ?? s.mission3 ?? { plantedPatches: [] });
   const pledges = useGameStore((s) => s.pledges);
   const addPledge = useGameStore((s) => s.addPledge);
   const restartGame = useGameStore((s) => s.restartGame);

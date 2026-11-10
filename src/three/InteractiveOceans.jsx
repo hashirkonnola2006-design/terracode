@@ -24,8 +24,8 @@ export const GYRE_CLUSTERS = [
 
 export const InteractiveOceans = ({ isInteractive = true }) => {
   const updateOceanSweep = useGameStore((s) => s.updateOceanSweep);
-  const sweptPercent = useGameStore((s) => s.mission4.sweptPercent);
-  const activeMissionId = useGameStore((s) => s.activeMissionId);
+  const sweptPercent = useGameStore((s) => s.cleanup?.mission4?.sweptPercent ?? s.mission4?.sweptPercent ?? 0);
+  const activeMissionId = useGameStore((s) => s.cleanup?.activeMissionId ?? s.activeMissionId ?? 1);
   const liteMode = useGameStore((s) => s.liteMode);
 
   const [sweptSet, setSweptSet] = useState(new Set());

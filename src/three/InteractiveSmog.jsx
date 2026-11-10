@@ -26,7 +26,7 @@ export const SMOG_SOURCES = [
 
 export const InteractiveSmog = ({ isInteractive = true }) => {
   const convertSmogSource = useGameStore((s) => s.convertSmogSource);
-  const convertedSources = useGameStore((s) => s.mission2.convertedSources);
+  const convertedSources = useGameStore((s) => s.cleanup?.mission2?.convertedSources ?? s.mission2?.convertedSources ?? []);
   const liteMode = useGameStore((s) => s.liteMode);
 
   const [hoveredSpot, setHoveredSpot] = useState(null);

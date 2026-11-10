@@ -77,8 +77,8 @@ function generateStumps(patchId) {
 
 export const InteractiveForests = ({ isInteractive = true }) => {
   const plantForestPatch = useGameStore((s) => s.plantForestPatch);
-  const plantedPatches = useGameStore((s) => s.mission3.plantedPatches);
-  const activeMissionId = useGameStore((s) => s.activeMissionId);
+  const plantedPatches = useGameStore((s) => s.cleanup?.mission3?.plantedPatches ?? s.mission3?.plantedPatches ?? []);
+  const activeMissionId = useGameStore((s) => s.cleanup?.activeMissionId ?? s.activeMissionId ?? 1);
   const liteMode = useGameStore((s) => s.liteMode);
 
   // Hover states & scale pop

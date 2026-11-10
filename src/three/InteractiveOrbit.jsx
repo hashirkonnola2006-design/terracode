@@ -46,8 +46,8 @@ function createCrateGeom() {
 
 export const InteractiveOrbit = ({ isInteractive = true }) => {
   const collectDebrisItem = useGameStore((s) => s.collectDebrisItem);
-  const collectedIds = useGameStore((s) => s.mission1.collectedIds);
-  const activeMissionId = useGameStore((s) => s.activeMissionId);
+  const collectedIds = useGameStore((s) => s.cleanup?.mission1?.collectedIds ?? s.mission1?.collectedIds ?? []);
+  const activeMissionId = useGameStore((s) => s.cleanup?.activeMissionId ?? s.activeMissionId ?? 1);
   const liteMode = useGameStore((s) => s.liteMode);
 
   const [hoveredId, setHoveredId] = useState(null);

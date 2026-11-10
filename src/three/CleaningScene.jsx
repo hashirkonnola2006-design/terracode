@@ -32,7 +32,7 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
   const currentSpinSpeed = useRef(0.014);
 
   // Heal mask persistence: restore saved regions on mount
-  const healRegions = useGameStore((s) => s.healRegions);
+  const healRegions = useGameStore((s) => s.cleanup?.healRegions ?? s.healRegions ?? []);
   useEffect(() => {
     if (healRegions && healRegions.length > 0) {
       healMask.restoreRegions(healRegions);
@@ -192,7 +192,7 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
 };
 
 export const CleaningScene = () => {
-  const cleanliness = useGameStore((s) => s.cleanliness);
+  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
   const liteMode = useGameStore((s) => s.liteMode);
   const setLiteMode = useGameStore((s) => s.setLiteMode);
   const canvasRef = useRef(null);

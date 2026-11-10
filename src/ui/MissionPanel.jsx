@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { GAME_CONFIG } from '../config/game';
 import {
   ChevronDown,
   ChevronUp,
@@ -14,23 +15,46 @@ import {
 
 export const MissionPanel = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const activeMissionId = useGameStore((s) => s.activeMissionId);
+  const cleanup = useGameStore((s) => s.cleanup);
   const setActiveMission = useGameStore((s) => s.setActiveMission);
-  const m1 = useGameStore((s) => s.mission1);
-  const m2 = useGameStore((s) => s.mission2);
-  const m3 = useGameStore((s) => s.mission3);
-  const m4 = useGameStore((s) => s.mission4);
-  const combo = useGameStore((s) => s.combo);
-  const co2Absorbed = useGameStore((s) => s.co2Absorbed);
+
+  const activeMissionId = cleanup?.activeMissionId ?? 1;
+  const m1Raw = cleanup?.mission1;
+  const m2Raw = cleanup?.mission2;
+  const m3Raw = cleanup?.mission3;
+  const m4Raw = cleanup?.mission4;
+  const combo = cleanup?.combo ?? 1;
+  const co2Absorbed = cleanup?.co2Absorbed ?? 0;
+
+  // Normalized mission progress & targets
+  const m1Count = m1Raw?.count ?? 0;
+  const m1Target = GAME_CONFIG.MISSION_1_TARGET;
+  const m1Completed = m1Count >= m1Target || Boolean(m1Raw?.completed);
+  const m1Progress = Math.min(100, Math.round((m1Count / m1Target) * 100));
+
+  const m2Count = m2Raw?.convertedSources?.length ?? 0;
+  const m2Target = GAME_CONFIG.MISSION_2_TARGET;
+  const m2Completed = m2Count >= m2Target || Boolean(m2Raw?.completed);
+  const m2Progress = Math.min(100, Math.round((m2Count / m2Target) * 100));
+
+  const m3Count = m3Raw?.plantedPatches?.length ?? 0;
+  const m3Target = GAME_CONFIG.MISSION_3_TARGET;
+  const m3Completed = m3Count >= m3Target || Boolean(m3Raw?.completed);
+  const m3Progress = Math.min(100, Math.round((m3Count / m3Target) * 100));
+
+  const m4Percent = m4Raw?.sweptPercent ?? 0;
+  const m4Target = GAME_CONFIG.MISSION_4_TARGET;
+  const m4Completed = m4Percent >= m4Target || Boolean(m4Raw?.completed);
+  const m4Progress = Math.min(100, Math.round((m4Percent / m4Target) * 100));
 
   const missions = [
     {
       id: 1,
       title: 'Orbit Cleanup',
       description: 'Tap floating space debris',
-      progress: m1.progress,
-      countLabel: `${m1.count}/${m1.target}`,
-      completed: m1.completed,
+      progress: m1Progress,
+      countLabel: `${m1Count}/${m1Target}`,
+      completed: m1Completed,
       icon: Trash2,
       accent: 'text-amber-400',
       tag: combo > 1 ? `x${combo} Combo!` : null,
@@ -39,9 +63,9 @@ export const MissionPanel = () => {
       id: 2,
       title: 'Clean Energy',
       description: 'Convert smog & coal emissions',
-      progress: m2.progress,
-      countLabel: `${m2.convertedSources.length}/${m2.target}`,
-      completed: m2.completed,
+      progress: m2Progress,
+      countLabel: `${m2Count}/${m2Target}`,
+      completed: m2Completed,
       icon: SunMedium,
       accent: 'text-yellow-400',
     },
@@ -49,9 +73,9 @@ export const MissionPanel = () => {
       id: 3,
       title: 'Reforest Continents',
       description: 'Tap dry patches to plant trees',
-      progress: m3.progress,
-      countLabel: `${m3.plantedPatches.length}/${m3.target}`,
-      completed: m3.completed,
+      progress: m3Progress,
+      countLabel: `${m3Count}/${m3Target}`,
+      completed: m3Completed,
       icon: Trees,
       accent: 'text-emerald-400',
       tag: co2Absorbed > 0 ? `${(co2Absorbed / 1000).toFixed(1)}t CO2` : null,
@@ -60,9 +84,9 @@ export const MissionPanel = () => {
       id: 4,
       title: 'Water & Oceans',
       description: 'Drag net to sweep ocean plastic',
-      progress: m4.progress,
-      countLabel: `${m4.sweptPercent}%`,
-      completed: m4.completed,
+      progress: m4Progress,
+      countLabel: `${m4Percent}%`,
+      completed: m4Completed,
       icon: Droplets,
       accent: 'text-cyan-400',
     },
