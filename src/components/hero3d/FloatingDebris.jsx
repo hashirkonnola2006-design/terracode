@@ -151,6 +151,7 @@ export const FloatingDebris = ({
   healProgress = 0,
   pollution = 1.0,
   isFinalBeat = false,
+  scale = 1.0,
 }) => {
   // Instanced mesh refs
   const bottleInstRef = useRef(null);
@@ -347,7 +348,7 @@ export const FloatingDebris = ({
   const cupData    = useMemo(() => generateClutterData(COUNT_CUPS,    SMALL_DEBRIS_SCALE * 0.85, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS), []);
   const capData    = useMemo(() => generateClutterData(COUNT_CAPS,    SMALL_DEBRIS_SCALE * 0.55, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS + 0.12, capPalette), [capPalette]);
 
-  // Compute 3D position on tilted orbital plane
+  // Compute 3D position on tilted orbital plane (pure orbital drift, no cursor tracking)
   const computeOrbitalPos = (item) => {
     const a = item.currentAngle;
     const r = item.radius;
@@ -362,8 +363,8 @@ export const FloatingDebris = ({
     const cosN = Math.cos(item.nodeAngle);
     const sinN = Math.sin(item.nodeAngle);
 
-    const x = x1 * cosN - z1 * sinN + mousePos.x * 0.05;
-    const y = y1 + mousePos.y * 0.04;
+    const x = x1 * cosN - z1 * sinN;
+    const y = y1;
     const z = x1 * sinN + z1 * cosN;
 
     return { x, y, z };
@@ -392,7 +393,7 @@ export const FloatingDebris = ({
     }
   };
 
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     const clampedDelta = Math.min(delta, 0.05);
     const effectivePollution = pollution !== undefined ? pollution : 1.0 - healProgress;
 
@@ -401,10 +402,7 @@ export const FloatingDebris = ({
 
       for (let i = 0; i < data.length; i++) {
         const item = data[i];
-        item.currentAngle += item.orbitSpeed * clampedDelta * 60;
-        item.rotX += item.rotSpeedX * clampedDelta;
-        item.rotY += item.rotSpeedY * clampedDelta;
-        item.rotZ += item.rotSpeedZ * clampedDelta;
+        // Orbital & rotation animation frozen — debris is static in space
 
         const pos = computeOrbitalPos(item);
 
@@ -438,16 +436,12 @@ export const FloatingDebris = ({
     updateInstances(cupInstRef.current,    cupData);
     updateInstances(capInstRef.current,    capData);
 
-    // Animate large foreground hero pieces
+    // Foreground hero pieces — keep scale reactive to pollution but freeze all motion
     if (heroGroupRef.current) {
       heroGroupRef.current.children.forEach((child, i) => {
         const item = heroItems[i];
         if (!item) return;
-        child.rotation.x += item.speed[0] * clampedDelta;
-        child.rotation.y += item.speed[1] * clampedDelta;
-        child.rotation.z += item.speed[2] * clampedDelta;
-        child.position.y = item.pos[1] + Math.sin(state.clock.elapsedTime * 0.8 + i) * 0.04 + mousePos.y * 0.02;
-        child.position.x = item.pos[0] + mousePos.x * 0.03;
+        // Position & rotation are frozen at their initial values (no animation)
         const s = Math.max(0, effectivePollution) * item.scale;
         child.scale.set(s, s, s);
       });
@@ -462,7 +456,7 @@ export const FloatingDebris = ({
   return (
     <group visible={healProgress < 0.99}>
       {/* ── Foreground Hero Debris (Close to Camera for Depth of Field) ── */}
-      <group ref={heroGroupRef}>
+      <group ref={heroGroupRef} scale={scale}>
         {heroItems.map((item, idx) => (
           <mesh
             key={idx}
@@ -478,7 +472,7 @@ export const FloatingDebris = ({
       </group>
 
       {/* ── Medium Orbital Pieces (Centered on Earth) ── */}
-      <group position={center}>
+      <group position={center} scale={scale}>
         {/* 1. Small Transparent Water Bottles */}
         <instancedMesh
           ref={(m) => {

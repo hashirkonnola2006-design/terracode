@@ -1,5 +1,5 @@
 import React, { Suspense, useRef, useEffect, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore';
@@ -18,6 +18,25 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
   const earthGroupRef = useRef(null);
   const controlsRef = useRef(null);
   const smoothCleanliness = useRef(cleanliness / 100);
+  const { size, camera } = useThree();
+  const aspect = size.width / Math.max(1, size.height);
+  const isPortrait = aspect < 1.05;
+  const initialAdjusted = useRef(false);
+
+  // Responsive camera initial distance on mobile/portrait so Earth & orbiting debris fit inside viewport
+  useEffect(() => {
+    if (!initialAdjusted.current) {
+      if (isPortrait) {
+        const responsiveZ = Math.min(6.2, 3.2 / Math.max(0.50, aspect * 1.15));
+        camera.position.z = responsiveZ;
+        if (controlsRef.current) {
+          controlsRef.current.target.set(0, 0, 0);
+          controlsRef.current.update();
+        }
+      }
+      initialAdjusted.current = true;
+    }
+  }, [isPortrait, aspect, camera]);
 
   // Smoothly lerp visual cleanliness state (never snap)
   useFrame((state, delta) => {
@@ -37,7 +56,7 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
         enablePan={false}
         enableZoom={true}
         minDistance={1.8}
-        maxDistance={4.5}
+        maxDistance={isPortrait ? 8.5 : 5.5}
         rotateSpeed={0.65}
         dampingFactor={0.06}
         enableDamping

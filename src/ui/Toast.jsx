@@ -26,7 +26,7 @@ export const Toast = () => {
     <>
       {/* ── 1. Floating Fact Toast (Triggered every 10 items) ── */}
       {activeToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-88 max-w-[92vw] select-none pointer-events-auto animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 w-88 max-w-[92vw] select-none pointer-events-auto animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="p-3.5 rounded-xl bg-slate-950/90 backdrop-blur-2xl border border-emerald-500/30 flex items-start gap-3">
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-300 shrink-0">
               <Info className="w-4 h-4 text-[#4ade80]" />
@@ -55,7 +55,7 @@ export const Toast = () => {
       {/* ── 2. Mission Completed Infographic Modal ── */}
       {missionReveal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300 select-none pointer-events-auto">
-          <div className="relative w-full max-w-md p-6 rounded-2xl bg-slate-950/95 border border-emerald-500/40 text-center">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 rounded-2xl bg-slate-950/95 border border-emerald-500/40 text-center shadow-2xl">
             {/* Celebration Icon */}
             <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-[#4ade80]">
               <CheckCircle2 className="w-7 h-7" />

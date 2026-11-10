@@ -30,12 +30,12 @@ export const Clean = () => {
       <CleaningScene />
 
       {/* ── 2. Minimal Top Bar (Fixed) ── */}
-      <header className="fixed top-0 left-0 right-0 z-30 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-3 pointer-events-none">
+      <header className="fixed top-0 left-0 right-0 z-30 px-3 sm:px-6 md:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-3 pointer-events-none">
         
         {/* Brand / Logo on Left */}
-        <div className="flex items-center gap-2 pointer-events-auto">
-          <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Leaf className="w-4 h-4 text-[#4ade80]" />
+        <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#4ade80]" />
           </div>
           <span className="font-display font-extrabold text-sm sm:text-base tracking-tight text-white hidden sm:inline-block">
             EcoFuture
@@ -43,12 +43,12 @@ export const Clean = () => {
         </div>
 
         {/* Cleanliness Meter in the Center */}
-        <div className="flex-1 max-w-md pointer-events-auto px-2">
+        <div className="flex-1 max-w-xs sm:max-w-md pointer-events-auto px-1 sm:px-2">
           <CleanlinessMeter />
         </div>
 
         {/* Controls & Quick Actions on Right */}
-        <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+        <div className="flex items-center gap-1 sm:gap-2 pointer-events-auto shrink-0">
           
           {/* Skip / Auto-Heal (Accessibility & Demonstration) */}
           <button
@@ -63,7 +63,7 @@ export const Clean = () => {
           {/* Sound Toggle */}
           <button
             onClick={toggleMute}
-            className={`p-2 rounded-lg backdrop-blur-md border text-xs transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 ${
+            className={`p-1.5 sm:p-2 rounded-lg backdrop-blur-md border text-xs transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 ${
               muted
                 ? 'bg-slate-900/80 border-white/10 text-slate-500'
                 : 'bg-slate-900/80 border-white/20 text-emerald-400 hover:bg-white/[0.08]'
@@ -71,13 +71,13 @@ export const Clean = () => {
             title={muted ? 'Unmute audio' : 'Mute audio'}
             aria-label={muted ? 'Unmute audio' : 'Mute audio'}
           >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            {muted ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           </button>
 
           {/* Lite Mode Toggle */}
           <button
             onClick={toggleLiteMode}
-            className={`p-2 rounded-lg backdrop-blur-md border text-xs transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 ${
+            className={`p-1.5 sm:p-2 rounded-lg backdrop-blur-md border text-xs transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 ${
               liteMode
                 ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
                 : 'bg-slate-900/80 border-white/10 text-slate-300 hover:text-white hover:bg-white/[0.08]'
@@ -85,17 +85,17 @@ export const Clean = () => {
             title={liteMode ? 'Switch to Cinematic High-DPI' : 'Switch to Eco/Lite Mode'}
             aria-label="Toggle Lite Mode"
           >
-            <Zap className="w-4 h-4" />
+            <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
 
           {/* Reset / Restart */}
           <button
             onClick={restartGame}
-            className="p-2 rounded-lg bg-slate-900/80 border border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            className="p-1.5 sm:p-2 rounded-lg bg-slate-900/80 border border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
             title="Restart Cleaning"
             aria-label="Restart Cleaning"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
 

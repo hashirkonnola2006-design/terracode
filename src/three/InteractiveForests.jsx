@@ -66,6 +66,11 @@ export const InteractiveForests = ({ isInteractive = true }) => {
             {/* UNPLANTED: Dry Brown/Gray Patch with Pulsing Sprout Beacon */}
             {!isPlanted && (
               <group
+                onPointerDown={(e) => {
+                  if (!isInteractive) return;
+                  e.stopPropagation();
+                  plantForestPatch(patch.id);
+                }}
                 onClick={(e) => {
                   if (!isInteractive) return;
                   e.stopPropagation();

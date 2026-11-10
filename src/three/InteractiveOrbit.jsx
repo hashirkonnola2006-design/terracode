@@ -134,10 +134,15 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
     return () => clearTimeout(timer);
   }, [floatingTexts]);
 
-  // Handle tap / click
+  // Handle tap / click (with debounce guard to prevent double-fire between pointerdown & click)
+  const lastCollectRef = useRef({});
   const handleItemClick = (e, item) => {
     if (!isInteractive) return;
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    const now = performance.now();
+    if (now - (lastCollectRef.current[item.id] || 0) < 350) return;
+    lastCollectRef.current[item.id] = now;
 
     // Tires & Crates take 2 taps
     if (item.points === 3) {
@@ -164,15 +169,11 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
     }
   };
 
-  useFrame((state, delta) => {
-    const clampedDelta = Math.min(delta, 0.05);
-
+  useFrame(() => {
+    // Orbital & rotation animation frozen — debris is static in space
+    // Positions computed once from fixed baseAngle; no updates needed here
     items.forEach((item) => {
-      item.currentAngle += item.orbitSpeed * clampedDelta * 60;
-      item.rotX += item.rotSpeed * clampedDelta;
-      item.rotY += item.rotSpeed * clampedDelta;
-
-      const a = item.currentAngle;
+      const a = item.currentAngle; // stays at baseAngle — never incremented
       const r = item.radius;
 
       const x0 = r * Math.cos(a);
@@ -231,7 +232,14 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
                 geometry={hitGeom}
                 material={matHit}
                 scale={[item.scale * 3.5, item.scale * 3.5, item.scale * 3.5]}
-                onClick={(e) => handleItemClick(e, item)}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  handleItemClick(e, item);
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleItemClick(e, item);
+                }}
               />
             )}
 

@@ -37,11 +37,11 @@ export const CleanlinessMeter = () => {
     <div className="flex flex-col items-center w-full max-w-xs sm:max-w-md mx-auto">
       {/* Percentage Header */}
       <div className="flex items-center justify-between w-full mb-1.5 px-1">
-        <span className="font-label uppercase text-[12px] tracking-[0.2em] text-[#4ade80] flex items-center gap-1.5">
-          <Sparkles className="w-3 h-3 text-[#4ade80]" />
-          Global Cleanliness
+        <span className="font-label uppercase text-[10px] sm:text-[12px] tracking-[0.14em] sm:tracking-[0.2em] text-[#4ade80] flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
+          <Sparkles className="w-3 h-3 text-[#4ade80] shrink-0" />
+          <span className="hidden min-[380px]:inline">Global </span>Cleanliness
         </span>
-        <span className="font-mono tabular-nums text-sm font-semibold text-white tracking-tight flex items-center gap-1">
+        <span className="font-mono tabular-nums text-xs sm:text-sm font-semibold text-white tracking-tight flex items-center gap-1 shrink-0 ml-2">
           {displayValue}%
           {displayValue === 100 && <CheckCircle2 className="w-3.5 h-3.5 text-[#4ade80]" />}
         </span>

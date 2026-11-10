@@ -55,12 +55,14 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
 
   const handlePointerDown = (e) => {
     if (!isInteractive || activeMissionId !== 4) return;
+    if (e.stopPropagation) e.stopPropagation();
     setIsSweeping(true);
     checkSweepHit(e.point);
   };
 
   const handlePointerMove = (e) => {
     if (!isInteractive || activeMissionId !== 4) return;
+    if (e.stopPropagation) e.stopPropagation();
     setNetPos(e.point);
     if (isSweeping || e.buttons === 1) {
       checkSweepHit(e.point);

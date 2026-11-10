@@ -41,7 +41,7 @@ export const Tutorial = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm select-none pointer-events-auto animate-in fade-in duration-300">
-      <div className="relative w-full max-w-sm p-6 rounded-2xl bg-slate-950/95 border border-white/10 text-center">
+      <div className="relative w-full max-w-xs sm:max-w-sm p-5 sm:p-6 rounded-2xl bg-slate-950/95 border border-white/10 text-center shadow-2xl">
         {/* Dismiss Button */}
         <button
           onClick={dismissTutorial}

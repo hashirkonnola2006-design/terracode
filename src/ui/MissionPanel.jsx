@@ -69,20 +69,20 @@ export const MissionPanel = () => {
   ];
 
   return (
-    <div className="fixed bottom-4 left-4 z-30 w-72 sm:w-80 max-w-[calc(100vw-2rem)] select-none pointer-events-auto">
-      <div className="rounded-xl bg-slate-950/85 backdrop-blur-xl border border-white/10 overflow-hidden transition-all duration-200">
+    <div className="fixed bottom-3 left-3 sm:bottom-4 sm:left-4 z-30 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] select-none pointer-events-auto">
+      <div className="rounded-xl bg-slate-950/85 backdrop-blur-xl border border-white/10 overflow-hidden transition-all duration-200 shadow-2xl">
         {/* Header Toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] text-left transition-colors duration-200 cursor-pointer border-b border-white/10"
+          className="w-full flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 bg-white/[0.03] hover:bg-white/[0.06] text-left transition-colors duration-200 cursor-pointer border-b border-white/10"
         >
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80]" />
-            <span className="font-label uppercase text-[12px] tracking-[0.22em] text-white/80 font-semibold">
+            <span className="font-label uppercase text-[11px] sm:text-[12px] tracking-[0.18em] sm:tracking-[0.22em] text-white/80 font-semibold">
               Restoration Missions
             </span>
           </div>
-          <div className="flex items-center gap-1.5 font-mono text-xs text-white/50">
+          <div className="flex items-center gap-1.5 font-mono text-[11px] sm:text-xs text-white/50">
             <span className="tabular-nums">
               {missions.filter((m) => m.completed).length}/4 Done
             </span>
@@ -92,7 +92,7 @@ export const MissionPanel = () => {
 
         {/* Missions List */}
         {!collapsed && (
-          <div className="p-2 space-y-1.5 max-h-[55vh] overflow-y-auto">
+          <div className="p-2 space-y-1.5 max-h-[44vh] sm:max-h-[55vh] overflow-y-auto">
             {missions.map((m) => {
               const Icon = m.icon;
               const isActive = activeMissionId === m.id;

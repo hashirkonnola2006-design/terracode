@@ -95,8 +95,14 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
   const currentEarthPos = useRef(new THREE.Vector3(1.35, 0, 0));
   const currentLookAt = useRef(new THREE.Vector3(0, 0, 0));
   const { viewport, size } = useThree();
-  const isPortrait = viewport.width < viewport.height;
+  const aspect = size.width / Math.max(1, size.height);
+  const isPortrait = aspect < 1.05;
   const isMobile = size.width < 768 || isPortrait;
+
+  // Responsive Earth scale: desktop remains 0.72; mobile/portrait scales proportionally to fit viewport width
+  const responsiveEarthScale = isMobile
+    ? Math.min(0.72, 0.72 * Math.max(0.55, aspect / 0.85))
+    : 0.72;
 
   const baseEarthX = isMobile ? 0.0 : 1.35;
   const baseEarthY = isMobile ? -0.45 : 0.0;
@@ -117,13 +123,16 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
 
     // Target Earth position for this beat
     const targetEarthX = isMobile ? 0.0 : baseEarthX * targetConfig.earthFactor;
-    const targetEarthY = isMobile ? baseEarthY * targetConfig.earthFactor : targetConfig.earthY;
+    const targetEarthY = isMobile
+      ? (activeBeat === 3 ? -0.16 : baseEarthY * targetConfig.earthFactor)
+      : targetConfig.earthY;
 
     currentEarthPos.current.x = THREE.MathUtils.lerp(currentEarthPos.current.x, targetEarthX, easeFactor);
     currentEarthPos.current.y = THREE.MathUtils.lerp(currentEarthPos.current.y, targetEarthY, easeFactor);
 
     if (earthGroupRef.current) {
       earthGroupRef.current.position.set(currentEarthPos.current.x, currentEarthPos.current.y, 0);
+      earthGroupRef.current.scale.set(responsiveEarthScale, responsiveEarthScale, responsiveEarthScale);
       earthGroupRef.current.rotation.y += delta * 0.015;
     }
 
@@ -147,7 +156,7 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
       {/* Sun key lighting (healProgress = 0, camera following) */}
       <Sun healProgress={0} isLowEnd={false} />
 
-      <group ref={earthGroupRef} scale={0.72}>
+      <group ref={earthGroupRef} scale={responsiveEarthScale}>
         <Earth
           pollution={1.0}
           healProgress={0}
@@ -165,6 +174,7 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
         pollution={1.0}
         healProgress={0}
         isFinalBeat={activeBeat === 3}
+        scale={responsiveEarthScale / 0.72}
       />
     </>
   );
@@ -283,7 +293,7 @@ export const Landing = () => {
 
       {/* ── Transparent Fixed Header ── */}
       <header
-        className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-6 sm:px-12 py-6 transition-all duration-300 pointer-events-auto"
+        className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 sm:px-8 md:px-12 py-3.5 sm:py-6 transition-all duration-300 pointer-events-auto"
         style={{
           opacity: isTransitioning ? 0 : 1,
           transform: isTransitioning ? 'translateY(-20px)' : 'translateY(0)',
@@ -292,21 +302,21 @@ export const Landing = () => {
         {/* Left: Leaf Logo + EcoFuture (70% opacity on Beat 3) */}
         <div
           onClick={() => goToBeat(0)}
-          className={`flex items-center gap-2.5 select-none cursor-pointer transition-opacity duration-150 ${
+          className={`flex items-center gap-2 sm:gap-2.5 select-none cursor-pointer transition-opacity duration-150 ${
             activeBeat === 3 ? 'opacity-70' : 'opacity-100'
           }`}
         >
-          <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Leaf className="w-4 h-4 text-[#4ade80]" />
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#4ade80]" />
           </div>
-          <span className="font-display font-extrabold text-xl tracking-tight text-white">
+          <span className="font-display font-extrabold text-lg sm:text-xl tracking-tight text-white">
             EcoFuture
           </span>
         </div>
 
         {/* Right: Nav items + Take Action pill (Fades out completely in 150ms on Beat 3) */}
         <div
-          className="flex items-center gap-6 sm:gap-8 transition-opacity duration-150"
+          className="flex items-center gap-4 sm:gap-6 md:gap-8 transition-opacity duration-150"
           style={{
             opacity: activeBeat === 3 ? 0 : 1,
             pointerEvents: activeBeat === 3 ? 'none' : 'auto',
@@ -341,10 +351,10 @@ export const Landing = () => {
           
           <button
             onClick={handleStartCleaning}
-            className="btn-aerospace-secondary text-[12px] py-2 px-4"
+            className="btn-aerospace-secondary text-[11px] sm:text-[12px] py-1.5 px-3 sm:py-2 sm:px-4"
           >
             <span>Take Action</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
         </div>
       </header>
@@ -379,7 +389,16 @@ export const Landing = () => {
           className="absolute inset-y-0 left-0 w-full md:w-3/5 pointer-events-none transition-opacity duration-300"
           style={{
             opacity: activeBeat < 3 ? 1 : 0,
-            background: 'linear-gradient(to right, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.45) 24%, rgba(0, 0, 0, 0.16) 48%, transparent 72%)',
+            background: 'linear-gradient(to right, rgba(0, 0, 0, 0.70) 0%, rgba(0, 0, 0, 0.50) 30%, rgba(0, 0, 0, 0.20) 60%, transparent 80%)',
+          }}
+        />
+
+        {/* 1b. Mobile Top Contrast Scrim for Text Readability on Beats 0-2 */}
+        <div
+          className="absolute inset-x-0 top-0 h-3/5 pointer-events-none sm:hidden transition-opacity duration-300"
+          style={{
+            opacity: activeBeat < 3 ? 1 : 0,
+            background: 'linear-gradient(to bottom, rgba(3, 7, 18, 0.75) 0%, rgba(3, 7, 18, 0.45) 55%, transparent 100%)',
           }}
         />
 
@@ -407,10 +426,10 @@ export const Landing = () => {
       </div>
 
       {/* ── Foreground Text & Action Layer (Fixed in Viewport) ── */}
-      <div className="fixed inset-0 z-10 pointer-events-none flex flex-col justify-between p-6 sm:p-12 md:p-16">
+      <div className="fixed inset-0 z-10 pointer-events-none flex flex-col justify-between p-4 sm:p-8 md:p-12 lg:p-16">
         
         {/* Spacer for fixed header */}
-        <div className="h-16" />
+        <div className="h-12 sm:h-16" />
 
         {/* ── Content Stage ── */}
         {activeBeat === 3 ? (
@@ -420,24 +439,24 @@ export const Landing = () => {
             className="final-beat-unit w-full max-w-3xl mx-auto my-auto text-center flex flex-col items-center justify-center pointer-events-auto px-4"
           >
             {/* a) Eyebrow: 14px, uppercase, letter-spacing 0.3em, white at 70% opacity */}
-            <p className="font-label uppercase text-[14px] tracking-[0.3em] text-white/70 mb-5 block text-center">
+            <p className="font-label uppercase text-[12px] sm:text-[14px] tracking-[0.22em] sm:tracking-[0.3em] text-white/70 mb-3 sm:mb-5 block text-center">
               THE PLANET CAN'T WAIT
             </p>
 
             {/* b) Headline: two lines max, centered, heavy geometric sans (display font, weight 800), white, clamp(2.5rem, 6vw, 5.5rem), line-height 1.0 */}
-            <h1 className="font-display font-extrabold text-[clamp(2.5rem,6vw,5.5rem)] leading-[1.0] text-white text-center drop-shadow-2xl mb-10 max-w-2xl mx-auto tracking-[-0.02em]">
+            <h1 className="font-display font-extrabold text-[clamp(1.85rem,5.5vw,4.5rem)] sm:text-[clamp(2.5rem,6vw,5.5rem)] leading-[1.05] sm:leading-[1.0] text-white text-center drop-shadow-2xl mb-6 sm:mb-10 max-w-2xl mx-auto tracking-[-0.02em]">
               Heal it with<br />your own hands.
             </h1>
 
             {/* c) The Button: bright green, tight glow around button only (no spill over Earth) */}
-            <div className="relative flex items-center justify-center my-2">
+            <div className="relative flex items-center justify-center my-2 w-full max-w-xs sm:max-w-none">
               {/* Main Glowing Green Pill Button */}
               <button
                 onClick={handleStartCleaning}
                 onMouseEnter={() => setIsBtnHovered(true)}
                 onMouseLeave={() => setIsBtnHovered(false)}
                 disabled={isTransitioning}
-                className="relative group overflow-hidden flex items-center justify-center gap-4 min-h-[72px] min-w-[300px] sm:min-w-[340px] px-10 py-5 rounded-full bg-gradient-to-r from-[#4ade80] to-[#22c55e] text-[#052e16] font-bold text-base sm:text-lg tracking-[0.06em] uppercase hover:scale-[1.04] active:scale-[0.97] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-4 focus:ring-white select-none z-10"
+                className="relative group overflow-hidden flex items-center justify-center gap-3 sm:gap-4 min-h-[58px] sm:min-h-[72px] w-full sm:w-auto sm:min-w-[340px] px-6 sm:px-10 py-3.5 sm:py-5 rounded-full bg-gradient-to-r from-[#4ade80] to-[#22c55e] text-[#052e16] font-bold text-base sm:text-lg tracking-[0.06em] uppercase hover:scale-[1.04] active:scale-[0.97] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-4 focus:ring-white select-none z-10"
                 style={{
                   boxShadow: isBtnHovered
                     ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.90), 0 0 20px rgba(74, 222, 128, 0.55), 0 4px 14px rgba(0, 0, 0, 0.4)'
@@ -448,20 +467,20 @@ export const Landing = () => {
                 <div className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent btn-shine pointer-events-none" />
 
                 {/* Sparkle Icon */}
-                <Sparkles className="w-5 h-5 text-[#052e16] shrink-0" />
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-[#052e16] shrink-0" />
 
                 {/* Label */}
-                <span className="font-extrabold text-[15px] sm:text-base tracking-[0.06em]">
+                <span className="font-extrabold text-[14px] sm:text-base tracking-[0.06em]">
                   START CLEANING
                 </span>
 
                 {/* Arrow Icon */}
-                <ArrowRight className="w-5 h-5 text-[#052e16] shrink-0 arrow-nudge group-hover:translate-x-2 transition-transform duration-200" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#052e16] shrink-0 arrow-nudge group-hover:translate-x-2 transition-transform duration-200" />
               </button>
             </div>
 
             {/* d) Micro-copy: 15px, white at 80% opacity */}
-            <p className="mt-5 text-[15px] font-body font-light text-white/80 tracking-wide text-center">
+            <p className="mt-3.5 sm:mt-5 text-[13px] sm:text-[15px] font-body font-light text-white/80 tracking-wide text-center">
               4 missions. About 3 minutes. No sign-up.
             </p>
 
@@ -472,19 +491,19 @@ export const Landing = () => {
             <div key={activeBeat} className="beat-unit">
               
               {/* Eyebrow */}
-              <p className={`font-label uppercase text-[12px] sm:text-[13px] tracking-[0.3em] ${currentBeatData.eyebrowColor} mb-4 block`}>
+              <p className={`font-label uppercase text-[11px] sm:text-[12px] sm:text-[13px] tracking-[0.25em] sm:tracking-[0.3em] ${currentBeatData.eyebrowColor} mb-2.5 sm:mb-4 block`}>
                 {currentBeatData.eyebrow}
               </p>
 
               {/* Headline */}
-              <h1 className="font-display font-extrabold text-[clamp(2.5rem,7vw,6.5rem)] leading-[0.95] tracking-[-0.02em] text-white mb-6 drop-shadow-2xl">
+              <h1 className="font-display font-extrabold text-[clamp(1.75rem,5.5vw,4.5rem)] sm:text-[clamp(2.5rem,7vw,6.5rem)] leading-[1.02] sm:leading-[0.95] tracking-[-0.02em] text-white mb-4 sm:mb-6 drop-shadow-2xl">
                 {currentBeatData.headline}
               </h1>
 
               {/* Body Text */}
               {currentBeatData.body && (
                 <p
-                  className="font-body font-normal text-[18px] sm:text-[20px] leading-[1.6] text-gray-200 mb-8 max-w-[46ch]"
+                  className="font-body font-normal text-[15px] sm:text-[18px] md:text-[20px] leading-[1.5] sm:leading-[1.6] text-gray-200 mb-5 sm:mb-8 max-w-[46ch]"
                   style={{ textShadow: '0 1px 4px rgba(0, 0, 0, 0.90), 0 2px 10px rgba(0, 0, 0, 0.65)' }}
                 >
                   {currentBeatData.body}
@@ -494,7 +513,7 @@ export const Landing = () => {
               {/* Sourced Data Line */}
               {currentBeatData.source && (
                 <p
-                  className="font-mono text-xs sm:text-sm text-gray-300 tracking-wider mb-8"
+                  className="font-mono text-[11px] sm:text-xs md:text-sm text-gray-300 tracking-wider mb-4 sm:mb-8"
                   style={{ textShadow: '0 1px 3px rgba(0, 0, 0, 0.85)' }}
                 >
                   {currentBeatData.source}

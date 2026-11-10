@@ -64,6 +64,11 @@ export const InteractiveSmog = ({ isInteractive = true }) => {
             {/* UNCONVERTED: Dark Smog Cloud & Red Smoldering Flare */}
             {!isConverted && (
               <group
+                onPointerDown={(e) => {
+                  if (!isInteractive) return;
+                  e.stopPropagation();
+                  convertSmogSource(spot.id);
+                }}
                 onClick={(e) => {
                   if (!isInteractive) return;
                   e.stopPropagation();

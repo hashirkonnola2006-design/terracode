@@ -69,26 +69,26 @@ export const EndingScreen = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-40 overflow-y-auto bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent p-4 sm:p-8 flex flex-col justify-end pointer-events-auto animate-in fade-in duration-1000">
-      <div className="max-w-4xl mx-auto w-full pt-24 pb-8 space-y-8">
+    <div className="fixed inset-0 z-40 overflow-y-auto bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent p-4 sm:p-8 flex flex-col justify-start sm:justify-end pointer-events-auto animate-in fade-in duration-1000">
+      <div className="max-w-4xl mx-auto w-full pt-16 sm:pt-24 pb-8 space-y-6 sm:space-y-8">
         
         {/* ── 1. Victory Headline & Subtext ── */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[#4ade80] font-label text-[11px] font-semibold tracking-[0.25em] uppercase">
+        <div className="text-center space-y-2.5 sm:space-y-3">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[#4ade80] font-label text-[10px] sm:text-[11px] font-semibold tracking-[0.2em] sm:tracking-[0.25em] uppercase">
             <Globe2 className="w-3.5 h-3.5" /> Planet Earth Fully Restored
           </div>
-          <h2 className="font-display font-extrabold text-3xl sm:text-5xl text-white tracking-tight leading-[1.05]">
+          <h2 className="font-display font-extrabold text-2xl sm:text-4xl md:text-5xl text-white tracking-tight leading-[1.08] sm:leading-[1.05]">
             This is the Tomorrow We Can Build
           </h2>
-          <p className="font-body font-light text-sm sm:text-base text-white/70 max-w-xl mx-auto leading-relaxed">
+          <p className="font-body font-light text-xs sm:text-base text-white/70 max-w-xl mx-auto leading-relaxed">
             You cleaned <span className="text-[#4ade80] font-semibold font-mono tabular-nums">{itemsCollected}</span> orbital debris items and restored{' '}
             <span className="text-[#4ade80] font-semibold font-mono tabular-nums">{m3.plantedPatches.length}</span> native forest biomes. Imagine what we can achieve together.
           </p>
         </div>
 
         {/* ── 2. Results & Action Bar ── */}
-        <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-white/10">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center mb-6">
+        <div className="p-4 sm:p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-white/10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 text-center mb-6">
             <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
               <span className="font-label uppercase text-[11px] tracking-[0.2em] text-white/60 block mb-1">Global Health</span>
               <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-[#4ade80]">100%</span>
