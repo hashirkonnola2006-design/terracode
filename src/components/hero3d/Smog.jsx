@@ -1,0 +1,329 @@
+import React, { useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
+import { EARTH_RADIUS } from './Earth';
+
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS (Desaturated Industrial Smog Shell & Emitters)
+// ═══════════════════════════════════════════════════════════════
+export const SMOG_SHELL_RADIUS = EARTH_RADIUS * 1.018;
+
+// Ash gray color palette (roughly #4a4642 to #6b5f58, no bright orange or yellow)
+export const COLOR_SMOG_ASH_DARK  = new THREE.Color('#4a4642'); // vec3(0.29, 0.27, 0.26)
+export const COLOR_SMOG_ASH_LIGHT = new THREE.Color('#6b5f58'); // vec3(0.42, 0.37, 0.35)
+
+// 7 Real Industrial Plume Emitter Coordinates on Earth Surface (normalized to unit sphere)
+// Lat / Lon conversion with Earth's initial rotation and axial orientation
+function latLonToVector3(lat, lon, radius = 1.0) {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+  const x = -radius * Math.sin(phi) * Math.cos(theta);
+  const y = radius * Math.cos(phi);
+  const z = radius * Math.sin(phi) * Math.sin(theta);
+  return new THREE.Vector3(x, y, z);
+}
+
+export const INDUSTRIAL_EMITTERS = [
+  { name: 'East Asia',      pos: latLonToVector3(35.0, 115.0), count: 32 }, // North China Plain / Yangtze
+  { name: 'South Asia',     pos: latLonToVector3(24.5, 82.0),  count: 32 }, // Indo-Gangetic Plain / India
+  { name: 'Central Europe', pos: latLonToVector3(50.5, 9.5),   count: 28 }, // Ruhr / Industrial Germany
+  { name: 'Eastern US',     pos: latLonToVector3(41.0, -80.5), count: 28 }, // Rust Belt / Megalopolis
+  { name: 'Middle East',    pos: latLonToVector3(27.0, 50.0),  count: 24 }, // Persian Gulf industrial
+  { name: 'Southeast Asia', pos: latLonToVector3(-6.2, 106.8), count: 24 }, // Java / Jakarta corridor
+  { name: 'South America',  pos: latLonToVector3(-23.5, -46.6), count: 20 }, // São Paulo industrial hub
+];
+
+export const TOTAL_PUFFS = INDUSTRIAL_EMITTERS.reduce((acc, e) => acc + e.count, 0); // 188 puffs
+
+// ── 1. ATMOSPHERIC SMOG SHELL SHADER ──
+const SmogShellShader = {
+  uniforms: {
+    uPollution:  { value: 1.0 },
+    uEscalation: { value: 0.5 },
+    uTime:       { value: 0.0 },
+    uCameraPos:  { value: new THREE.Vector3(0, 0, 3.65) },
+  },
+
+  vertexShader: `
+    varying vec3 vWorldNormal;
+    varying vec3 vWorldPos;
+    varying vec3 vObjectPos;
+
+    void main() {
+      vObjectPos   = position;
+      vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+      vWorldPos    = (modelMatrix * vec4(position, 1.0)).xyz;
+      gl_Position  = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+
+  fragmentShader: `
+    uniform float uPollution;
+    uniform float uEscalation;
+    uniform float uTime;
+    uniform vec3  uCameraPos;
+
+    varying vec3 vWorldNormal;
+    varying vec3 vWorldPos;
+    varying vec3 vObjectPos;
+
+    // Simple, lightweight procedural 3D noise anchored to Earth object coords
+    float hash(vec3 p) {
+      p = fract(p * 0.3183099 + 0.1);
+      p *= 17.0;
+      return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+    }
+
+    float noise3D(vec3 x) {
+      vec3 i = floor(x);
+      vec3 f = fract(x);
+      f = f * f * (3.0 - 2.0 * f);
+      return mix(
+        mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
+            mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+        mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+            mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y),
+        f.z
+      );
+    }
+
+    void main() {
+      if (uPollution < 0.005) discard;
+
+      vec3 wn = normalize(vWorldNormal);
+      vec3 viewDir = normalize(uCameraPos - vWorldPos);
+      float NdotV = clamp(dot(wn, viewDir), 0.0, 1.0);
+
+      // Fresnel limb falloff: nearly transparent when looking at center, thicker near horizon
+      float horizon = pow(1.0 - NdotV, 2.4);
+
+      // Low-frequency noise rotating with Earth (anchored to vObjectPos)
+      float n = noise3D(vObjectPos * 3.2 + vec3(0.0, uTime * 0.03, 0.0));
+      float densityMod = 0.75 + 0.50 * n;
+
+      // Desaturated ash-gray with faint warm rust tint (#4a4642 to #6b5f58) - NO bright orange/yellow!
+      vec3 ashDark  = vec3(0.29, 0.27, 0.26);
+      vec3 ashLight = vec3(0.42, 0.37, 0.35);
+      vec3 shellCol = mix(ashDark, ashLight, horizon * 0.7);
+
+      // Opacity escalates from Slide 1 (0.4) to Slide 3 / Final (1.0)
+      float baseAlpha = mix(0.06, 0.52, horizon);
+      float alpha = baseAlpha * densityMod * uPollution * mix(0.55, 1.0, uEscalation);
+
+      gl_FragColor = vec4(shellCol, clamp(alpha, 0.0, 0.90));
+    }
+  `
+};
+
+// ── 2. INSTANCED SMOKE PUFF SHADER (GPU-driven rising plumes anchored to Earth) ──
+const SmokePuffShader = {
+  uniforms: {
+    uPollution:  { value: 1.0 },
+    uEscalation: { value: 0.5 },
+    uTime:       { value: 0.0 },
+  },
+
+  vertexShader: `
+    attribute vec3  aEmitterPos;
+    attribute vec3  aNormal;
+    attribute vec3  aDrift;
+    attribute float aPhase;
+    attribute float aSpeed;
+    attribute float aScale;
+
+    uniform float uTime;
+    uniform float uPollution;
+    uniform float uEscalation;
+
+    varying vec2  vUv;
+    varying float vAlpha;
+
+    void main() {
+      vUv = uv;
+
+      // Particle lifecycle t in [0.0, 1.0]
+      float t = fract(uTime * aSpeed + aPhase);
+
+      // Rise along surface normal from surface (r=1.002) up to r=1.12
+      float riseDist = t * 0.11;
+      vec3 puffCenter = aEmitterPos + aNormal * riseDist + aDrift * (t * t * 0.04);
+
+      // Expand as it rises
+      float size = aScale * mix(0.030, 0.095, t);
+
+      // Alpha envelope: quick rise from 0, sustain, then fade out
+      float fadeIn  = smoothstep(0.0, 0.20, t);
+      float fadeOut = smoothstep(1.0, 0.45, t);
+      vAlpha = fadeIn * fadeOut * uPollution * mix(0.45, 1.0, uEscalation);
+
+      // Billboard orientation facing the camera in model-view space
+      vec4 mvPosition = modelViewMatrix * vec4(puffCenter, 1.0);
+      mvPosition.xy += (position.xy * size);
+
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `,
+
+  fragmentShader: `
+    varying vec2  vUv;
+    varying float vAlpha;
+
+    void main() {
+      // Soft round Gaussian puff texture
+      float dist = length(vUv - 0.5) * 2.0;
+      if (dist > 1.0) discard;
+      float softCircle = smoothstep(1.0, 0.05, dist);
+
+      // Soft dark-gray industrial smoke color (#34302c)
+      vec3 smokeColor = vec3(0.20, 0.19, 0.18);
+      float alpha = softCircle * vAlpha * 0.45;
+
+      gl_FragColor = vec4(smokeColor, clamp(alpha, 0.0, 1.0));
+    }
+  `
+};
+
+export const Smog = ({ pollution = 1.0, escalation = 0.5 }) => {
+  const shellMatRef = useRef(null);
+  const puffsMatRef = useRef(null);
+  const { camera } = useThree();
+
+  // Create geometry and instanced attributes for the smoke puffs
+  const { puffGeom, puffUniforms, shellUniforms } = useMemo(() => {
+    // 1. Shared instanced quad geometry for all smoke puffs
+    const baseGeom = new THREE.PlaneGeometry(1, 1);
+    const instGeom = new THREE.InstancedBufferGeometry();
+    instGeom.index = baseGeom.index;
+    instGeom.attributes.position = baseGeom.attributes.position;
+    instGeom.attributes.uv = baseGeom.attributes.uv;
+
+    const emitterPosArr = new Float32Array(TOTAL_PUFFS * 3);
+    const normalArr     = new Float32Array(TOTAL_PUFFS * 3);
+    const driftArr      = new Float32Array(TOTAL_PUFFS * 3);
+    const phaseArr      = new Float32Array(TOTAL_PUFFS);
+    const speedArr      = new Float32Array(TOTAL_PUFFS);
+    const scaleArr      = new Float32Array(TOTAL_PUFFS);
+
+    let idx = 0;
+    INDUSTRIAL_EMITTERS.forEach((emitter) => {
+      const normal = emitter.pos.clone().normalize();
+      
+      // Compute two tangent vectors on the surface for wind/drift
+      const up = Math.abs(normal.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+      const tangent = new THREE.Vector3().crossVectors(normal, up).normalize();
+      const bitangent = new THREE.Vector3().crossVectors(normal, tangent).normalize();
+
+      for (let i = 0; i < emitter.count; i++) {
+        // Slight surface jitter around industrial centroid
+        const jitterR = (Math.random() - 0.5) * 0.045;
+        const jitterT = (Math.random() - 0.5) * 0.045;
+        const p = emitter.pos.clone()
+          .addScaledVector(tangent, jitterR)
+          .addScaledVector(bitangent, jitterT)
+          .normalize()
+          .multiplyScalar(EARTH_RADIUS * 1.002);
+
+        emitterPosArr[idx * 3 + 0] = p.x;
+        emitterPosArr[idx * 3 + 1] = p.y;
+        emitterPosArr[idx * 3 + 2] = p.z;
+
+        normalArr[idx * 3 + 0] = normal.x;
+        normalArr[idx * 3 + 1] = normal.y;
+        normalArr[idx * 3 + 2] = normal.z;
+
+        // Tangential drift vector
+        const driftAngle = Math.random() * Math.PI * 2;
+        const driftVec = tangent.clone().multiplyScalar(Math.cos(driftAngle))
+          .addScaledVector(bitangent, Math.sin(driftAngle))
+          .multiplyScalar(0.8 + Math.random() * 0.6);
+
+        driftArr[idx * 3 + 0] = driftVec.x;
+        driftArr[idx * 3 + 1] = driftVec.y;
+        driftArr[idx * 3 + 2] = driftVec.z;
+
+        phaseArr[idx] = i / emitter.count + (Math.random() * 0.2);
+        speedArr[idx] = 0.12 + Math.random() * 0.08;
+        scaleArr[idx] = 0.85 + Math.random() * 0.35;
+
+        idx++;
+      }
+    });
+
+    instGeom.setAttribute('aEmitterPos', new THREE.InstancedBufferAttribute(emitterPosArr, 3));
+    instGeom.setAttribute('aNormal',     new THREE.InstancedBufferAttribute(normalArr, 3));
+    instGeom.setAttribute('aDrift',      new THREE.InstancedBufferAttribute(driftArr, 3));
+    instGeom.setAttribute('aPhase',      new THREE.InstancedBufferAttribute(phaseArr, 1));
+    instGeom.setAttribute('aSpeed',      new THREE.InstancedBufferAttribute(speedArr, 1));
+    instGeom.setAttribute('aScale',      new THREE.InstancedBufferAttribute(scaleArr, 1));
+
+    const pUniforms = THREE.UniformsUtils.clone(SmokePuffShader.uniforms);
+    pUniforms.uPollution.value = pollution;
+    pUniforms.uEscalation.value = escalation;
+
+    const sUniforms = THREE.UniformsUtils.clone(SmogShellShader.uniforms);
+    sUniforms.uPollution.value = pollution;
+    sUniforms.uEscalation.value = escalation;
+
+    return { puffGeom: instGeom, puffUniforms: pUniforms, shellUniforms: sUniforms };
+  }, []);
+
+  useFrame((state, delta) => {
+    const t = state.clock.elapsedTime;
+
+    if (shellMatRef.current) {
+      shellMatRef.current.uniforms.uCameraPos.value.copy(camera.position);
+      shellMatRef.current.uniforms.uTime.value = t;
+      shellMatRef.current.uniforms.uPollution.value = pollution;
+      shellMatRef.current.uniforms.uEscalation.value = THREE.MathUtils.lerp(
+        shellMatRef.current.uniforms.uEscalation.value,
+        escalation,
+        Math.min(delta * 4.0, 1.0)
+      );
+    }
+
+    if (puffsMatRef.current) {
+      puffsMatRef.current.uniforms.uTime.value = t;
+      puffsMatRef.current.uniforms.uPollution.value = pollution;
+      puffsMatRef.current.uniforms.uEscalation.value = THREE.MathUtils.lerp(
+        puffsMatRef.current.uniforms.uEscalation.value,
+        escalation,
+        Math.min(delta * 4.0, 1.0)
+      );
+    }
+  });
+
+  return (
+    <group>
+      {/* 1. Atmospheric Smog Shell (Thin Fresnel envelope with low-frequency noise) */}
+      <mesh scale={SMOG_SHELL_RADIUS}>
+        <sphereGeometry args={[1, 64, 64]} />
+        <shaderMaterial
+          ref={shellMatRef}
+          uniforms={shellUniforms}
+          vertexShader={SmogShellShader.vertexShader}
+          fragmentShader={SmogShellShader.fragmentShader}
+          side={THREE.FrontSide}
+          transparent={true}
+          depthWrite={false}
+          blending={THREE.NormalBlending}
+        />
+      </mesh>
+
+      {/* 2. Anchored Smoke Plumes (Instanced quads rising from industrial centers) */}
+      <mesh geometry={puffGeom}>
+        <shaderMaterial
+          ref={puffsMatRef}
+          uniforms={puffUniforms}
+          vertexShader={SmokePuffShader.vertexShader}
+          fragmentShader={SmokePuffShader.fragmentShader}
+          side={THREE.DoubleSide}
+          transparent={true}
+          depthWrite={false}
+          blending={THREE.NormalBlending}
+        />
+      </mesh>
+    </group>
+  );
+};
+
+export default Smog;

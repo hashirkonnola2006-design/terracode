@@ -371,9 +371,9 @@ export const SpaceBackground = ({
         />
       </mesh>
 
-      {/* ── 5. Faint Dark Red/Brown Pollution Haze (Behind Earth, matches polluted Earth) ── */}
+      {/* ── 5. Very Dark Neutral Charcoal Space Haze (Deep dark space, Earth stands out) ── */}
       <mesh position={[0, -0.12, -8]} renderOrder={1}>
-        <planeGeometry args={[14, 14]} />
+        <planeGeometry args={[16, 16]} />
         <shaderMaterial
           vertexShader={`
             varying vec2 vUv;
@@ -386,9 +386,11 @@ export const SpaceBackground = ({
             varying vec2 vUv;
             void main() {
               float d = length(vUv - 0.5) * 2.0;
-              float alpha = smoothstep(1.0, 0.0, d) * 0.18;
-              vec3 brownHaze = vec3(0.36, 0.14, 0.07);
-              gl_FragColor = vec4(brownHaze, alpha);
+              float alpha = smoothstep(1.0, 0.0, d) * 0.10;
+              vec3 charcoal = vec3(0.035, 0.035, 0.040);
+              vec3 faintWarmEdge = vec3(0.065, 0.045, 0.035);
+              vec3 bgCol = mix(charcoal, faintWarmEdge, smoothstep(0.4, 1.0, d));
+              gl_FragColor = vec4(bgCol, alpha);
             }
           `}
           transparent={true}

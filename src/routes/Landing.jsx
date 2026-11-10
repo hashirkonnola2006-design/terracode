@@ -7,6 +7,7 @@ import { Sun } from '../components/hero3d/Sun';
 import { Earth } from '../components/hero3d/Earth';
 import { Clouds } from '../components/hero3d/Clouds';
 import { Atmosphere } from '../components/hero3d/Atmosphere';
+import { Smog } from '../components/hero3d/Smog';
 import { FloatingDebris } from '../components/hero3d/FloatingDebris';
 import { Effects } from '../components/hero3d/Effects';
 import { ArrowRight, Leaf, Sparkles } from 'lucide-react';
@@ -89,8 +90,15 @@ const computeActiveBeat = (progress, prevBeat) => {
   return 0;
 };
 
-const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHovered }) => {
+const LandingSceneController = ({
+  scrollProgressRef,
+  activeBeat,
+  isTransitioning,
+  mousePos,
+  isBtnHovered,
+}) => {
   const earthGroupRef = useRef(null);
+  const smoothScrollRef = useRef(0);
   const currentCamZ = useRef(3.65);
   const currentEarthPos = useRef(new THREE.Vector3(1.35, 0, 0));
   const currentLookAt = useRef(new THREE.Vector3(0, 0, 0));
@@ -104,44 +112,57 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
     ? Math.min(0.72, 0.72 * Math.max(0.55, aspect / 0.85))
     : 0.72;
 
-  const baseEarthX = isMobile ? 0.0 : 1.35;
-  const baseEarthY = isMobile ? -0.45 : 0.0;
-
   useFrame((state, delta) => {
-    const targetConfig = BEAT_CAMERA_TARGETS[activeBeat] || BEAT_CAMERA_TARGETS[0];
+    const rawProgress = scrollProgressRef ? scrollProgressRef.current : 0;
+    // Single smoothed scroll progress (smoothed once for all scene objects)
+    smoothScrollRef.current = THREE.MathUtils.lerp(
+      smoothScrollRef.current,
+      rawProgress,
+      Math.min(delta * 7.5, 1.0)
+    );
+    const sp = smoothScrollRef.current;
 
-    // Desired camera Z: either transitioning (1.45) or the active beat's target
-    let targetZ = targetConfig.camZ;
+    // Continuous keyframed interpolation from single smoothed progress
+    let targetZ, targetEarthX, targetEarthY, escalation;
+
+    if (sp <= 0.33) {
+      const u = sp / 0.33;
+      targetZ = THREE.MathUtils.lerp(3.65, 3.25, u);
+      targetEarthX = isMobile ? 0.0 : THREE.MathUtils.lerp(1.35, 0.95, u);
+      targetEarthY = isMobile ? THREE.MathUtils.lerp(-0.45, -0.35, u) : 0.0;
+      escalation = THREE.MathUtils.lerp(0.35, 0.60, u);
+    } else if (sp <= 0.66) {
+      const u = (sp - 0.33) / 0.33;
+      targetZ = THREE.MathUtils.lerp(3.25, 2.85, u);
+      targetEarthX = isMobile ? 0.0 : THREE.MathUtils.lerp(0.95, 0.47, u);
+      targetEarthY = isMobile ? THREE.MathUtils.lerp(-0.35, -0.25, u) : 0.0;
+      escalation = THREE.MathUtils.lerp(0.60, 0.85, u);
+    } else {
+      const u = (sp - 0.66) / 0.34;
+      targetZ = 2.85;
+      targetEarthX = isMobile ? 0.0 : THREE.MathUtils.lerp(0.47, 0.0, u);
+      targetEarthY = isMobile ? THREE.MathUtils.lerp(-0.25, -0.16, u) : THREE.MathUtils.lerp(0.0, -0.24, u);
+      escalation = THREE.MathUtils.lerp(0.85, 1.0, u);
+    }
+
     if (isTransitioning) {
       targetZ = 1.45;
     }
 
-    // 600-800ms eased tween (exponential ease-out, independent of scroll speed)
-    const easeFactor = Math.min(delta * 4.5, 1.0);
-    currentCamZ.current = THREE.MathUtils.lerp(currentCamZ.current, targetZ, easeFactor);
-    state.camera.position.z = currentCamZ.current;
-
-    // Target Earth position for this beat
-    const targetEarthX = isMobile ? 0.0 : baseEarthX * targetConfig.earthFactor;
-    const targetEarthY = isMobile
-      ? (activeBeat === 3 ? -0.16 : baseEarthY * targetConfig.earthFactor)
-      : targetConfig.earthY;
-
-    currentEarthPos.current.x = THREE.MathUtils.lerp(currentEarthPos.current.x, targetEarthX, easeFactor);
-    currentEarthPos.current.y = THREE.MathUtils.lerp(currentEarthPos.current.y, targetEarthY, easeFactor);
+    state.camera.position.z = targetZ;
+    currentEarthPos.current.set(targetEarthX, targetEarthY, 0);
 
     if (earthGroupRef.current) {
-      earthGroupRef.current.position.set(currentEarthPos.current.x, currentEarthPos.current.y, 0);
+      earthGroupRef.current.position.set(targetEarthX, targetEarthY, 0);
       earthGroupRef.current.scale.set(responsiveEarthScale, responsiveEarthScale, responsiveEarthScale);
       earthGroupRef.current.rotation.y += delta * 0.015;
     }
 
     // Gentle camera look offset to balance Earth composition
-    const targetLookX = currentEarthPos.current.x * 0.15;
-    const targetLookY = currentEarthPos.current.y * 0.2;
-    currentLookAt.current.x = THREE.MathUtils.lerp(currentLookAt.current.x, targetLookX, easeFactor);
-    currentLookAt.current.y = THREE.MathUtils.lerp(currentLookAt.current.y, targetLookY, easeFactor);
-    state.camera.lookAt(currentLookAt.current.x, currentLookAt.current.y, 0);
+    const targetLookX = targetEarthX * 0.15;
+    const targetLookY = targetEarthY * 0.2;
+    currentLookAt.current.set(targetLookX, targetLookY, 0);
+    state.camera.lookAt(targetLookX, targetLookY, 0);
   });
 
   return (
@@ -156,6 +177,7 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
       {/* Sun key lighting (healProgress = 0, camera following) */}
       <Sun healProgress={0} isLowEnd={false} />
 
+      {/* Synchronous World Transform Group (Earth + Clouds + Atmosphere + Smog + Trash all in same group) */}
       <group ref={earthGroupRef} scale={responsiveEarthScale}>
         <Earth
           pollution={1.0}
@@ -165,17 +187,16 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
         />
         <Clouds pollution={1.0} healProgress={0} />
         <Atmosphere pollution={1.0} healProgress={0} />
+        <Smog
+          pollution={1.0}
+          escalation={activeBeat >= 3 ? 1.0 : activeBeat >= 2 ? 0.85 : activeBeat >= 1 ? 0.65 : 0.40}
+        />
+        <FloatingDebris
+          pollution={1.0}
+          healProgress={0}
+          isFinalBeat={activeBeat === 3}
+        />
       </group>
-
-      {/* Floating debris follows Earth center position, clears center in final beat */}
-      <FloatingDebris
-        center={[currentEarthPos.current.x, currentEarthPos.current.y, 0]}
-        mousePos={mousePos}
-        pollution={1.0}
-        healProgress={0}
-        isFinalBeat={activeBeat === 3}
-        scale={responsiveEarthScale / 0.72}
-      />
     </>
   );
 };
@@ -183,6 +204,7 @@ const LandingSceneController = ({ activeBeat, isTransitioning, mousePos, isBtnHo
 export const Landing = () => {
   const navigate = useNavigate();
   const [activeBeat, setActiveBeat] = useState(0);
+  const scrollProgressRef = useRef(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isBtnHovered, setIsBtnHovered] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -215,6 +237,7 @@ export const Landing = () => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       if (maxScroll <= 0) return;
       const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
+      scrollProgressRef.current = progress;
       setActiveBeat((prevBeat) => computeActiveBeat(progress, prevBeat));
     };
 
@@ -375,6 +398,7 @@ export const Landing = () => {
         >
           <Suspense fallback={null}>
             <LandingSceneController
+              scrollProgressRef={scrollProgressRef}
               activeBeat={activeBeat}
               isTransitioning={isTransitioning}
               mousePos={mousePos}

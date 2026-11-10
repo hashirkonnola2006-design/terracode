@@ -114,35 +114,37 @@ export const EarthShader = {
       // Transition smoothly driven by pollution (1.0 = destroyed, 0.0 = clean)
       vec3 surfaceColor = mix(cleanColor, pollutedColor, pollution);
 
-      // ── 3. SURFACE FIRES (Subtle, slowly pulsing red/orange glow spots on land) ──
+      // ── 3. SURFACE FIRES (Small, dim, subtly pulsing glow spots under plume sources) ──
       vec3 fireEmission = vec3(0.0);
       if (oceanMask < 0.25 && pollution > 0.02) {
-        // Known wildfire hotspots in UV coordinates (Amazon, Central Africa, Australia, Siberia, W. US)
-        vec2 f1 = vec2(0.28, 0.40);
-        vec2 f2 = vec2(0.54, 0.46);
-        vec2 f3 = vec2(0.83, 0.32);
-        vec2 f4 = vec2(0.70, 0.64);
-        vec2 f5 = vec2(0.23, 0.63);
+        // Aligned with industrial plume emitters (East Asia, South Asia, Europe, Eastern US, Middle East)
+        vec2 f1 = vec2(0.819, 0.694); // East Asia
+        vec2 f2 = vec2(0.727, 0.636); // South Asia / India
+        vec2 f3 = vec2(0.526, 0.780); // Europe
+        vec2 f4 = vec2(0.276, 0.728); // Eastern US
+        vec2 f5 = vec2(0.638, 0.650); // Middle East
 
-        // Independent gentle pulsing rates
-        float p1 = 0.68 + 0.32 * sin(uTime * 1.8 + 0.0);
-        float p2 = 0.64 + 0.36 * sin(uTime * 2.2 + 1.6);
-        float p3 = 0.70 + 0.30 * sin(uTime * 1.5 + 3.1);
-        float p4 = 0.66 + 0.34 * sin(uTime * 2.4 + 4.5);
-        float p5 = 0.72 + 0.28 * sin(uTime * 1.9 + 2.3);
+        // Subtle, slow pulsing
+        float p1 = 0.75 + 0.25 * sin(uTime * 1.4 + 0.0);
+        float p2 = 0.70 + 0.30 * sin(uTime * 1.8 + 1.6);
+        float p3 = 0.72 + 0.28 * sin(uTime * 1.2 + 3.1);
+        float p4 = 0.70 + 0.30 * sin(uTime * 1.6 + 4.5);
+        float p5 = 0.75 + 0.25 * sin(uTime * 1.5 + 2.3);
 
         // Coordinate micro-flicker
-        float flicker = 0.85 + 0.15 * sin(vUv.x * 280.0 + vUv.y * 280.0 + uTime * 4.0);
+        float flicker = 0.88 + 0.12 * sin(vUv.x * 280.0 + vUv.y * 280.0 + uTime * 3.5);
 
-        float s1 = smoothstep(0.035, 0.005, length((vUv - f1) * vec2(2.0, 1.0))) * p1;
-        float s2 = smoothstep(0.030, 0.004, length((vUv - f2) * vec2(2.0, 1.0))) * p2;
-        float s3 = smoothstep(0.028, 0.004, length((vUv - f3) * vec2(2.0, 1.0))) * p3;
-        float s4 = smoothstep(0.032, 0.005, length((vUv - f4) * vec2(2.0, 1.0))) * p4;
-        float s5 = smoothstep(0.026, 0.004, length((vUv - f5) * vec2(2.0, 1.0))) * p5;
+        // Small spot radius (0.022 to 0.003)
+        float s1 = smoothstep(0.022, 0.003, length((vUv - f1) * vec2(2.0, 1.0))) * p1;
+        float s2 = smoothstep(0.020, 0.003, length((vUv - f2) * vec2(2.0, 1.0))) * p2;
+        float s3 = smoothstep(0.018, 0.003, length((vUv - f3) * vec2(2.0, 1.0))) * p3;
+        float s4 = smoothstep(0.020, 0.003, length((vUv - f4) * vec2(2.0, 1.0))) * p4;
+        float s5 = smoothstep(0.016, 0.003, length((vUv - f5) * vec2(2.0, 1.0))) * p5;
 
         float fireTotal = (s1 + s2 + s3 + s4 + s5) * flicker * pollution;
-        vec3 fireColor = mix(vec3(1.0, 0.28, 0.03), vec3(1.0, 0.72, 0.12), 0.35);
-        fireEmission = fireColor * fireTotal * 2.2;
+        vec3 fireColor = mix(vec3(0.95, 0.24, 0.02), vec3(0.95, 0.60, 0.10), 0.30);
+        // Dim, subtle glow under plume emitters
+        fireEmission = fireColor * fireTotal * 1.15;
       }
 
       // ── 4. OCEAN SHEEN (Subtle wide soft sheen, diminished in murky water) ──
