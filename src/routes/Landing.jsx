@@ -33,11 +33,6 @@ const BEATS_DATA = [
       </>
     ),
     body: "Plastic, pollution and human waste are choking our home. It's time to act.",
-    button: {
-      label: 'Start Cleaning',
-      primary: true,
-      large: false,
-    },
   },
   {
     id: 1,
@@ -432,8 +427,8 @@ export const Landing = () => {
               Heal it with<br />your own hands.
             </h1>
 
-            {/* c) The Button: at least 72px tall and 300px wide (desktop), 64px full width (mobile), gradient #4ade80 to #22c55e, text #052e16, white top highlight, sonar ripple rings, shine sweep, arrow nudge */}
-            <div className="relative flex items-center justify-center my-2 w-full max-w-[340px] sm:max-w-none sm:w-auto">
+            {/* c) The Button: at least 72px tall and 300px wide, gradient #4ade80 to #22c55e, text #052e16, white top highlight, sonar ripple rings, shine sweep, arrow nudge */}
+            <div className="relative flex items-center justify-center my-2">
               
               {/* Sonar Ripple Ring 1 (2.4s loop) */}
               <div className="absolute inset-0 rounded-full bg-emerald-400/40 sonar-ring-1 pointer-events-none" />
@@ -447,7 +442,7 @@ export const Landing = () => {
                 onMouseEnter={() => setIsBtnHovered(true)}
                 onMouseLeave={() => setIsBtnHovered(false)}
                 disabled={isTransitioning}
-                className="relative group overflow-hidden flex items-center justify-center gap-3 sm:gap-4 min-h-[64px] sm:min-h-[72px] w-full sm:w-auto sm:min-w-[340px] px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-gradient-to-r from-[#4ade80] to-[#22c55e] text-[#052e16] font-bold text-base sm:text-lg tracking-[0.06em] uppercase shadow-[0_0_50px_rgba(74,222,128,0.65)] hover:shadow-[0_0_75px_rgba(74,222,128,0.95)] hover:scale-[1.06] active:scale-[0.97] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-4 focus:ring-white select-none z-10"
+                className="relative group overflow-hidden flex items-center justify-center gap-4 min-h-[72px] min-w-[300px] sm:min-w-[340px] px-10 py-5 rounded-full bg-gradient-to-r from-[#4ade80] to-[#22c55e] text-[#052e16] font-bold text-base sm:text-lg tracking-[0.06em] uppercase shadow-[0_0_50px_rgba(74,222,128,0.65)] hover:shadow-[0_0_75px_rgba(74,222,128,0.95)] hover:scale-[1.06] active:scale-[0.97] transition-all duration-200 cursor-pointer focus:outline-none focus:ring-4 focus:ring-white select-none z-10"
                 style={{
                   boxShadow: isBtnHovered
                     ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.90), 0 0 75px rgba(74, 222, 128, 0.90)'
@@ -505,20 +500,6 @@ export const Landing = () => {
                 </p>
               )}
 
-              {/* Action Button for Beat 0 */}
-              {currentBeatData.button && (
-                <div>
-                  <button
-                    onClick={handleStartCleaning}
-                    disabled={isTransitioning}
-                    className="btn-aerospace-primary group"
-                  >
-                    <span>{currentBeatData.button.label}</span>
-                    <ArrowRight className="w-4 h-4 text-slate-950 group-hover:translate-x-1.5 transition-transform duration-200" />
-                  </button>
-                </div>
-              )}
-
             </div>
           </div>
         )}
@@ -561,15 +542,8 @@ export const Landing = () => {
             <div className="w-12 h-px bg-white/15" />
           </div>
 
-          {/* Bottom Right: Skip Intro Link */}
-          <div className="w-24 text-right">
-            <button
-              onClick={() => navigate('/clean')}
-              className="font-label uppercase text-[12px] tracking-[0.2em] text-white/50 hover:text-[#4ade80] transition-colors duration-200 p-2 cursor-pointer"
-            >
-              Skip intro &rarr;
-            </button>
-          </div>
+          {/* Bottom Right Spacer (balances pagination dots so scroll indicator remains centered) */}
+          <div className="w-24" />
 
         </div>
 
