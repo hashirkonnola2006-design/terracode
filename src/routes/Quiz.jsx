@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { EarthBackground } from '../three/EarthBackground';
@@ -9,6 +9,10 @@ import {
   getQuizProgressLine,
   QUIZ_RESULT_THRESHOLDS,
 } from '../config/quizResults';
+import {
+  downloadQuizCertificate,
+  shareQuizCertificate,
+} from '../utils/quizCertificate';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import {
   ArrowLeft,
@@ -22,6 +26,9 @@ import {
   RotateCcw,
   Globe2,
   Share2,
+  Download,
+  Loader2,
+  Check,
 } from 'lucide-react';
 
 export const Quiz = () => {
@@ -69,7 +76,26 @@ export const Quiz = () => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [floatingBonus, setFloatingBonus] = useState(false);
-  const [copied, setCopied] = useState(false);
+
+  // Certificate generation & sharing state
+  const [certName, setCertName] = useState(() => {
+    try {
+      return localStorage.getItem('terraheal_cert_name') || '';
+    } catch (_) {
+      return '';
+    }
+  });
+  const [isGeneratingCert, setIsGeneratingCert] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+  const toastTimerRef = useRef(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 3800);
+  };
+
+  const canShare = typeof navigator !== 'undefined' && Boolean(navigator.share);
 
   // Results screen quotes and progress line
   const [resultQuote, setResultQuote] = useState('');
@@ -208,16 +234,41 @@ export const Quiz = () => {
     setSelectedOption(null);
   };
 
-  const handleShare = async () => {
-    const text = `I scored ${quiz.score}/10 on the TerraHeal Zero-Waste Quiz and healed ${quiz.health}% of the Earth! Can you beat my score?`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'TerraHeal Zero-Waste Quiz', text, url: window.location.href });
-      } catch (_) {}
-    } else {
-      await navigator.clipboard.writeText(`${text} ${window.location.href}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+  const handleDownloadCert = async () => {
+    if (isGeneratingCert) return;
+    setIsGeneratingCert(true);
+    try {
+      await downloadQuizCertificate({
+        score: quiz.score,
+        health: quiz.health,
+        playerName: certName,
+        quote: resultQuote,
+        onToast: showToast,
+      });
+    } catch (err) {
+      console.error('Download certificate error:', err);
+      showToast('Could not generate certificate. Please try again.');
+    } finally {
+      setIsGeneratingCert(false);
+    }
+  };
+
+  const handleShareCert = async () => {
+    if (isGeneratingCert) return;
+    setIsGeneratingCert(true);
+    try {
+      await shareQuizCertificate({
+        score: quiz.score,
+        health: quiz.health,
+        playerName: certName,
+        quote: resultQuote,
+        onToast: showToast,
+      });
+    } catch (err) {
+      console.error('Share certificate error:', err);
+      showToast('Could not share certificate. Please try again.');
+    } finally {
+      setIsGeneratingCert(false);
     }
   };
 
@@ -544,19 +595,19 @@ export const Quiz = () => {
           </div>
 
           {/* ── Mobile Bottom Sheet / Desktop Left Column: Results Card (Never Overlaps Earth) ── */}
-          <div className="order-2 md:order-1 w-full md:w-[380px] lg:w-[420px] xl:w-[440px] h-[50vh] md:h-full p-2.5 sm:p-5 md:p-8 flex flex-col justify-end md:justify-center z-30 pointer-events-auto">
-            <div className="w-full max-h-full overflow-y-auto p-4 sm:p-6 md:p-8 rounded-2xl md:rounded-3xl bg-slate-950/90 backdrop-blur-2xl border border-white/10 shadow-2xl text-center space-y-3.5 sm:space-y-4 animate-in slide-in-from-bottom md:slide-in-from-left duration-500">
+          <div className="order-2 md:order-1 w-full md:w-[380px] lg:w-[420px] xl:w-[440px] h-[58vh] sm:h-[54vh] md:h-full p-2 sm:p-5 md:p-8 flex flex-col justify-end md:justify-center z-30 pointer-events-auto">
+            <div className="w-full max-h-full overflow-y-auto p-3.5 sm:p-6 md:p-8 rounded-2xl md:rounded-3xl bg-slate-950/90 backdrop-blur-2xl border border-white/10 shadow-2xl text-center space-y-2.5 sm:space-y-4 animate-in slide-in-from-bottom md:slide-in-from-left duration-500">
               {/* Icon */}
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#0becc2]/10 border border-[#0becc2]/30 mx-auto flex items-center justify-center text-[#0becc2] shrink-0">
-                <Globe2 className="w-6 h-6 sm:w-7 sm:h-7" />
+              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-[#0becc2]/10 border border-[#0becc2]/30 mx-auto flex items-center justify-center text-[#0becc2] shrink-0">
+                <Globe2 className="w-5 h-5 sm:w-7 sm:h-7" />
               </div>
 
               {/* Title & Tier Quote */}
-              <div className="space-y-1.5">
-                <span className="font-label uppercase text-[10px] sm:text-[11px] font-semibold tracking-[0.25em] text-[#0becc2]">
+              <div className="space-y-1 sm:space-y-1.5">
+                <span className="font-label uppercase text-[9px] sm:text-[11px] font-semibold tracking-[0.25em] text-[#0becc2]">
                   Quiz Completed
                 </span>
-                <h2 className="font-display font-extrabold text-xl sm:text-2xl text-white">
+                <h2 className="font-display font-extrabold text-lg sm:text-2xl text-white leading-tight">
                   {quiz.score === 10
                     ? 'Planet Earth Fully Restored!'
                     : quiz.health >= QUIZ_RESULT_THRESHOLDS.GOOD
@@ -567,36 +618,62 @@ export const Quiz = () => {
                 </h2>
 
                 {/* Motivating Quote Message */}
-                <p className="font-body font-light text-xs sm:text-sm text-white/80 max-w-md mx-auto leading-relaxed pt-1">
+                <p className="font-body font-light text-xs sm:text-sm text-white/80 max-w-md mx-auto leading-relaxed pt-0.5 sm:pt-1">
                   "{resultQuote}"
                 </p>
 
                 {/* Sub-line: X% more to fully heal the Earth (when below 100%) */}
                 {progressLine && (
-                  <p className="text-xs font-mono font-medium text-amber-400/90 pt-0.5">
+                  <p className="text-[11px] sm:text-xs font-mono font-medium text-amber-400/90 pt-0.5">
                     {progressLine}
                   </p>
                 )}
               </div>
 
               {/* Score Metric Cards */}
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3 max-w-sm mx-auto w-full">
-                <div className="p-2.5 sm:p-3.5 rounded-xl bg-white/[0.03] border border-white/10">
-                  <span className="font-label uppercase text-[9px] sm:text-[10px] tracking-wider text-white/50 block mb-1">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 max-w-sm mx-auto w-full">
+                <div className="p-2 sm:p-3.5 rounded-xl bg-white/[0.03] border border-white/10">
+                  <span className="font-label uppercase text-[8px] sm:text-[10px] tracking-wider text-white/50 block mb-0.5 sm:mb-1">
                     Your Score
                   </span>
-                  <span className="font-mono font-bold text-lg sm:text-xl text-[#0becc2]">
+                  <span className="font-mono font-bold text-base sm:text-xl text-[#0becc2]">
                     {quiz.score} / 10
                   </span>
                 </div>
-                <div className="p-2.5 sm:p-3.5 rounded-xl bg-white/[0.03] border border-white/10">
-                  <span className="font-label uppercase text-[9px] sm:text-[10px] tracking-wider text-white/50 block mb-1">
+                <div className="p-2 sm:p-3.5 rounded-xl bg-white/[0.03] border border-white/10">
+                  <span className="font-label uppercase text-[8px] sm:text-[10px] tracking-wider text-white/50 block mb-0.5 sm:mb-1">
                     Earth Restored
                   </span>
-                  <span className="font-mono font-bold text-lg sm:text-xl text-[#0becc2]">
+                  <span className="font-mono font-bold text-base sm:text-xl text-[#0becc2]">
                     {quiz.health}%
                   </span>
                 </div>
+              </div>
+
+
+              {/* Optional Name Input for Certificate */}
+              <div className="w-full text-left pt-1">
+                <label
+                  htmlFor="cert-name-input"
+                  className="block text-[10px] font-label uppercase tracking-wider text-white/50 mb-1"
+                >
+                  Your name (for the certificate)
+                </label>
+                <input
+                  id="cert-name-input"
+                  type="text"
+                  maxLength={30}
+                  value={certName}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCertName(val);
+                    try {
+                      localStorage.setItem('terraheal_cert_name', val);
+                    } catch (_) {}
+                  }}
+                  placeholder="Your name (optional)"
+                  className="w-full px-3.5 py-2 text-xs rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#0becc2]/60 focus:bg-white/[0.07] transition-all font-body"
+                />
               </div>
 
               {/* Action Buttons (NO Play Cleanup button) */}
@@ -631,18 +708,45 @@ export const Quiz = () => {
                   </button>
                 )}
 
-                {/* Share Score Button */}
-                <button
-                  onClick={handleShare}
-                  className="w-full py-2 text-white/60 hover:text-white font-label text-[10px] uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Share2 className="w-3 h-3" />
-                  <span>{copied ? 'Score Link Copied!' : 'Share Score'}</span>
-                </button>
+                {/* Download Certificate (Full-width secondary) + Share Icon Button */}
+                <div className="flex items-center gap-2 w-full">
+                  <button
+                    onClick={handleDownloadCert}
+                    disabled={isGeneratingCert}
+                    className="flex-1 py-2.5 px-4 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-label text-[11px] uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGeneratingCert ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0becc2]" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isGeneratingCert ? 'Generating...' : 'Download Certificate'}</span>
+                  </button>
+
+                  {canShare && (
+                    <button
+                      onClick={handleShareCert}
+                      disabled={isGeneratingCert}
+                      aria-label="Share certificate"
+                      title="Share certificate"
+                      className="w-10 h-10 shrink-0 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white hover:text-[#0becc2] transition-colors cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </main>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-slate-900/95 border border-[#0becc2]/40 text-[#0becc2] text-xs font-label uppercase tracking-wider shadow-2xl flex items-center gap-2 pointer-events-auto backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <Check className="w-4 h-4 text-[#0becc2] shrink-0" />
+          <span className="text-white/90 normal-case font-body font-normal text-xs">{toastMessage}</span>
+        </div>
       )}
     </div>
   );
