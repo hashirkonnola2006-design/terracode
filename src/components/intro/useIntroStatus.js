@@ -8,6 +8,12 @@ export function checkShouldPlayIntro() {
   if (typeof window === 'undefined') return false;
   if (!INTRO_CONFIG.enabled) return false;
 
+  // Never play intro animation or mount canvas on static pages
+  const pathname = window.location.pathname;
+  if (['/terms', '/privacy', '/sources', '/credits'].includes(pathname)) {
+    return false;
+  }
+
   try {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get(INTRO_CONFIG.storage.urlOverrideParam) === '1') {

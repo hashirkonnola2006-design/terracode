@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { GAME_CONFIG } from '../config/game';
+import { Footer } from '../components/Footer/Footer';
 import {
   Download,
   Share2,
@@ -206,34 +207,8 @@ export const EndingScreen = () => {
           </div>
         </div>
 
-        {/* ── 4. Competition Footer (Only displayed at game completion) ── */}
-        <footer className="pt-8 border-t border-white/10 text-center space-y-4 text-xs text-white/50">
-          <div className="flex flex-wrap items-center justify-center gap-6">
-            <a
-              href="https://github.com/hashirkonnola2006-design/terracode"
-              target="_blank"
-              rel="noreferrer"
-              className="font-label uppercase text-[11px] tracking-[0.14em] inline-flex items-center gap-1.5 hover:text-[#0becc2] transition-colors"
-            >
-              <Code2 className="w-4 h-4" /> GitHub Repository
-            </a>
-            <span className="font-label uppercase text-[11px] tracking-[0.14em] inline-flex items-center gap-1.5 text-white/80 font-semibold">
-              <Zap className="w-3.5 h-3.5 text-[#0becc2]" /> Built for TerraCode 2026
-            </span>
-            <button
-              onClick={toggleLiteMode}
-              className="font-label uppercase text-[11px] tracking-[0.14em] hover:text-[#0becc2] transition-colors cursor-pointer"
-            >
-              Display: {liteMode ? 'Lite Mode' : 'Cinematic High-DPI'}
-            </button>
-          </div>
-
-          <p className="font-mono text-[11px] text-white/40 max-w-2xl mx-auto leading-relaxed">
-            Data & scientific benchmarks sourced from <span className="text-white/60">UNEP</span>, <span className="text-white/60">IRENA</span>,{' '}
-            <span className="text-white/60">Ember Energy Review 2024</span>, <span className="text-white/60">FAO FRA 2024</span>, and{' '}
-            <span className="text-white/60">IUCN</span>. Earth textures courtesy of NASA Blue Marble and Visible Earth. Procedural shaders powered by Three.js & Ashima simplex noise.
-          </p>
-        </footer>
+        {/* ── 4. Shared Minimal Competition Footer ── */}
+        <Footer className="mt-8 border-t border-white/10" />
 
       </div>
     </div>

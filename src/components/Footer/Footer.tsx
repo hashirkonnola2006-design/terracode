@@ -1,98 +1,168 @@
-import React from 'react';
-import { Zap, ZapOff } from 'lucide-react';
-import { TerraHealLogo } from '../brand/TerraHealLogo';
+import React, { useState } from 'react';
+import { NavLink, Link } from 'react-router-dom';
+import { Code2 } from 'lucide-react';
+import { useGameStore } from '../../store/gameStore';
 
 interface FooterProps {
-  isLowPower:       boolean;
-  onToggleLowPower: () => void;
+  className?: string;
 }
 
 /**
- * Footer
+ * Shared TerraHeal Footer Component
  *
- * Project name, theme, GitHub/credits links,
- * low-power toggle, and a sustainable page-weight note.
+ * Minimal, flat, bold aesthetic.
+ * Background #050505, border #1f1f1f, text #ffffff, secondary #8a8a8a, accent --brand.
  */
-export const Footer: React.FC<FooterProps> = ({ isLowPower, onToggleLowPower }) => {
-  // Rough page weight estimate (textures + JS bundle gzipped)
-  const pageWeightKb = '~360';
+export const Footer: React.FC<FooterProps> = ({ className = '' }) => {
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const resetAllProgress = useGameStore((s) => s.resetAllProgress);
+
+  const handleResetConfirm = () => {
+    resetAllProgress();
+    setShowResetConfirm(false);
+  };
+
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `min-h-[44px] inline-flex items-center font-mono uppercase text-[12px] tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-glow)] rounded-sm ${
+      isActive ? 'text-white font-medium' : 'text-[#8a8a8a] hover:text-white'
+    }`;
 
   return (
-    <footer className="relative bg-[rgba(2,7,14,0.35)] backdrop-blur-md text-slate-400 text-xs">
-      <div className="max-w-5xl mx-auto px-6 sm:px-8 py-10 sm:py-12">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
-
-          {/* Brand */}
-          <div>
-            <div className="mb-2">
-              <TerraHealLogo markSize={24} textClass="text-sm font-bold" />
-            </div>
-            <p className="text-slate-500 leading-relaxed max-w-xs">
-              Built for <span className="text-[#0becc2]">TerraCode 2026</span> — theme:
-              Green Tomorrow, Building a Sustainable Future.
+    <footer
+      id="sources"
+      className={`relative w-full bg-[#050505] border-t border-[#1f1f1f] text-[#ffffff] select-none ${className}`}
+    >
+      <div className="max-w-[1224px] mx-auto px-6 sm:px-8 pt-16 pb-12">
+        {/* ── Row 1: Brand & Nav Columns ── */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-10 md:gap-16">
+          {/* Row 1 (Left): Wordmark & Tagline */}
+          <div className="space-y-2">
+            <Link
+              to="/solutions"
+              aria-label="TerraHeal Home"
+              className="inline-block font-pixel text-2xl font-bold tracking-tight leading-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-glow)] rounded-sm"
+              style={{ fontFamily: "'Pixelify Sans', monospace, sans-serif" }}
+            >
+              <span className="text-white">Terra</span>
+              <span className="text-[var(--brand)]">Heal</span>
+            </Link>
+            <p className="font-body text-[14px] text-[#8a8a8a] leading-normal">
+              Heal the planet by playing.
             </p>
           </div>
 
-          {/* Links */}
-          <div className="flex flex-col gap-2.5">
-            <a
-              href="https://github.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#0becc2] transition-colors"
-            >
-              GitHub Repository
-            </a>
-            <a
-              href="#"
-              className="hover:text-[#0becc2] transition-colors"
-            >
-              Credits &amp; Licences
-            </a>
-            <a
-              href="https://www.ipcc.ch/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#0becc2] transition-colors"
-            >
-              Data Sources
-            </a>
-          </div>
+          {/* Row 1 (Right): Two Link Columns (PLAY and INFO) */}
+          <div className="grid grid-cols-2 gap-8 sm:gap-16">
+            {/* Column "PLAY" */}
+            <div className="flex flex-col">
+              <span className="font-mono text-[12px] uppercase tracking-[0.12em] text-[#8a8a8a] mb-2 font-medium">
+                PLAY
+              </span>
+              <nav className="flex flex-col" aria-label="Play Games Navigation">
+                <NavLink to="/clean" className={navLinkClass}>
+                  Cleanup Mission
+                </NavLink>
+                <NavLink to="/quiz" className={navLinkClass}>
+                  Zero-Waste Quiz
+                </NavLink>
+              </nav>
+            </div>
 
-          {/* Low-Power Mode toggle + page weight */}
-          <div className="flex flex-col items-start sm:items-end gap-3">
-            <button
-              onClick={onToggleLowPower}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-full border transition-all text-xs font-medium
-                ${isLowPower
-                  ? 'bg-[#0becc2]/15 border-[#0becc2]/40 text-[#0becc2]'
-                  : 'bg-slate-900/60 border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
-                }`}
-            >
-              {isLowPower
-                ? <><ZapOff className="w-3.5 h-3.5" /> Eco Mode: ON (2D Fallback)</>
-                : <><Zap className="w-3.5 h-3.5 text-amber-400" /> Eco Mode: OFF (3D Globe)</>
-              }
-            </button>
-            <span className="text-slate-600 font-mono">
-              Approx. page weight (gzip): {pageWeightKb} KB
-            </span>
-            <span className="text-slate-600">
-              60 fps · DPR capped at 2 · Zero third-party trackers
-            </span>
+            {/* Column "INFO" */}
+            <div className="flex flex-col">
+              <span className="font-mono text-[12px] uppercase tracking-[0.12em] text-[#8a8a8a] mb-2 font-medium">
+                INFO
+              </span>
+              <nav className="flex flex-col" aria-label="Information Navigation">
+                <NavLink to="/sources" className={navLinkClass}>
+                  Sources
+                </NavLink>
+                <NavLink to="/credits" className={navLinkClass}>
+                  Credits
+                </NavLink>
+                <NavLink to="/terms" className={navLinkClass}>
+                  Terms
+                </NavLink>
+                <NavLink to="/privacy" className={navLinkClass}>
+                  Privacy
+                </NavLink>
+              </nav>
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-white/5 mt-8 pt-6 flex flex-col sm:flex-row
-          items-center justify-between gap-3 text-slate-600">
-          <span>© 2026 TerraHeal / TerraCode. MIT Licence.</span>
-          <span className="text-center">
-            Earth textures: NASA Blue Marble (public domain) via Three.js examples (MIT) ·
-            Simplex noise: Ashima Arts (MIT)
-          </span>
+        {/* ── Row 2: Divider ── */}
+        <div className="border-t border-[#1f1f1f] my-8 sm:my-10" />
+
+        {/* ── Row 3: Meta & Reset Action ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 font-mono text-[12px] text-[#8a8a8a]">
+          {/* Row 3 (Left): Copyright & GitHub */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+            <span>TerraHeal 2026. Built for TerraCode 2026.</span>
+            <a
+              href="https://github.com/hashirkonnola2006-design/terracode"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="TerraHeal GitHub repository"
+              className="min-h-[44px] inline-flex items-center gap-1.5 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-glow)] rounded-sm"
+            >
+              <Code2 className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>GitHub</span>
+            </a>
+          </div>
+
+          {/* Row 3 (Right): Reset All Progress */}
+          <div className="pt-2 md:pt-0">
+            <button
+              type="button"
+              onClick={() => setShowResetConfirm(true)}
+              className="min-h-[44px] inline-flex items-center font-mono uppercase text-[12px] tracking-[0.12em] text-red-500 hover:text-red-400 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-glow)] rounded-sm"
+            >
+              RESET ALL PROGRESS
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* ── Flat Reset Confirmation Modal ── */}
+      {showResetConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85"
+        >
+          <div className="p-6 bg-[#050505] border border-[#333333] max-w-sm w-full space-y-4 text-left">
+            <h3
+              id="reset-modal-title"
+              className="font-['Outfit',sans-serif] font-medium text-lg text-white"
+            >
+              Reset all game progress?
+            </h3>
+            <p className="font-body text-xs text-[#8a8a8a] leading-relaxed">
+              This will clear both the Cleanup Mission and Zero-Waste Quiz progress, scores, and saved Earth states. This action cannot be undone.
+            </p>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                className="flex-1 min-h-[44px] px-4 bg-[#1f1f1f] hover:bg-[#2a2a2a] text-white text-xs font-mono uppercase tracking-[0.12em] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-glow)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetConfirm}
+                className="flex-1 min-h-[44px] px-4 bg-red-600 hover:bg-red-700 text-white text-xs font-mono uppercase tracking-[0.12em] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-glow)]"
+              >
+                Reset All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </footer>
   );
 };
 
+export default Footer;

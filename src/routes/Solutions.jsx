@@ -4,6 +4,7 @@ import { useGameStore } from '../store/gameStore';
 import { GAMES } from '../config/games';
 import { SolutionsHero } from '../components/solutions/SolutionsHero';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
+import { Footer } from '../components/Footer/Footer';
 import {
   Leaf,
   Sparkles,
@@ -83,9 +84,7 @@ export const Solutions = () => {
   const toggleLiteMode = useGameStore((s) => s.toggleLiteMode);
   const muted = useGameStore((s) => s.muted);
   const toggleMute = useGameStore((s) => s.toggleMute);
-  const resetAllProgress = useGameStore((s) => s.resetAllProgress);
 
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
 
   useEffect(() => {
@@ -101,26 +100,23 @@ export const Solutions = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Smooth scroll to #play if URL hash matches
+  // Smooth scroll to #play or redirect #sources
   useEffect(() => {
     if (location.hash === '#play') {
       setTimeout(() => {
         const el = document.getElementById('play');
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }, 150);
+    } else if (location.hash === '#sources') {
+      navigate('/sources', { replace: true });
     }
-  }, [location.hash]);
+  }, [location.hash, navigate]);
 
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
-  };
-
-  const handleResetConfirm = () => {
-    resetAllProgress();
-    setShowResetConfirm(false);
   };
 
   return (
@@ -382,100 +378,11 @@ export const Solutions = () => {
           </div>
         </section>
 
-        {/* ── 4. Footer & Licences ── */}
-        <footer className="pt-16 border-t border-white/10 space-y-8 text-xs text-white/50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="space-y-2">
-              <span className="font-display font-bold text-sm text-white block">
-                TerraHeal Platform: heal the planet by playing.
-              </span>
-              <p className="font-body text-xs text-white/60 leading-relaxed">
-                An interactive environmental simulation dedicated to raising awareness for zero-waste practices and clean renewable energy.
-              </p>
-            </div>
+        </main>
 
-            <div className="space-y-2">
-              <span className="font-label uppercase text-[11px] font-semibold text-white/80 tracking-wider block">
-                Data Sources & Benchmarks
-              </span>
-              <ul className="space-y-1 text-white/50 font-body text-xs">
-                <li>• UNEP (Turning off the Tap 2023)</li>
-                <li>• Ember Global Electricity Review 2024</li>
-                <li>• FAO Forest Resources Assessment 2024</li>
-                <li>• IPCC Climate & Land Special Report</li>
-                <li>• ESA Space Debris Office 2024</li>
-              </ul>
-            </div>
-
-            <div className="space-y-2">
-              <span className="font-label uppercase text-[11px] font-semibold text-white/80 tracking-wider block">
-                Credits & Assets
-              </span>
-              <p className="text-white/50 font-body text-xs leading-relaxed">
-                Earth textures courtesy of NASA Visible Earth (Blue Marble). 3D rendering powered by Three.js & React Three Fiber.
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-4 text-xs">
-            <div className="flex items-center gap-6">
-              <a
-                href="https://github.com/hashirkonnola2006-design/terracode"
-                target="_blank"
-                rel="noreferrer"
-                className="font-label uppercase text-[11px] tracking-wider hover:text-[#0becc2] transition-colors inline-flex items-center gap-1.5"
-              >
-                <Code2 className="w-4 h-4" /> GitHub Repository
-              </a>
-              <span className="font-label uppercase text-[11px] tracking-wider text-white/70">
-                TerraCode 2026
-              </span>
-            </div>
-
-            <div className="flex items-center gap-4">
-              {/* Reset All Progress Link */}
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="text-red-400/70 hover:text-red-400 font-label uppercase text-[11px] tracking-wider transition-colors cursor-pointer"
-              >
-                Reset All Progress
-              </button>
-            </div>
-          </div>
-        </footer>
-      </main>
-    </div>
-
-      {/* ── Reset Confirmation Dialog ── */}
-      {showResetConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="p-6 rounded-2xl bg-slate-950 border border-red-500/40 max-w-sm w-full space-y-4 text-center shadow-2xl">
-            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 mx-auto flex items-center justify-center text-red-400">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <h3 className="font-display font-extrabold text-lg text-white">
-              Reset All Game Progress?
-            </h3>
-            <p className="font-body text-xs text-white/70 leading-relaxed">
-              This will clear both the Cleanup Mission and Zero-Waste Quiz progress, scores, and saved Earth states. This action cannot be undone.
-            </p>
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                className="flex-1 py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-semibold uppercase tracking-wider transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleResetConfirm}
-                className="flex-1 py-2.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-semibold uppercase tracking-wider transition-colors shadow-[0_0_12px_rgba(239,68,68,0.4)]"
-              >
-                Reset All
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* ── Shared Minimal Footer ── */}
+        <Footer />
+      </div>
     </div>
   );
 };
