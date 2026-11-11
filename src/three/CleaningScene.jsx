@@ -194,6 +194,7 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
           noGroupTilt={true}
           healProgress={currentClean}
           pollution={pollutionVal}
+          healMaskManager={healMask}
           isLowEnd={liteMode}
         />
 
@@ -203,6 +204,7 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
           noGroupTilt={true}
           healProgress={currentClean}
           pollution={pollutionVal}
+          healMaskManager={healMask}
         />
 
         {/* Thin Atmospheric Rim Glow */}

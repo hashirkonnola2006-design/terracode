@@ -202,6 +202,7 @@ const BackgroundSceneController = ({
           noGroupTilt={true}
           healProgress={smoothHealth.current}
           pollution={pollution}
+          healMaskManager={healMaskManager}
         />
         <Atmosphere
           healProgress={smoothHealth.current}

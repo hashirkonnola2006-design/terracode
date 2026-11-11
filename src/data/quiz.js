@@ -16,7 +16,7 @@ export const QUIZ_QUESTIONS = [
     options: ['Recycle', 'Reduce', 'Reuse', 'Burn for energy'],
     correct: 'Reduce',
     explanation: 'The best waste is the waste never created, so prevention and reduction come before reuse and recycling.',
-    region: { name: 'North Pacific Gyre', lat: 32.0, lon: -145.0, radius: 0.16 },
+    region: { name: 'North Pacific Gyre', lat: 32.0, lon: -145.0, radius: 0.24 },
   },
   {
     id: 2,
@@ -24,7 +24,7 @@ export const QUIZ_QUESTIONS = [
     options: ['Glass', 'Plastic bottles', 'Paper', 'Styrofoam'],
     correct: 'Glass',
     explanation: 'Glass can be melted and reshaped endlessly. Paper fibres shorten with each cycle and most plastics lose quality.',
-    region: { name: 'European Rhine Basin', lat: 50.0, lon: 8.5, radius: 0.14 },
+    region: { name: 'European Rhine Basin', lat: 50.0, lon: 8.5, radius: 0.24 },
   },
   {
     id: 3,
@@ -32,7 +32,7 @@ export const QUIZ_QUESTIONS = [
     options: ['Nutrient-rich soil', 'Recycled plastic', 'Clean water', 'Ash'],
     correct: 'Nutrient-rich soil',
     explanation: 'Composting lets microbes break organic waste down into humus that improves soil.',
-    region: { name: 'Amazon Basin Canopy', lat: -8.5, lon: -55.0, radius: 0.15 },
+    region: { name: 'Amazon Basin Canopy', lat: -8.5, lon: -55.0, radius: 0.24 },
   },
   {
     id: 4,
@@ -45,7 +45,7 @@ export const QUIZ_QUESTIONS = [
     ],
     correct: 'They tangle and jam sorting machines',
     explanation: 'Thin bags wrap around machinery and are often removed or rejected, so reuse them or use a dedicated drop-off point.',
-    region: { name: 'North American Rust Belt', lat: 41.5, lon: -85.0, radius: 0.14 },
+    region: { name: 'North American Rust Belt', lat: 41.5, lon: -85.0, radius: 0.24 },
   },
   {
     id: 5,
@@ -58,7 +58,7 @@ export const QUIZ_QUESTIONS = [
     ],
     correct: 'Carrying a reusable bottle and bag',
     explanation: 'Reusables replace many single-use items over their lifetime.',
-    region: { name: 'Indo-Gangetic Basin', lat: 26.5, lon: 80.0, radius: 0.15 },
+    region: { name: 'Indo-Gangetic Basin', lat: 26.5, lon: 80.0, radius: 0.24 },
   },
   {
     id: 6,
@@ -66,7 +66,7 @@ export const QUIZ_QUESTIONS = [
     options: ['Helium', 'Methane', 'Oxygen', 'Nitrogen'],
     correct: 'Methane',
     explanation: 'Buried food and garden waste decays without oxygen and produces methane, a potent greenhouse gas, so composting and diverting food waste help the climate.',
-    region: { name: 'East Asian Manufacturing Belt', lat: 31.5, lon: 118.0, radius: 0.15 },
+    region: { name: 'East Asian Manufacturing Belt', lat: 31.5, lon: 118.0, radius: 0.24 },
   },
   {
     id: 7,
@@ -79,7 +79,7 @@ export const QUIZ_QUESTIONS = [
     ],
     correct: 'The type of plastic resin',
     explanation: 'The code identifies the plastic type, which helps recyclers sort it. It does not guarantee the item will be accepted locally.',
-    region: { name: 'North Atlantic Ocean Gyre', lat: 28.0, lon: -42.0, radius: 0.16 },
+    region: { name: 'North Atlantic Ocean Gyre', lat: 28.0, lon: -42.0, radius: 0.24 },
   },
   {
     id: 8,
@@ -92,7 +92,7 @@ export const QUIZ_QUESTIONS = [
     ],
     correct: 'Take it to an authorised e-waste collection point',
     explanation: 'E-waste contains toxic and valuable materials that need proper handling and recovery.',
-    region: { name: 'Congo Rainforest Corridor', lat: -1.5, lon: 22.0, radius: 0.15 },
+    region: { name: 'Congo Rainforest Corridor', lat: -1.5, lon: 22.0, radius: 0.24 },
   },
   {
     id: 9,
@@ -105,7 +105,7 @@ export const QUIZ_QUESTIONS = [
     ],
     correct: 'Wet (biodegradable) waste',
     explanation: 'Segregating wet waste at source lets it be composted instead of contaminating recyclables or filling landfills.',
-    region: { name: 'Indian Ocean Garbage Gyre', lat: -15.0, lon: 80.0, radius: 0.16 },
+    region: { name: 'Indian Ocean Garbage Gyre', lat: -15.0, lon: 80.0, radius: 0.24 },
   },
   {
     id: 10,
@@ -118,7 +118,7 @@ export const QUIZ_QUESTIONS = [
     ],
     correct: 'Food residue can contaminate other recyclables',
     explanation: 'Greasy or dirty items can spoil a whole batch of paper and plastic, so a quick rinse keeps recyclables recyclable.',
-    region: { name: 'South Pacific Ocean Gyre', lat: -25.0, lon: -110.0, radius: 0.16 },
+    region: { name: 'South Pacific Ocean Gyre', lat: -25.0, lon: -110.0, radius: 0.24 },
   },
 ];
 

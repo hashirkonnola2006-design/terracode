@@ -23,6 +23,7 @@ export const EarthShader = {
     uCameraPos:   { value: new THREE.Vector3(0, 0, 3.65) },
     uHeroSolutions: { value: 0.0 }, // 1.0 = specialized /solutions hero mode (cracked, fires, ice cap, cyclone)
     uFireFlicker: { value: 1.0 },
+    uUseLocalMask: { value: 0.0 }, // 1.0 = strictly follow local heal mask (for Quiz & Cleanup games)
   },
 
   vertexShader: `
@@ -37,6 +38,33 @@ export const EarthShader = {
       vec2 ba = b - a;
       float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
       return length(pa - ba * h);
+    }
+
+    float hash21(vec2 p) {
+      p = fract(p * vec2(234.34, 435.345));
+      p += dot(p, p + 34.23);
+      return fract(p.x * p.y);
+    }
+
+    float noise2D(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      f = f * f * (3.0 - 2.0 * f);
+      float a = hash21(i);
+      float b = hash21(i + vec2(1.0, 0.0));
+      float c = hash21(i + vec2(0.0, 1.0));
+      float d = hash21(i + vec2(1.0, 1.0));
+      return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+    }
+
+    float fbm2D(vec2 p) {
+      float v = 0.0;
+      float a = 0.5;
+      v += a * noise2D(p); p *= 2.02; a *= 0.5;
+      v += a * noise2D(p); p *= 2.03; a *= 0.5;
+      v += a * noise2D(p); p *= 2.01; a *= 0.5;
+      v += a * noise2D(p);
+      return v;
     }
 
     void main() {
@@ -63,6 +91,7 @@ export const EarthShader = {
     uniform float     uHover;
     uniform float     uHeroSolutions;
     uniform float     uFireFlicker;
+    uniform float     uUseLocalMask;
 
     varying vec2 vUv;
     varying vec3 vViewNormal;
@@ -77,14 +106,54 @@ export const EarthShader = {
       return length(pa - ba * h);
     }
 
+    float hash21(vec2 p) {
+      p = fract(p * vec2(234.34, 435.345));
+      p += dot(p, p + 34.23);
+      return fract(p.x * p.y);
+    }
+
+    float noise2D(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      f = f * f * (3.0 - 2.0 * f);
+      float a = hash21(i);
+      float b = hash21(i + vec2(1.0, 0.0));
+      float c = hash21(i + vec2(0.0, 1.0));
+      float d = hash21(i + vec2(1.0, 1.0));
+      return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+    }
+
+    float fbm2D(vec2 p) {
+      float v = 0.0;
+      float a = 0.5;
+      v += a * noise2D(p); p *= 2.02; a *= 0.5;
+      v += a * noise2D(p); p *= 2.03; a *= 0.5;
+      v += a * noise2D(p); p *= 2.01; a *= 0.5;
+      v += a * noise2D(p);
+      return v;
+    }
+
     void main() {
       // ── LOCAL HEAL MASK & GLOBAL STAGING ──
       float maskVal = 0.0;
-      // Guard texture2D check with texture lookup
       maskVal = texture2D(uHealMask, vUv).r;
 
       float globalClean = 1.0 - clamp(max(uPollution, 1.0 - uHeal), 0.0, 1.0);
-      float effectiveClean = clamp(max(globalClean, maskVal), 0.0, 1.0);
+      
+      // When uUseLocalMask > 0.5 (Quiz & Cleanup games):
+      // The mask texture defines EXACTLY which parts are clean vs dirty.
+      // If global clean is 1.0 (100% full victory), the entire planet is clean.
+      // Otherwise, ONLY regions painted in maskVal are clean; unhealed regions remain genuinely dirty (0.0)!
+      float effectiveClean;
+      if (uUseLocalMask > 0.5) {
+        if (globalClean >= 0.999) {
+          effectiveClean = 1.0;
+        } else {
+          effectiveClean = maskVal;
+        }
+      } else {
+        effectiveClean = clamp(max(globalClean, maskVal), 0.0, 1.0);
+      }
       float effectivePollution = 1.0 - effectiveClean;
 
       // In view space, camera is looking along -Z from (0,0,0)
@@ -160,41 +229,59 @@ export const EarthShader = {
       vec3 pollutedLand = mix(pollutedLandBase, vec3(landLuma * 0.22), 0.35);
 
       // Oceans: Murky, toxic, oily with floating plastic garbage gyres
-      vec3 murkyDeep = vec3(0.010, 0.018, 0.024);
-      vec3 murkyCoast = vec3(0.018, 0.030, 0.028);
-      vec3 basePollutedOcean = mix(murkyDeep, murkyCoast, shallowShelf * 0.50);
+      vec3 murkyDeep = vec3(0.018, 0.026, 0.022); // Sickly dark green-brown dead ocean
+      vec3 murkyCoast = vec3(0.032, 0.040, 0.025); // Toxic algae & industrial runoff
+      vec3 basePollutedOcean = mix(murkyDeep, murkyCoast, shallowShelf * 0.65);
 
-      // ── PROCEDURAL OCEAN PLASTIC GYRES & FLOATING TRASH ISLANDS ──
-      // 1. Indian Ocean Garbage Patch (directly visible in hero framing: lon ~ 70°-90°E, lat -15° to 10°)
-      vec2 indGyrePos = vec2(0.725, 0.440);
-      float dInd = length((vUv - indGyrePos) * vec2(1.2, 1.8));
-      float indMask = smoothstep(0.16, 0.02, dInd);
+      // ── PROCEDURAL OCEAN PLASTIC GYRES & FLOATING TRASH ISLANDS ACROSS ALL BASINS ──
+      // 1. Great North Pacific Garbage Patch (lon ~ -145°, lat ~ 32°) -> u ~ 0.097, v ~ 0.678
+      vec2 pacNorthPos = vec2(0.097, 0.678);
+      float dPacN = length((vUv - pacNorthPos) * vec2(1.2, 1.6));
+      float pacNorthMask = smoothstep(0.22, 0.02, dPacN);
 
-      // 2. North Pacific Garbage Patch
-      vec2 pacGyrePos = vec2(0.920, 0.580);
-      float dPac = length((vUv - pacGyrePos) * vec2(1.0, 1.4));
-      float pacMask = smoothstep(0.20, 0.03, dPac);
+      // 2. South Pacific Ocean Gyre (lon ~ -110°, lat ~ -25°) -> u ~ 0.194, v ~ 0.361
+      vec2 pacSouthPos = vec2(0.194, 0.361);
+      float dPacS = length((vUv - pacSouthPos) * vec2(1.1, 1.5));
+      float pacSouthMask = smoothstep(0.20, 0.02, dPacS);
 
-      // 3. South China Sea / Southeast Asia plastic convergence zone
-      vec2 seaGyrePos = vec2(0.810, 0.480);
-      float dSea = length((vUv - seaGyrePos) * vec2(1.5, 2.0));
-      float seaMask = smoothstep(0.12, 0.02, dSea);
+      // 3. North Atlantic Ocean Gyre (lon ~ -42°, lat ~ 28°) -> u ~ 0.383, v ~ 0.655
+      vec2 atlNorthPos = vec2(0.383, 0.655);
+      float dAtlN = length((vUv - atlNorthPos) * vec2(1.2, 1.6));
+      float atlNorthMask = smoothstep(0.19, 0.02, dAtlN);
 
-      // Procedural micro-swirl plastic scum pattern
-      float oceanSwirl = sin(vUv.x * 75.0 + sin(vUv.y * 55.0) * 2.8) * cos(vUv.y * 75.0 + cos(vUv.x * 55.0) * 2.8);
-      float trashDensity = smoothstep(0.15, 0.75, oceanSwirl * 0.5 + 0.5);
+      // 4. South Atlantic Ocean Gyre (lon ~ -15°, lat ~ -30°) -> u ~ 0.458, v ~ 0.333
+      vec2 atlSouthPos = vec2(0.458, 0.333);
+      float dAtlS = length((vUv - atlSouthPos) * vec2(1.3, 1.7));
+      float atlSouthMask = smoothstep(0.17, 0.02, dAtlS);
 
-      float totalTrashGyre = max(indMask, max(pacMask, seaMask)) * trashDensity * oceanMask;
-      vec3 plasticScumCol = vec3(0.45, 0.48, 0.50); // Weathered microplastics & floating foam
-      vec3 oilySludgeCol  = vec3(0.12, 0.14, 0.10); // Dirty chemical film
-      vec3 gyreTrashCol   = mix(oilySludgeCol, plasticScumCol, smoothstep(0.35, 0.75, trashDensity));
+      // 5. Indian Ocean Garbage Gyre (lon ~ 80°, lat ~ -15°) -> u ~ 0.722, v ~ 0.416
+      vec2 indGyrePos = vec2(0.722, 0.416);
+      float dInd = length((vUv - indGyrePos) * vec2(1.2, 1.6));
+      float indMask = smoothstep(0.20, 0.02, dInd);
+
+      // 6. East Asian / Philippine Sea plastic convergence (lon ~ 135°, lat ~ 22°) -> u ~ 0.875, v ~ 0.622
+      vec2 asiaSeaPos = vec2(0.875, 0.622);
+      float dAsia = length((vUv - asiaSeaPos) * vec2(1.3, 1.8));
+      float asiaSeaMask = smoothstep(0.16, 0.02, dAsia);
+
+      // High-density procedural fractal noise for floating plastic trash islands and slicks
+      float trashFbm = fbm2D(vUv * vec2(90.0, 50.0));
+      float trashTurb = fbm2D(vUv * vec2(220.0, 130.0) + vec2(trashFbm * 0.40));
+      float trashDensity = smoothstep(0.35, 0.75, trashTurb);
+
+      float allGyres = max(max(max(pacNorthMask, pacSouthMask), max(atlNorthMask, atlSouthMask)), max(indMask, asiaSeaMask));
+      float totalTrashGyre = allGyres * trashDensity * oceanMask;
+
+      vec3 plasticScumCol = vec3(0.58, 0.62, 0.60); // Bleached weathered microplastics, foam & debris
+      vec3 oilySludgeCol  = vec3(0.14, 0.12, 0.08); // Dark petroleum film & chemical sludge
+      vec3 gyreTrashCol   = mix(oilySludgeCol, plasticScumCol, smoothstep(0.40, 0.80, trashTurb));
 
       // Coastal industrial toxic runoff bleeding from river deltas
-      float coastalPollution = smoothstep(0.04, 0.25, shallowShelf) * (1.0 - shallowShelf) * 0.45;
-      vec3 toxicRunoff = vec3(0.06, 0.08, 0.05);
+      float coastalPollution = smoothstep(0.04, 0.25, shallowShelf) * (1.0 - shallowShelf) * 0.65;
+      vec3 toxicRunoff = vec3(0.08, 0.09, 0.05);
 
       vec3 pollutedOcean = mix(basePollutedOcean, toxicRunoff, coastalPollution);
-      pollutedOcean = mix(pollutedOcean, gyreTrashCol, totalTrashGyre * 0.65);
+      pollutedOcean = mix(pollutedOcean, gyreTrashCol, totalTrashGyre * 0.85);
 
       // Eased Sub-Values for Global & Local Milestones:
       float oceanClarity = smoothstep(0.05, 0.65, effectiveClean);
@@ -202,6 +289,32 @@ export const EarthShader = {
 
       float landGreen = smoothstep(0.12, 0.80, effectiveClean);
       vec3 currentLand = mix(pollutedLand, cleanLand, landGreen);
+
+      // ── PROCEDURAL WILDFIRES & BURN HOTSPOTS ON UNHEALED CONTINENTS ──
+      // Active burning hotspots: West US, Amazon, Med, Central Africa, Australia, Siberia, SE Asia
+      float fire1 = smoothstep(0.042, 0.006, length((vUv - vec2(0.165, 0.705)) * vec2(1.2, 1.4))); // California/West US
+      float fire2 = smoothstep(0.048, 0.008, length((vUv - vec2(0.335, 0.450)) * vec2(1.1, 1.3))); // Amazon Rainforest
+      float fire3 = smoothstep(0.035, 0.005, length((vUv - vec2(0.488, 0.710)) * vec2(1.3, 1.5))); // Mediterranean / Iberia
+      float fire4 = smoothstep(0.045, 0.008, length((vUv - vec2(0.560, 0.485)) * vec2(1.2, 1.3))); // Central Africa
+      float fire5 = smoothstep(0.040, 0.006, length((vUv - vec2(0.888, 0.345)) * vec2(1.2, 1.4))); // Australia
+      float fire6 = smoothstep(0.038, 0.006, length((vUv - vec2(0.750, 0.780)) * vec2(1.2, 1.5))); // Siberian Boreal
+      float fire7 = smoothstep(0.035, 0.005, length((vUv - vec2(0.816, 0.490)) * vec2(1.3, 1.5))); // SE Asia / Borneo
+
+      float allWildfires = max(max(max(fire1, fire2), max(fire3, fire4)), max(max(fire5, fire6), fire7)) * (1.0 - oceanMask);
+
+      // Fractal flame fronts and crackling ember veins (NO smooth yellow ellipses!)
+      float fireFbm = fbm2D(vUv * 160.0 + vec2(uTime * 0.15, -uTime * 0.25));
+      float emberVeins = smoothstep(0.38, 0.82, fireFbm);
+
+      // Charcoal burn scars surrounding wildfires
+      currentLand = mix(currentLand, vec3(0.02, 0.018, 0.015), allWildfires * (1.0 - effectiveClean) * 0.90);
+
+      // Realistic flickering ember core and golden flame tips
+      float fireFlicker = 0.85 + 0.15 * sin(uTime * 8.0 + vUv.x * 450.0 + vUv.y * 380.0);
+      vec3 emberRed   = vec3(1.0, 0.25, 0.02);
+      vec3 flameGold  = vec3(1.0, 0.85, 0.18);
+      vec3 fireColor  = mix(emberRed, flameGold, emberVeins);
+      vec3 wildfireColor = fireColor * 4.2 * allWildfires * emberVeins * fireFlicker * (1.0 - effectiveClean);
 
       // ── 2B. PROCEDURAL HIGH-DETAIL BRANCHING TECTONIC FAULT LINES & MAGMA FISSURES ──
       vec3 heroFissureEmission = vec3(0.0);
@@ -275,7 +388,7 @@ export const EarthShader = {
       }
 
       vec3 surfaceColor = mix(currentLand, currentOcean, oceanMask);
-      vec3 fireEmission = heroFissureEmission;
+      vec3 fireEmission = heroFissureEmission + wildfireColor;
 
       // ── 4. NIGHT SIDE CITY LIGHTS (Dense sparkling golden grids on dark hemisphere) ──
       vec3 cityLightsEmission = vec3(0.0);

@@ -28,10 +28,12 @@ export const INDUSTRIAL_EMITTERS = [
   { name: 'East Asia',      pos: latLonToVector3(35.0, 115.0), count: 32 }, // North China Plain / Yangtze
   { name: 'South Asia',     pos: latLonToVector3(24.5, 82.0),  count: 32 }, // Indo-Gangetic Plain / India
   { name: 'Central Europe', pos: latLonToVector3(50.5, 9.5),   count: 28 }, // Ruhr / Industrial Germany
-  { name: 'Eastern US',     pos: latLonToVector3(41.0, -80.5), count: 28 }, // Rust Belt / Megalopolis
+  { name: 'Eastern US',     pos: latLonToVector3(41.0, -80.5), count: 32 }, // Rust Belt / Megalopolis
+  { name: 'Western US',     pos: latLonToVector3(36.5, -119.5), count: 28 }, // California / West Coast
   { name: 'Middle East',    pos: latLonToVector3(27.0, 50.0),  count: 24 }, // Persian Gulf industrial
   { name: 'Southeast Asia', pos: latLonToVector3(-6.2, 106.8), count: 24 }, // Java / Jakarta corridor
-  { name: 'South America',  pos: latLonToVector3(-23.5, -46.6), count: 20 }, // São Paulo industrial hub
+  { name: 'South America',  pos: latLonToVector3(-23.5, -46.6), count: 22 }, // São Paulo industrial hub
+  { name: 'Central Africa', pos: latLonToVector3(-1.5, 22.0),  count: 22 }, // Central Africa / Congo
 ];
 
 export const TOTAL_PUFFS = INDUSTRIAL_EMITTERS.reduce((acc, e) => acc + e.count, 0); // 188 puffs
@@ -102,22 +104,27 @@ const SmogShellShader = {
       vec3 viewDir = normalize(uCameraPos - vWorldPos);
       float NdotV = clamp(dot(wn, viewDir), 0.0, 1.0);
 
-      // Fresnel limb falloff: nearly transparent when looking at center, thicker near horizon
-      float horizon = pow(1.0 - NdotV, 2.4);
+      // Fresnel limb falloff
+      float horizon = pow(1.0 - NdotV, 2.0);
 
-      // Low-frequency noise rotating with Earth (anchored to vObjectPos)
-      float n = noise3D(vObjectPos * 3.2 + vec3(0.0, uTime * 0.03, 0.0));
-      float densityMod = 0.75 + 0.50 * n;
+      // Multi-octave organic turbulence (billowing atmospheric smog, NO diagonal zebra bands)
+      vec3 p = vObjectPos * 3.8 + vec3(0.0, uTime * 0.02, 0.0);
+      float n1 = noise3D(p);
+      float n2 = noise3D(p * 2.2 + vec3(uTime * 0.015, 0.0, 0.0)) * 0.5;
+      float n3 = noise3D(p * 4.4) * 0.25;
+      float organicSmog = (n1 + n2 + n3) / 1.75;
+      float densityMod = 0.70 + 0.55 * organicSmog;
 
-      // Desaturated ash-gray with faint warm rust tint (#4a4642 to #6b5f58) - NO bright orange/yellow!
-      vec3 ashDark  = vec3(0.29, 0.27, 0.26);
-      vec3 ashLight = vec3(0.42, 0.37, 0.35);
-      vec3 shellCol = mix(ashDark, ashLight, horizon * 0.7);
+      // Desaturated ash-gray with faint warm rust tint
+      vec3 ashDark  = vec3(0.26, 0.23, 0.20);
+      vec3 ashLight = vec3(0.44, 0.38, 0.32);
+      vec3 shellCol = mix(ashDark, ashLight, horizon * 0.6 + organicSmog * 0.4);
 
-      float baseAlpha = mix(0.06, 0.52, horizon);
-      float alpha = baseAlpha * densityMod * effPollution * mix(0.55, 1.0, uEscalation);
+      // Clearly visible over unhealed regions from all angles, fading to zero where healed
+      float baseAlpha = mix(0.18, 0.60, horizon);
+      float alpha = baseAlpha * densityMod * effPollution * mix(0.65, 1.0, uEscalation);
 
-      gl_FragColor = vec4(shellCol, clamp(alpha, 0.0, 0.90));
+      gl_FragColor = vec4(shellCol, clamp(alpha, 0.0, 0.85));
     }
   `
 };

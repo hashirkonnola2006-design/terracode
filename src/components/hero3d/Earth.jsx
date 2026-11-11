@@ -120,8 +120,9 @@ export const Earth = ({
     u.uHeal.value = 1.0 - initialPollution;
     u.uPulse.value = 0.0;
     u.uHeroSolutions.value = heroSolutions ? 1.0 : 0.0;
+    u.uUseLocalMask.value = healMaskManager ? 1.0 : 0.0;
     return u;
-  }, [dayMap2k, normalMap, specularMap, lightsMap, heroSolutions]);
+  }, [dayMap2k, normalMap, specularMap, lightsMap, heroSolutions, healMaskManager]);
 
   const smoothPollutionRef = useRef(initialPollution);
 
@@ -145,6 +146,7 @@ export const Earth = ({
       shaderMatRef.current.uniforms.uPulse.value = pulseIntensityRef.current;
       shaderMatRef.current.uniforms.uTime.value = t;
       shaderMatRef.current.uniforms.uHeroSolutions.value = heroSolutions ? 1.0 : 0.0;
+      shaderMatRef.current.uniforms.uUseLocalMask.value = healMaskManager ? 1.0 : 0.0;
       shaderMatRef.current.uniforms.uHealMask.value = activeMask.getTexture();
       shaderMatRef.current.uniforms.uDim.value = THREE.MathUtils.lerp(
         shaderMatRef.current.uniforms.uDim.value,

@@ -9,6 +9,7 @@ import {
   AXIAL_TILT_Z,
   INITIAL_ROTATION_Y
 } from './Earth';
+import { healMask } from '../../three/HealMask';
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS (Clouds & Atmosphere Layers)
@@ -18,10 +19,12 @@ export const CLOUD_SPEED_MULTIPLIER = 1.08;   // Rotates slightly faster for nat
 
 const CloudShader = {
   uniforms: {
-    uMap:       { value: null },
-    uPollution: { value: 1.0 },
-    uHeal:      { value: 0.0 },
-    uTime:      { value: 0.0 },
+    uMap:          { value: null },
+    uPollution:    { value: 1.0 },
+    uHeal:         { value: 0.0 },
+    uTime:         { value: 0.0 },
+    uHealMask:     { value: null },
+    uUseLocalMask: { value: 0.0 },
   },
 
   vertexShader: `
@@ -39,16 +42,30 @@ const CloudShader = {
 
   fragmentShader: `
     uniform sampler2D uMap;
+    uniform sampler2D uHealMask;
     uniform float     uPollution;
     uniform float     uHeal;
     uniform float     uTime;
+    uniform float     uUseLocalMask;
 
     varying vec2 vUv;
     varying vec3 vViewNormal;
     varying vec3 vViewPos;
 
     void main() {
-      float pollution = clamp(max(uPollution, 1.0 - uHeal), 0.0, 1.0);
+      float maskVal = texture2D(uHealMask, vUv).r;
+      float globalPollution = clamp(max(uPollution, 1.0 - uHeal), 0.0, 1.0);
+      float effPollution;
+      if (uUseLocalMask > 0.5) {
+        if (globalPollution <= 0.001) {
+          effPollution = 0.0;
+        } else {
+          effPollution = clamp(1.0 - maskVal, 0.0, 1.0);
+        }
+      } else {
+        effPollution = clamp(globalPollution * (1.0 - maskVal), 0.0, 1.0);
+      }
+
       vec4 tex = texture2D(uMap, vUv);
 
       // Contrast curve: crisp natural NASA weather systems and storm fronts
@@ -63,18 +80,18 @@ const CloudShader = {
 
       float cleanDiffuse = 0.70 + 0.30 * clamp(NdotL, 0.0, 1.0);
       float pollutedDiffuse = clamp(NdotL * 0.85 + 0.15, 0.08, 1.0);
-      float diffuse = mix(cleanDiffuse, pollutedDiffuse, pollution);
+      float diffuse = mix(cleanDiffuse, pollutedDiffuse, effPollution);
 
       // Soft limb falloff
       float NdotV = clamp(dot(N, V), 0.0, 1.0);
       float limb = pow(NdotV, 0.30);
 
       // Color: dingy sooty industrial brown-gray when polluted; pristine white when clean
-      vec3 pollutedCloud = vec3(0.40, 0.35, 0.30);
+      vec3 pollutedCloud = vec3(0.32, 0.28, 0.24);
       vec3 healedCloud   = vec3(1.00, 1.00, 1.00);
-      vec3 cloudCol      = mix(healedCloud, pollutedCloud, pollution) * diffuse * limb;
+      vec3 cloudCol      = mix(healedCloud, pollutedCloud, effPollution) * diffuse * limb;
 
-      float baseAlpha = mix(0.40, 0.58, pollution);
+      float baseAlpha = mix(0.40, 0.62, effPollution);
       float alpha = cloudDensity * baseAlpha;
 
       gl_FragColor = vec4(cloudCol, alpha);
@@ -88,9 +105,11 @@ export const Clouds = ({
   pollution = 1.0,
   autoRotate = true,
   noGroupTilt = false,
+  healMaskManager = null,
 }) => {
   const cloudsRef = useRef(null);
   const matRef = useRef(null);
+  const activeMask = healMaskManager || healMask;
 
   const cloudsMap = useTexture('/textures/earth_clouds_2k.jpg');
 
@@ -110,8 +129,10 @@ export const Clouds = ({
     u.uMap.value = cloudsMap;
     u.uPollution.value = initialPollution;
     u.uHeal.value = 1.0 - initialPollution;
+    u.uHealMask.value = activeMask.getTexture();
+    u.uUseLocalMask.value = healMaskManager ? 1.0 : 0.0;
     return u;
-  }, [cloudsMap]);
+  }, [cloudsMap, healMaskManager]);
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
@@ -125,6 +146,8 @@ export const Clouds = ({
       );
       matRef.current.uniforms.uHeal.value = 1.0 - matRef.current.uniforms.uPollution.value;
       matRef.current.uniforms.uTime.value = t;
+      matRef.current.uniforms.uHealMask.value = activeMask.getTexture();
+      matRef.current.uniforms.uUseLocalMask.value = healMaskManager ? 1.0 : 0.0;
     }
 
     if (cloudsRef.current) {
