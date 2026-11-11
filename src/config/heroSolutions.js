@@ -28,9 +28,9 @@ export const HERO_CONFIG = {
   rotationSpeed: 0.0030, // Slow majestic auto-rotation
 
   // HEAL Typography Positioning
-  healTopOffsetDesktop: 'pt-16 sm:pt-20 md:pt-22',
-  healTopOffsetMobile: 'pt-16',
-  healFontSize: 'text-[clamp(90px,23.5vw,350px)]',
+  healTopOffsetDesktop: 'pt-28 sm:pt-36 md:pt-44 lg:pt-48',
+  healTopOffsetMobile: 'pt-28',
+  healFontSize: 'text-[clamp(80px,21vw,300px)]',
 
   // Headline ("Broken planet. Your move.") and Action Buttons Positioning
   headlineBottomDesktop: 'bottom-10 sm:bottom-12 md:bottom-16',

@@ -103,7 +103,8 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
           }}
         >
           <div
-            className={`w-full max-w-[1920px] mx-auto px-4 sm:px-8 md:px-12 ${HERO_CONFIG.healTopOffsetDesktop} flex justify-between items-start select-none will-change-transform`}
+            className="w-full max-w-[1920px] mx-auto px-4 sm:px-8 md:px-12 flex justify-between items-start select-none will-change-transform"
+            style={{ paddingTop: 'clamp(116px, 18.5vh, 185px)' }}
           >
             {['H', 'E', 'A', 'L'].map((letter, idx) => (
               <span
@@ -137,10 +138,10 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
         {/* Soft dark radial scrim behind text for WCAG AAA contrast */}
         <div className="absolute -inset-10 -z-10 bg-radial from-[#050505]/95 via-[#050505]/75 to-transparent blur-3xl pointer-events-none" />
 
-        <div className="space-y-4 sm:space-y-5">
-          {/* Headline on two lines */}
+        <div className="space-y-3 sm:space-y-4">
+          {/* Headline on two lines - Refined, sleek & proportional */}
           <h1
-            className={`tracking-[-0.03em] leading-[0.92] text-[clamp(40px,5.8vw,92px)] font-black transition-all duration-1000 delay-200 ease-out ${
+            className={`tracking-[-0.03em] leading-[0.98] text-[clamp(24px,2.9vw,44px)] font-black transition-all duration-1000 delay-200 ease-out ${
               entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
             style={{
@@ -154,7 +155,7 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
             <div
               className="text-[#14e6c0]"
               style={{
-                textShadow: '0 0 28px rgba(20, 230, 192, 0.45), 0 0 50px rgba(20, 230, 192, 0.20)',
+                textShadow: '0 0 24px rgba(20, 230, 192, 0.40), 0 0 44px rgba(20, 230, 192, 0.18)',
               }}
             >
               Your move.

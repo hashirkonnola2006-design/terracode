@@ -41,9 +41,9 @@ const DEBRIS_ITEMS = [
     type: 'bottle',
     brand: 'glacier',
     capColor: '#2563eb', // Royal blue sports cap
-    pos: [-0.94, 0.08, 0.58],
+    pos: [-0.82, 0.12, 0.62],
     rot: [-0.42, 0.50, -0.65],
-    scale: 0.82,
+    scale: 0.95,
     spin: [0.003, 0.004, -0.002],
     drift: 0.035,
   },
@@ -52,9 +52,9 @@ const DEBRIS_ITEMS = [
   {
     type: 'can',
     brand: 'cola',
-    pos: [0.78, -0.26, 0.78],
+    pos: [0.74, -0.25, 0.82],
     rot: [0.42, 0.68, -0.35],
-    scale: 1.10,
+    scale: 1.15,
     spin: [-0.003, 0.004, 0.003],
     drift: 0.055,
   },
@@ -62,9 +62,9 @@ const DEBRIS_ITEMS = [
   // 3. Craggy Space Asteroid between 'H' and 'E' (Floats in empty gap, does NOT touch either letter)
   {
     type: 'slag',
-    pos: [-0.48, 0.46, 0.38],
+    pos: [-0.46, 0.44, 0.40],
     rot: [0.5, 0.3, -0.4],
-    scale: 0.48,
+    scale: 0.62,
     spin: [0.002, 0.003, -0.002],
     drift: 0.025,
   },
@@ -74,7 +74,7 @@ const DEBRIS_ITEMS = [
     type: 'slag',
     pos: [0.00, 0.48, 0.38],
     rot: [-0.4, 0.6, 0.3],
-    scale: 0.42,
+    scale: 0.55,
     spin: [-0.002, 0.003, 0.003],
     drift: 0.025,
   },
@@ -82,9 +82,9 @@ const DEBRIS_ITEMS = [
   // 5. Craggy Space Asteroid between 'A' and 'L' (Floats in empty gap, does NOT touch either letter)
   {
     type: 'slag',
-    pos: [0.46, 0.46, 0.38],
+    pos: [0.44, 0.44, 0.40],
     rot: [0.3, -0.4, 0.5],
-    scale: 0.45,
+    scale: 0.58,
     spin: [0.003, -0.002, 0.003],
     drift: 0.025,
   },
@@ -92,9 +92,9 @@ const DEBRIS_ITEMS = [
   // 6. Craggy Battered Rock (Far Right of 'L' in deep space)
   {
     type: 'slag',
-    pos: [0.96, 0.32, 0.42],
+    pos: [0.94, 0.38, 0.44],
     rot: [-0.3, 0.5, -0.5],
-    scale: 0.52,
+    scale: 0.78,
     spin: [-0.002, 0.004, 0.002],
     drift: 0.035,
   },
@@ -102,9 +102,9 @@ const DEBRIS_ITEMS = [
   // 7. Craggy Rock below 'L' on the right flank (Floats in space above soda can)
   {
     type: 'slag',
-    pos: [0.90, -0.02, 0.46],
+    pos: [0.88, -0.04, 0.50],
     rot: [0.4, -0.5, 0.3],
-    scale: 0.58,
+    scale: 0.72,
     spin: [0.003, 0.003, -0.003],
     drift: 0.035,
   },
@@ -113,9 +113,9 @@ const DEBRIS_ITEMS = [
   {
     type: 'bag',
     color: '#bae6fd',
-    pos: [0.94, 0.16, 0.44],
+    pos: [0.92, 0.16, 0.46],
     rot: [0.35, -0.30, 0.55],
-    scale: 0.65,
+    scale: 0.68,
     spin: [0.002, 0.003, -0.002],
     drift: 0.035,
   },
@@ -125,7 +125,7 @@ const DEBRIS_ITEMS = [
     type: 'slag',
     pos: [-0.96, 0.44, 0.35],
     rot: [0.5, -0.3, 0.4],
-    scale: 0.45,
+    scale: 0.52,
     spin: [0.002, -0.003, 0.002],
     drift: 0.025,
   },
@@ -292,11 +292,7 @@ const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
       pos.x += p.drift * progress;
 
       dummy.position.copy(pos);
-      if (meshRef.current.parent) {
-        dummy.quaternion.copy(meshRef.current.parent.quaternion).invert().multiply(camera.quaternion);
-      } else {
-        dummy.quaternion.copy(camera.quaternion);
-      }
+      dummy.quaternion.copy(camera.quaternion);
       dummy.scale.setScalar(p.scale * (1.2 + progress * 3.2));
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(idx, dummy.matrix);
@@ -339,14 +335,14 @@ const PersistentPlanetController = ({
   // Persistent smoothed state refs
   const currentPos = useRef({ x: isMobile ? 0 : 0.16, y: isMobile ? -1.28 : -1.44 });
   const currentScale = useRef(isMobile ? 1.18 : 1.30);
-  const currentRotX = useRef(-0.38);
-  const currentRotZ = useRef(-0.06);
+  const currentRotX = useRef(AXIAL_TILT_X + 0.14);
+  const currentRotZ = useRef(AXIAL_TILT_Z);
   const currentRotYOffset = useRef(0.0);
   const currentDim = useRef(1.0);
   const currentHeal = useRef(0.0);
   const currentDebrisOpacity = useRef(1.0);
 
-  const baseRotationY = useRef(3.80);
+  const baseRotationY = useRef(INITIAL_ROTATION_Y + 0.60);
 
   const [activeHeal, setActiveHeal] = useState(0.0);
   const [activeDim, setActiveDim] = useState(1.0);
@@ -461,7 +457,7 @@ const PersistentPlanetController = ({
         ref={planetGroupRef}
         position={[currentPos.current.x, currentPos.current.y, 0]}
         scale={currentScale.current}
-        rotation={[-0.38, 3.80, -0.06]}
+        rotation={[AXIAL_TILT_X + 0.14, INITIAL_ROTATION_Y + 0.60, AXIAL_TILT_Z]}
       >
         {/* Core Earth with High-Res NASA Textures & Dynamic Story Healing */}
         <Earth

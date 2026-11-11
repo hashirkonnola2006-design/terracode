@@ -32,6 +32,13 @@ export const EarthShader = {
     varying vec3 vWorldNormal;
     varying vec3 vWorldPos;
 
+    float distToSegment(vec2 p, vec2 a, vec2 b) {
+      vec2 pa = p - a;
+      vec2 ba = b - a;
+      float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+      return length(pa - ba * h);
+    }
+
     void main() {
       vUv          = uv;
       vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
@@ -103,7 +110,7 @@ export const EarthShader = {
       // Key light: in standard mode keyDir = normalize(vec3(-0.35, 0.42, 0.84))
       // In hero solutions mode: strong cold rim light from upper left with deep shadow on right
       vec3 standardKeyDir = normalize(vec3(-0.35, 0.42, 0.84));
-      vec3 heroKeyDir     = normalize(vec3(-0.88, 0.38, -0.05));
+      vec3 heroKeyDir     = normalize(vec3(-0.82, 0.45, 0.25));
       vec3 keyDir = normalize(mix(standardKeyDir, heroKeyDir, uHeroSolutions));
       float NdotL = dot(N, keyDir);
 
@@ -199,7 +206,7 @@ export const EarthShader = {
       // ── 2B. PROCEDURAL HIGH-DETAIL BRANCHING TECTONIC FAULT LINES & MAGMA FISSURES ──
       vec3 heroFissureEmission = vec3(0.0);
       if (uHeroSolutions > 0.01) {
-        // High-frequency fractal jitter for jagged tectonic canyon walls
+        // High-frequency fractal jitter for razor-sharp cracked tectonic rock edges
         float fJitter = sin(vUv.y * 45.0) * 0.0035 + 
                         sin(vUv.y * 110.0 + vUv.x * 80.0) * 0.0018 + 
                         sin(vUv.y * 320.0 - vUv.x * 240.0) * 0.0008 +
