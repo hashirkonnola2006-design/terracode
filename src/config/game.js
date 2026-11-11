@@ -11,7 +11,7 @@ export const GAME_CONFIG = {
   MISSION_1_TARGET: 20,   // Floating orbit debris items to collect
   MISSION_2_TARGET: 6,    // Smog / industrial emission sources to convert (out of 8)
   MISSION_3_TARGET: 6,    // Continental forest patches to plant & restore (out of 10)
-  MISSION_4_TARGET: 65,   // Percent of ocean plastic swept (65% required)
+  MISSION_4_TARGET: 25,   // Percent of ocean plastic swept (25% = 1 full gyre sweeps to accessible, rewarding completion)
 
   // Mission Cleanliness Weights (Total = 100%)
   WEIGHT_MISSION_1: 25,   // Orbit Cleanup = 25%
@@ -30,7 +30,7 @@ export const GAME_CONFIG = {
   // Timing & Interactivity
   COMBO_RESET_SECONDS: 2.2, // Combo decays after 2.2s idle
   IDLE_HINT_SECONDS: 8.0,   // Soft pulse hints appear after 8s of inactivity
-  SWEEP_RADIUS_WORLD: 0.16, // Ocean plastic sweep net radius (tangential surface collector)
+  SWEEP_RADIUS_WORLD: 0.42, // Ocean plastic sweep net radius (generous tangential surface vacuum)
 
   // Verified Climate & Plastic Facts (shown every 3 items collected)
   COLLECTION_FACTS: [

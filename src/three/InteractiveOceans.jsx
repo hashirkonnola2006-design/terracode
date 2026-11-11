@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore';
 import { GAME_CONFIG } from '../config/game';
@@ -21,18 +21,17 @@ export function latLonToVector3(lat, lon, radius = 1.0) {
   return new THREE.Vector3(x, y, z);
 }
 
-// 4 Major Oceanic Plastic Gyres with cluster center and extent
+// 4 Major Oceanic Plastic Gyres with cluster center, extent, and label
 export const GYRE_CLUSTERS = [
-  { id: 0, name: 'Great Pacific Garbage Patch', lat: 32.0,  lon: -145.0, radius: 0.16 },
-  { id: 1, name: 'North Atlantic Ocean Gyre',   lat: 28.0,  lon: -42.0,  radius: 0.15 },
-  { id: 2, name: 'Indian Ocean Garbage Gyre',   lat: -16.0, lon: 78.0,   radius: 0.14 },
-  { id: 3, name: 'South Pacific Ocean Gyre',    lat: -26.0, lon: -112.0, radius: 0.14 },
+  { id: 0, name: 'Great Pacific Garbage Patch', lat: 32.0,  lon: -145.0, radius: 0.16, label: 'PACIFIC' },
+  { id: 1, name: 'North Atlantic Ocean Gyre',   lat: 28.0,  lon: -42.0,  radius: 0.15, label: 'ATLANTIC' },
+  { id: 2, name: 'Indian Ocean Garbage Gyre',   lat: -16.0, lon: 78.0,   radius: 0.14, label: 'INDIAN' },
+  { id: 3, name: 'South Pacific Ocean Gyre',    lat: -26.0, lon: -112.0, radius: 0.14, label: 'S. PACIFIC' },
 ];
 
 const EMPTY_IDS = [];
 
 export const InteractiveOceans = ({ isInteractive = true }) => {
-  const { controls } = useThree();
   const updateOceanSweep = useGameStore((s) => s.updateOceanSweep);
   const sweptPercent = useGameStore((s) => s.cleanup?.mission4?.sweptPercent ?? s.mission4?.sweptPercent ?? 0);
   const storedSweptIds = useGameStore((s) => s.cleanup?.mission4?.sweptIds ?? s.mission4?.sweptIds ?? EMPTY_IDS);
@@ -43,38 +42,9 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
   const setActiveMission = useGameStore((s) => s.setActiveMission);
   const liteMode = useGameStore((s) => s.liteMode);
 
-  const [sweptSet, setSweptSet] = useState(() => {
-    const s = new Set(storedSweptIds);
-    if (sweptPercent > 0 && s.size === 0) {
-      const count = Math.round((sweptPercent / 100) * (liteMode ? 60 : 120));
-      for (let i = 0; i < count; i++) s.add(i);
-    }
-    return s;
-  });
-
-  const [netPos, setNetPos] = useState(null);
-  const [isSweeping, setIsSweeping] = useState(false);
+  const groupRef = useRef(null);
   const scoopGroupRef = useRef(null);
-
-  // Sync sweptSet when store resets (e.g. Restart Game)
-  useEffect(() => {
-    if (storedSweptIds.length === 0 && sweptPercent === 0) {
-      setSweptSet(new Set());
-    } else if (storedSweptIds.length > sweptSet.size) {
-      setSweptSet((prev) => {
-        const next = new Set(prev);
-        storedSweptIds.forEach((id) => next.add(id));
-        return next;
-      });
-    }
-  }, [storedSweptIds, sweptPercent]);
-
-  // Clean up OrbitControls when unmounting or pointer leaves
-  useEffect(() => {
-    return () => {
-      if (controls) controls.enabled = true;
-    };
-  }, [controls]);
+  const animatingSwept = useRef(new Map());
 
   // Generate low-poly floating plastic items clustered in real oceanic gyres
   const { items, clusterAnchors } = useMemo(() => {
@@ -86,7 +56,8 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
     };
 
     const types = ['bottle', 'bag', 'can', 'crate', 'net'];
-    const totalItems = liteMode ? 60 : 120;
+    // 80 items total (20 per gyre) for high visibility, 48 in lite mode
+    const totalItems = liteMode ? 48 : 80;
     const itemsPerGyre = Math.floor(totalItems / GYRE_CLUSTERS.length);
 
     const anchors = GYRE_CLUSTERS.map((gyre) => {
@@ -102,10 +73,11 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
       for (let i = 0; i < itemsPerGyre; i++) {
         const type = types[Math.floor(rand() * types.length)];
         const angle = rand() * Math.PI * 2;
-        const dist = Math.sqrt(rand()) * 0.13; // distance on tangent plane
+        const dist = Math.sqrt(rand()) * (gyre.radius * 0.90);
         const phase = rand() * Math.PI * 2;
         const driftSpeed = 0.2 + rand() * 0.3;
-        const scale = 0.007 + rand() * 0.005;
+        // Crisp, visible scale: 0.018 - 0.026 (easily spotted on water)
+        const scale = 0.018 + rand() * 0.008;
 
         const lx = Math.cos(angle) * dist;
         const lz = Math.sin(angle) * dist;
@@ -126,6 +98,8 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
           scale,
           basePos: pos,
           currentPos: pos.clone(),
+          displayScale: scale,
+          isRemoved: false,
         });
       }
     });
@@ -133,37 +107,106 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
     return { items: list, clusterAnchors: anchors };
   }, [liteMode]);
 
+  const [sweptSet, setSweptSet] = useState(() => {
+    const s = new Set(storedSweptIds);
+    if (sweptPercent > 0 && s.size === 0) {
+      const count = Math.round((sweptPercent / 100) * items.length);
+      for (let i = 0; i < count; i++) s.add(i);
+    }
+    return s;
+  });
+
+  const [netPos, setNetPos] = useState(null);
+  const [isSweeping, setIsSweeping] = useState(false);
+
+  // Sync sweptSet when store resets (e.g. Restart Game)
+  useEffect(() => {
+    if (storedSweptIds.length === 0 && sweptPercent === 0) {
+      setSweptSet(new Set());
+      animatingSwept.current.clear();
+      items.forEach((it) => {
+        it.isRemoved = false;
+        it.displayScale = it.scale;
+        it.currentPos.copy(it.basePos);
+      });
+    } else if (storedSweptIds.length > sweptSet.size) {
+      setSweptSet((prev) => {
+        const next = new Set(prev);
+        storedSweptIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  }, [storedSweptIds, sweptPercent, items]);
+
   // Shared Geometries
   const bottleGeom = useMemo(() => createPlasticBottleGeometry(false), []);
   const bagGeom    = useMemo(() => createCrumpledBagGeometry(false), []);
   const canGeom    = useMemo(() => createSodaCanGeometry(false), []);
   const crateGeom  = useMemo(() => createMilkJugGeometry(), []);
   const netGeom    = useMemo(() => new THREE.TorusGeometry(0.35, 0.12, 4, 8), []);
-  const decalGeom  = useMemo(() => new THREE.CircleGeometry(0.15, 24), []);
+  const decalGeom  = useMemo(() => new THREE.CircleGeometry(0.18, 24), []);
+  const beaconGeom = useMemo(() => new THREE.OctahedronGeometry(0.016, 0), []);
+  const targetRingGeom = useMemo(() => new THREE.RingGeometry(0.12, 0.15, 32), []);
 
   // Shared Materials
-  const matBottle = useMemo(() => new THREE.MeshStandardMaterial({ color: '#cbe6f7', roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.85 }), []);
-  const matBag    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#f1f5f9', roughness: 0.7, transparent: true, opacity: 0.8 }), []);
-  const matCan    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ef4444', metalness: 0.8, roughness: 0.3 }), []);
-  const matCrate  = useMemo(() => new THREE.MeshStandardMaterial({ color: '#0284c7', roughness: 0.5 }), []);
-  const matNet    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#475569', roughness: 0.9 }), []);
+  const matBottle = useMemo(() => new THREE.MeshStandardMaterial({ color: '#7dd3fc', roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.90 }), []);
+  const matBag    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.65, transparent: true, opacity: 0.85 }), []);
+  const matCan    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ef4444', metalness: 0.85, roughness: 0.25 }), []);
+  const matCrate  = useMemo(() => new THREE.MeshStandardMaterial({ color: '#0284c7', roughness: 0.45, metalness: 0.1 }), []);
+  const matNet    = useMemo(() => new THREE.MeshStandardMaterial({ color: '#64748b', roughness: 0.9 }), []);
+  const matBeacon = useMemo(() => new THREE.MeshBasicMaterial({ color: '#0becc2', wireframe: false }), []);
+  const matRing   = useMemo(() => new THREE.MeshBasicMaterial({ color: '#0becc2', transparent: true, opacity: 0.65, side: THREE.DoubleSide }), []);
 
-  // Check sweep hit around given world coordinate
-  const checkSweepHit = (hitPoint) => {
-    if (!hitPoint) return;
-    const sweepRadius = GAME_CONFIG.SWEEP_RADIUS_WORLD;
+  // Coordinate converter: converts world coordinates from raycasting to local group coordinates
+  const toLocalPoint = useCallback((worldPoint) => {
+    if (!worldPoint) return null;
+    if (!groupRef.current) return worldPoint.clone();
+    return groupRef.current.worldToLocal(worldPoint.clone());
+  }, []);
+
+  // Check sweep hit with generous swoop radius in local coordinates
+  const checkSweepHit = useCallback((localPoint, isDirectClick = false) => {
+    if (!localPoint) return;
+    // Generous radius: 0.42 on hover/drag, 0.55 on click
+    const sweepRadius = isDirectClick ? GAME_CONFIG.SWEEP_RADIUS_WORLD * 1.35 : GAME_CONFIG.SWEEP_RADIUS_WORLD;
     const newlySwept = [];
 
+    // 1. Direct hit on floating plastic items
     items.forEach((item) => {
-      if (!sweptSet.has(item.id)) {
-        const d = hitPoint.distanceTo(item.currentPos);
+      if (!sweptSet.has(item.id) && !animatingSwept.current.has(item.id)) {
+        const d = localPoint.distanceTo(item.currentPos);
         if (d < sweepRadius) {
           newlySwept.push(item.id);
         }
       }
     });
 
+    // 2. Proximity to any gyre center: if within sweepRadius of a gyre, sweep its plastic cluster!
+    clusterAnchors.forEach((gyre) => {
+      if (localPoint.distanceTo(gyre.pos) < sweepRadius) {
+        items.forEach((item) => {
+          if (item.gyreId === gyre.id && !sweptSet.has(item.id) && !animatingSwept.current.has(item.id)) {
+            if (!newlySwept.includes(item.id)) {
+              newlySwept.push(item.id);
+            }
+          }
+        });
+      }
+    });
+
     if (newlySwept.length > 0) {
+      const now = performance.now();
+      newlySwept.forEach((id) => {
+        const itemObj = items.find((it) => it.id === id);
+        if (itemObj) {
+          animatingSwept.current.set(id, {
+            startTime: now,
+            startPos: itemObj.currentPos.clone(),
+            targetPos: localPoint.clone(),
+          });
+        }
+      });
+
       setSweptSet((prev) => {
         const next = new Set(prev);
         newlySwept.forEach((id) => next.add(id));
@@ -171,59 +214,81 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
         updateOceanSweep(currentPercent, newlySwept);
         return next;
       });
-      sound.playCollect();
-      sound.triggerHaptic(15);
-    }
-  };
 
-  // Pointer event handlers with OrbitControls pausing during active sweep
+      sound.playCollect();
+      sound.triggerHaptic(18);
+    }
+  }, [items, clusterAnchors, sweptSet, updateOceanSweep]);
+
+  // Pointer event handlers: swoop effortlessly on hover, drag, or click!
   const handlePointerDown = (e) => {
     if (!isInteractive) return;
-    e.stopPropagation();
-    setIsSweeping(true);
-    if (controls) controls.enabled = false;
     if (activeMissionId !== 4) setActiveMission(4);
-    setNetPos(e.point);
-    checkSweepHit(e.point);
+    setIsSweeping(true);
+    const localPt = toLocalPoint(e.point);
+    if (localPt) {
+      setNetPos(localPt);
+      checkSweepHit(localPt, true);
+    }
   };
 
   const handlePointerMove = (e) => {
     if (!isInteractive) return;
-    setNetPos(e.point);
-    if (isSweeping || e.buttons === 1) {
-      checkSweepHit(e.point);
+    const localPt = toLocalPoint(e.point);
+    if (localPt) {
+      setNetPos(localPt);
+      // Fluid vacuum: sweeps continuously on cursor move or drag
+      checkSweepHit(localPt, false);
     }
   };
 
   const handlePointerUp = () => {
     setIsSweeping(false);
-    if (controls) controls.enabled = true;
   };
 
   const handlePointerLeave = () => {
     setIsSweeping(false);
     setNetPos(null);
-    if (controls) controls.enabled = true;
   };
 
-  // Animate items bobbing and scoop boom orientation
+  // Animate items bobbing, suction vacuum into scoop, and scoop boom orientation
   useFrame((state) => {
     const t = state.clock.elapsedTime;
+    const now = performance.now();
 
-    // Floating plastic bobbing
+    // Floating plastic bobbing & suction animation
     items.forEach((item) => {
-      if (sweptSet.has(item.id)) return;
-      const bob = Math.sin(t * 2.2 + item.phase) * 0.0016;
-      const currentAngle = item.angle + t * item.driftSpeed * 0.08;
-      const curLx = Math.cos(currentAngle) * item.dist;
-      const curLz = Math.sin(currentAngle) * item.dist;
+      if (item.isRemoved) return;
 
-      const gyre = clusterAnchors[item.gyreId];
-      const localVec = new THREE.Vector3(curLx, bob, curLz).applyQuaternion(gyre.quat);
-      item.currentPos.copy(gyre.pos).add(localVec).normalize().multiplyScalar(1.003 + bob);
+      const anim = animatingSwept.current.get(item.id);
+      if (anim) {
+        // Magnetic suction: pulled into net vortex over 260ms
+        const progress = Math.min(1.0, (now - anim.startTime) / 260);
+        const eased = progress * progress; // acceleration into vortex
+        item.currentPos.lerpVectors(anim.startPos, anim.targetPos, eased);
+        item.displayScale = item.scale * (1.0 - progress);
+
+        if (progress >= 1.0) {
+          item.isRemoved = true;
+          animatingSwept.current.delete(item.id);
+        }
+      } else if (!sweptSet.has(item.id)) {
+        // Natural ocean bobbing
+        const bob = Math.sin(t * 2.2 + item.phase) * 0.0016;
+        const currentAngle = item.angle + t * item.driftSpeed * 0.08;
+        const curLx = Math.cos(currentAngle) * item.dist;
+        const curLz = Math.sin(currentAngle) * item.dist;
+
+        const gyre = clusterAnchors[item.gyreId];
+        const localVec = new THREE.Vector3(curLx, bob, curLz).applyQuaternion(gyre.quat);
+        item.currentPos.copy(gyre.pos).add(localVec).normalize().multiplyScalar(1.003 + bob);
+        item.displayScale = item.scale;
+      } else {
+        item.isRemoved = true;
+      }
     });
 
-    // Tangential orientation of the ocean scoop along sphere surface
+    // Tangential orientation of the ocean scoop along sphere surface in local space
     if (scoopGroupRef.current && netPos) {
       const normal = netPos.clone().normalize();
       scoopGroupRef.current.position.copy(normal).multiplyScalar(1.006);
@@ -231,7 +296,7 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
     }
   });
 
-  // When 100% cleaned, or ocean mission is completed, remove all ocean plastic and scoop
+  // When 100% cleaned, remove all ocean plastic and scoop
   if (cleanliness >= 100 || isFinished || mission4Completed) {
     return null;
   }
@@ -239,8 +304,8 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
   const radius = GAME_CONFIG.SWEEP_RADIUS_WORLD;
 
   return (
-    <group>
-      {/* Ocean raycasting sphere (invisible, handles sweep clicks and drag) */}
+    <group ref={groupRef}>
+      {/* Ocean raycasting sphere (handles hover, sweep clicks and drag without locking orbit) */}
       <mesh
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -251,14 +316,13 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
         <meshBasicMaterial visible={false} />
       </mesh>
 
-      {/* ── Dark Oily Discoloration Decals Under Each Gyre Cluster ── */}
+      {/* ── Visual Gyre Patches: Oily Scum + Pulsing Target Rings & Beacons ── */}
       {clusterAnchors.map((gyre) => {
         const gyreItems = items.filter((it) => it.gyreId === gyre.id);
         const sweptInGyre = gyreItems.filter((it) => sweptSet.has(it.id)).length;
+        const isGyreCleaned = sweptInGyre >= gyreItems.length;
         const cleanFraction = sweptInGyre / gyreItems.length;
-        const oilOpacity = Math.max(0.0, (1.0 - cleanFraction) * 0.58);
-
-        if (oilOpacity < 0.01) return null;
+        const oilOpacity = Math.max(0.0, (1.0 - cleanFraction) * 0.60);
 
         return (
           <group
@@ -266,22 +330,66 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
             position={[gyre.pos.x, gyre.pos.y, gyre.pos.z]}
             quaternion={gyre.quat}
           >
-            <mesh position={[0, 0.0012, 0]} rotation={[-Math.PI / 2, 0, 0]} geometry={decalGeom}>
-              <meshBasicMaterial
-                color="#0a120f"
-                transparent
-                opacity={oilOpacity}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
+            {/* Oily patch discoloration decal */}
+            {oilOpacity > 0.01 && (
+              <mesh
+                position={[0, 0.0012, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                geometry={decalGeom}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  checkSweepHit(gyre.pos, true);
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  checkSweepHit(gyre.pos, true);
+                }}
+              >
+                <meshBasicMaterial
+                  color="#0a1512"
+                  transparent
+                  opacity={oilOpacity}
+                  side={THREE.DoubleSide}
+                />
+              </mesh>
+            )}
+
+            {/* Pulsing Sonar Target Ring & Buoy (Clicking cleans entire gyre) */}
+            {!isGyreCleaned && (
+              <group
+                onClick={(e) => {
+                  e.stopPropagation();
+                  checkSweepHit(gyre.pos, true);
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  checkSweepHit(gyre.pos, true);
+                }}
+              >
+                {/* Generous invisible hit zone */}
+                <mesh position={[0, 0.024, 0]}>
+                  <sphereGeometry args={[0.18, 12, 12]} />
+                  <meshBasicMaterial visible={false} />
+                </mesh>
+
+                {/* Pulsing Sonar Target Ring */}
+                <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]} geometry={targetRingGeom} material={matRing} />
+
+                {/* Floating Beacon Buoy */}
+                <mesh
+                  position={[0, 0.028, 0]}
+                  geometry={beaconGeom}
+                  material={matBeacon}
+                />
+              </group>
+            )}
           </group>
         );
       })}
 
-      {/* ── Varied Low-Poly Ocean Plastic Items ── */}
+      {/* ── Varied, High-Contrast Floating Plastic Waste ── */}
       {items.map((item) => {
-        const isSwept = sweptSet.has(item.id);
-        if (isSwept) return null;
+        if (item.isRemoved) return null;
 
         const geom =
           item.type === 'bottle' ? bottleGeom :
@@ -299,46 +407,54 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
           <mesh
             key={item.id}
             position={[item.currentPos.x, item.currentPos.y, item.currentPos.z]}
-            scale={[item.scale, item.scale, item.scale]}
+            scale={[item.displayScale, item.displayScale, item.displayScale]}
             geometry={geom}
             material={mat}
+            onClick={(e) => {
+              e.stopPropagation();
+              checkSweepHit(item.currentPos, true);
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              checkSweepHit(item.currentPos, true);
+            }}
           />
         );
       })}
 
-      {/* ── High-Tech Tangential Ocean Scoop & Cleanup Boom ── */}
+      {/* ── High-Tech Tangential Ocean Scoop & Cleanup Boom (Accurately tracks cursor) ── */}
       {isInteractive && netPos && (
         <group ref={scoopGroupRef}>
           {/* Outer glowing barrier arc (Ocean Interceptor Boom) */}
-          <mesh scale={isSweeping ? 1.08 : 1.0}>
-            <ringGeometry args={[radius * 0.88, radius, 32, 1, -Math.PI * 0.70, Math.PI * 1.4]} />
+          <mesh scale={isSweeping ? 1.12 : 1.0}>
+            <ringGeometry args={[radius * 0.86, radius, 32, 1, -Math.PI * 0.70, Math.PI * 1.4]} />
             <meshBasicMaterial
               color={isSweeping ? '#0becc2' : '#38bdf8'}
               side={THREE.DoubleSide}
               transparent
-              opacity={isSweeping ? 0.90 : 0.65}
+              opacity={isSweeping ? 0.95 : 0.75}
             />
           </mesh>
 
           {/* Micro-mesh collection pocket behind the boom */}
-          <mesh scale={isSweeping ? 1.08 : 1.0}>
-            <ringGeometry args={[radius * 0.45, radius * 0.88, 32, 1, -Math.PI * 0.70, Math.PI * 1.4]} />
+          <mesh scale={isSweeping ? 1.12 : 1.0}>
+            <ringGeometry args={[radius * 0.40, radius * 0.86, 32, 1, -Math.PI * 0.70, Math.PI * 1.4]} />
             <meshBasicMaterial
               color="#0284c7"
               side={THREE.DoubleSide}
               transparent
-              opacity={isSweeping ? 0.35 : 0.18}
+              opacity={isSweeping ? 0.40 : 0.22}
             />
           </mesh>
 
           {/* Center intake vortex pulse */}
           <mesh>
-            <circleGeometry args={[radius * 0.40, 24]} />
+            <circleGeometry args={[radius * 0.38, 24]} />
             <meshBasicMaterial
               color={isSweeping ? '#0becc2' : '#0284c7'}
               side={THREE.DoubleSide}
               transparent
-              opacity={isSweeping ? 0.28 : 0.12}
+              opacity={isSweeping ? 0.32 : 0.16}
             />
           </mesh>
         </group>

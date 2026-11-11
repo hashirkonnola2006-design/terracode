@@ -50,8 +50,8 @@ const MISSION_EXPLANATIONS = {
     subtitle: 'Sweep Plastic Gyres',
     color: '#06b6d4',
     icon: Droplets,
-    howTo: 'Drag or sweep across dense plastic waste patches in the ocean with your cursor or finger to scoop up and clear the waste.',
-    tip: 'Clean all major ocean gyres across the Pacific, Atlantic, and Indian Oceans until global ocean cleanliness reaches 100%.',
+    howTo: 'Glide or sweep across floating ocean plastic patches. The interceptor scoop automatically vacuums debris in range.',
+    tip: 'Click or glide across glowing gyre beacons to vacuum plastic into the interceptor boom.',
   },
 };
 
