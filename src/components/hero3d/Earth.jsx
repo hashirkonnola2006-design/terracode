@@ -95,6 +95,18 @@ export const Earth = ({
     }
   }, [planetPulseTrigger]);
 
+  // Immediately snap to full pollution on game reset
+  useEffect(() => {
+    if (pollution >= 0.99) {
+      smoothPollutionRef.current = 1.0;
+      if (shaderMatRef.current) {
+        shaderMatRef.current.uniforms.uPollution.value = 1.0;
+        shaderMatRef.current.uniforms.uHeal.value = 0.0;
+        shaderMatRef.current.uniforms.uHealMask.value = activeMask.getTexture();
+      }
+    }
+  }, [pollution, activeMask]);
+
   const initialPollution = pollution !== undefined ? pollution : 1.0 - healProgress;
 
   const earthUniforms = useMemo(() => {

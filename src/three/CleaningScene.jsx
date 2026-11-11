@@ -33,17 +33,20 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
   const lastInteractionTime = useRef(performance.now());
   const currentSpinSpeed = useRef(0.014);
 
-  // Heal mask persistence: restore saved regions on mount
+  // Heal mask persistence: restore saved regions on mount and synchronize on game resets
   const healRegions = useGameStore((s) => s.cleanup?.healRegions ?? s.healRegions ?? EMPTY_REGIONS);
   useEffect(() => {
-    if (healRegions && healRegions.length > 0) {
-      healMask.restoreRegions(healRegions);
+    if (cleanliness === 0) {
+      smoothCleanliness.current = 0.0;
+      healMask.clear();
     } else if (cleanliness >= 100) {
       healMask.fill();
+    } else if (healRegions && healRegions.length > 0) {
+      healMask.restoreRegions(healRegions);
     } else {
       healMask.clear();
     }
-  }, []);
+  }, [cleanliness, healRegions]);
 
   // Responsive camera initial distance on mobile/portrait
   useEffect(() => {
@@ -141,7 +144,8 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
     }
   });
 
-  const pollutionVal = 1.0 - smoothCleanliness.current;
+  const currentClean = cleanliness === 0 ? 0.0 : smoothCleanliness.current;
+  const pollutionVal = cleanliness === 0 ? 1.0 : (1.0 - smoothCleanliness.current);
 
   return (
     <>
@@ -172,7 +176,7 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
         <Earth
           autoRotate={false}
           noGroupTilt={true}
-          healProgress={smoothCleanliness.current}
+          healProgress={currentClean}
           pollution={pollutionVal}
           isLowEnd={liteMode}
         />
@@ -181,13 +185,13 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
         <Clouds
           autoRotate={false}
           noGroupTilt={true}
-          healProgress={smoothCleanliness.current}
+          healProgress={currentClean}
           pollution={pollutionVal}
         />
 
         {/* Thin Atmospheric Rim Glow */}
         <Atmosphere
-          healProgress={smoothCleanliness.current}
+          healProgress={currentClean}
           pollution={pollutionVal}
         />
 
