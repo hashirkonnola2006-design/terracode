@@ -14,6 +14,7 @@ import {
   shareQuizCertificate,
 } from '../utils/quizCertificate';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
+import { navigateWithTransition } from '../utils/navigation';
 import {
   ArrowLeft,
   Volume2,
@@ -316,7 +317,7 @@ export const Quiz = () => {
         {/* Left: Back to Hub + Brand */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
-            onClick={() => navigate('/solutions#play')}
+            onClick={() => navigateWithTransition('/solutions#play', navigate)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white/80 hover:text-white font-label uppercase text-[11px] font-semibold tracking-wider transition-colors cursor-pointer"
             title="Return to Solutions Hub"
           >
@@ -690,7 +691,7 @@ export const Quiz = () => {
                     </button>
 
                     <button
-                      onClick={() => navigate('/solutions#play')}
+                      onClick={() => navigateWithTransition('/solutions#play', navigate)}
                       className="w-full py-2.5 px-4 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-label text-[11px] uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
@@ -700,7 +701,7 @@ export const Quiz = () => {
                 ) : (
                   /* When 10/10 Perfect Score: Hide Retake, Back to Hub is Primary */
                   <button
-                    onClick={() => navigate('/solutions#play')}
+                    onClick={() => navigateWithTransition('/solutions#play', navigate)}
                     className="btn-aerospace-primary w-full text-xs py-3.5 cursor-pointer flex items-center justify-center gap-2"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />

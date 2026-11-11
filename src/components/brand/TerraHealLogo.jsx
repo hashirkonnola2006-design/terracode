@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { navigateWithTransition } from '../../utils/navigation';
 
 /**
  * TerraHeal — Official Brand Mark & Wordmark
@@ -131,7 +132,7 @@ export const TerraHealLogo = ({
     if (onClick) {
       onClick(e);
     } else if (to) {
-      navigate(to);
+      navigateWithTransition(to, navigate);
     }
   };
 

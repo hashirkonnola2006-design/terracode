@@ -13,6 +13,7 @@ import { Effects } from '../components/hero3d/Effects';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { useIntroStatus } from '../components/intro/useIntroStatus';
+import { navigateWithTransition } from '../utils/navigation';
 
 // Camera & Earth target values per discrete beat
 const BEAT_CAMERA_TARGETS = [
@@ -298,19 +299,11 @@ export const Landing = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     setScreenFlash(true);
-
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (prefersReducedMotion) {
-      navigate('/solutions');
-    } else {
-      // Camera zooms into Earth, radial green flash, seamless navigate to /solutions
-      setTimeout(() => {
-        navigate('/solutions');
-      }, 700);
-    }
+    navigateWithTransition('/solutions', navigate);
+    setTimeout(() => {
+      setIsTransitioning(false);
+      setScreenFlash(false);
+    }, 2000);
   };
 
   useEffect(() => {

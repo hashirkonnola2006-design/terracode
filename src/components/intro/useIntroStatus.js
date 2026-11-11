@@ -44,7 +44,13 @@ export function useIntroStatus() {
   });
 
   useEffect(() => {
-    if (!status.isIntroActive) return;
+    const handleStart = () => {
+      setStatus({
+        isIntroActive: true,
+        isIntroExiting: false,
+        isIntroComplete: false,
+      });
+    };
 
     const handleExit = () => {
       setStatus((prev) => ({ ...prev, isIntroExiting: true }));
@@ -58,17 +64,18 @@ export function useIntroStatus() {
       });
     };
 
-    window.addEventListener('terraheal:intro-exit', handleExit, { once: true });
-    window.addEventListener('terraheal:intro-complete', handleComplete, { once: true });
+    window.addEventListener('terraheal:intro-start', handleStart);
+    window.addEventListener('terraheal:intro-exit', handleExit);
+    window.addEventListener('terraheal:intro-complete', handleComplete);
 
     return () => {
+      window.removeEventListener('terraheal:intro-start', handleStart);
       window.removeEventListener('terraheal:intro-exit', handleExit);
       window.removeEventListener('terraheal:intro-complete', handleComplete);
     };
-  }, [status.isIntroActive]);
+  }, []);
 
   return status;
 }
 
 export default useIntroStatus;
-

@@ -5,6 +5,7 @@ import { GAMES } from '../config/games';
 import { SolutionsHero } from '../components/solutions/SolutionsHero';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { Footer } from '../components/Footer/Footer';
+import { navigateWithTransition } from '../utils/navigation';
 import {
   Leaf,
   Sparkles,
@@ -377,7 +378,7 @@ export const Solutions = () => {
               </div>
 
               <button
-                onClick={() => navigate('/clean')}
+                onClick={() => navigateWithTransition('/clean', navigate)}
                 className="btn-aerospace-primary w-full text-xs py-3 cursor-pointer"
               >
                 {cleanup.completed
@@ -427,7 +428,7 @@ export const Solutions = () => {
               </div>
 
               <button
-                onClick={() => navigate('/quiz')}
+                onClick={() => navigateWithTransition('/quiz', navigate)}
                 className="w-full py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-extrabold text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[0_0_16px_rgba(56,189,248,0.3)] hover:shadow-[0_0_24px_rgba(56,189,248,0.5)] flex items-center justify-center gap-2"
               >
                 <span>{quiz.completed ? 'Retake Quiz' : 'Play Quiz'}</span>

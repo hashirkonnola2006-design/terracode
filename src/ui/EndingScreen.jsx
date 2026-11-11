@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { GAME_CONFIG } from '../config/game';
 import { Footer } from '../components/Footer/Footer';
+import { navigateWithTransition } from '../utils/navigation';
 import {
   Download,
   Share2,
@@ -142,7 +143,7 @@ export const EndingScreen = () => {
             </button>
 
             <button
-              onClick={() => navigate('/solutions#play')}
+              onClick={() => navigateWithTransition('/solutions#play', navigate)}
               className="px-5 py-2.5 rounded-full bg-[#0becc2]/20 hover:bg-[#0becc2]/30 text-[#0becc2] font-label text-[12px] font-semibold tracking-[0.12em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-2 border border-[#0becc2]/40"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Hub

@@ -4,6 +4,7 @@ import { EarthBackground } from '../three/EarthBackground';
 import { hubHealMask } from '../three/HealMask';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { ArrowLeft, Lock, ArrowRight } from 'lucide-react';
+import { navigateWithTransition } from '../utils/navigation';
 
 export const Game3 = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ export const Game3 = () => {
       <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between backdrop-blur-md bg-slate-950/40 border-b border-white/5">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/solutions#play')}
+            onClick={() => navigateWithTransition('/solutions#play', navigate)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-label uppercase text-[11px] font-semibold tracking-wider transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -62,7 +63,7 @@ export const Game3 = () => {
 
           <div className="pt-2">
             <button
-              onClick={() => navigate('/solutions#play')}
+              onClick={() => navigateWithTransition('/solutions#play', navigate)}
               className="btn-aerospace-primary w-full text-xs py-3 cursor-pointer flex items-center justify-center gap-2"
             >
               <span>Return to Solutions Hub</span>

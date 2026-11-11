@@ -8,6 +8,7 @@ import { Toast } from '../ui/Toast';
 import { Tutorial } from '../ui/Tutorial';
 import { EndingScreen } from '../ui/EndingScreen';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
+import { navigateWithTransition } from '../utils/navigation';
 import {
   Volume2,
   VolumeX,
@@ -42,7 +43,7 @@ export const Clean = () => {
         {/* Back to Hub + Brand / Logo on Left */}
         <div className="flex items-center gap-2 sm:gap-3 pointer-events-auto shrink-0">
           <button
-            onClick={() => navigate('/solutions#play')}
+            onClick={() => navigateWithTransition('/solutions#play', navigate)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#050505]/80 hover:bg-white/[0.08] border border-white/10 hover:border-white/20 text-white/80 hover:text-white font-mono text-xs transition-colors cursor-pointer"
             title="Return to Solutions Hub"
           >

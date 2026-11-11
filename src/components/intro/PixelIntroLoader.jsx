@@ -1,29 +1,69 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import INTRO_CONFIG from '../../config/intro';
 import { checkShouldPlayIntro } from './useIntroStatus';
 import introSvgRaw from '../../assets/logo/terraheal-logo-intro.svg?raw';
 
 /**
- * PixelIntroLoader — Fast Pixel-Style Intro Loading Screen for TerraHeal
+ * PixelIntroLoader — Fast Pixel-Style Intro & Page Transition Loader for TerraHeal
  *
  * Sequence (total ~1.95s, driven by requestAnimationFrame & performance.now()):
  * 1. 0.00 - 0.15s: Solid black (#050505)
- * 2. 0.15 - 0.80s: Randomized pixel static filling to brand teal with intermediate shades
+ * 2. 0.15 - 0.80s: Randomized pixel static wave filling to brand teal with intermediate shades
  * 3. 0.60 - 1.30s: Stepped pixel sharpening of TerraHeal logo across 5 resolution stages
+ *    * At 0.80 - 0.85s (solid teal cover): Route navigate(to) is called if navigating between pages
  * 4. 1.30 - 1.45s: Solid teal hold with full crisp resolution logo
- * 5. 1.45 - 1.95s: Reverse pixel dissolve revealing site; logo dissolves with blocks
- * 6. 1.95s: Overlay removed from DOM, scroll restored, entrance events dispatched
+ * 5. 1.45 - 1.95s: Reverse pixel dissolve revealing new page; logo dissolves with blocks
+ * 6. 1.95s: Overlay removed from DOM, scroll restored, completion events dispatched
  */
 export const PixelIntroLoader = () => {
-  const [shouldRender, setShouldRender] = useState(() => checkShouldPlayIntro());
+  const navigate = useNavigate();
+
+  // Active transition session: null when inactive, or { id, to, isInitial }
+  const [activeSession, setActiveSession] = useState(() => {
+    return checkShouldPlayIntro() ? { id: 1, to: null, isInitial: true } : null;
+  });
+
   const [isReducedMotion, setIsReducedMotion] = useState(false);
   const [reducedFadeOut, setReducedFadeOut] = useState(false);
 
   const canvasRef = useRef(null);
   const animFrameId = useRef(null);
 
+  // Register global transition listener and direct trigger
   useEffect(() => {
-    if (!shouldRender) return;
+    window.__TERRAHEAL_LOADER_ACTIVE__ = true;
+
+    window.__TERRAHEAL_TRIGGER_TRANSITION__ = (to) => {
+      setActiveSession((curr) => {
+        // If already transitioning to this exact target, don't restart
+        if (curr && curr.to === to) return curr;
+        window.dispatchEvent(new CustomEvent('terraheal:intro-start'));
+        return { id: Date.now(), to, isInitial: false };
+      });
+    };
+
+    const handleTransitionEvent = (e) => {
+      const to = e.detail?.to;
+      if (!to) return;
+      window.dispatchEvent(new CustomEvent('terraheal:transition-handled'));
+      if (typeof window.__TERRAHEAL_TRIGGER_TRANSITION__ === 'function') {
+        window.__TERRAHEAL_TRIGGER_TRANSITION__(to);
+      }
+    };
+
+    window.addEventListener('terraheal:transition-to', handleTransitionEvent);
+
+    return () => {
+      window.__TERRAHEAL_LOADER_ACTIVE__ = false;
+      delete window.__TERRAHEAL_TRIGGER_TRANSITION__;
+      window.removeEventListener('terraheal:transition-to', handleTransitionEvent);
+    };
+  }, []);
+
+  // Run intro / transition sequence whenever activeSession is set
+  useEffect(() => {
+    if (!activeSession) return;
 
     // ── Accessibility: prefers-reduced-motion fallback ──
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -33,12 +73,17 @@ export const PixelIntroLoader = () => {
       document.body.style.overflow = 'hidden';
 
       const timer = setTimeout(() => {
+        if (activeSession.to) {
+          navigate(activeSession.to);
+          window.scrollTo(0, 0);
+        }
         setReducedFadeOut(true);
         window.dispatchEvent(new CustomEvent('terraheal:intro-exit'));
+
         setTimeout(() => {
           document.body.style.overflow = prevBodyOverflow;
           window.dispatchEvent(new CustomEvent('terraheal:intro-complete'));
-          setShouldRender(false);
+          setActiveSession(null);
           try {
             sessionStorage.setItem(INTRO_CONFIG.storage.key, 'true');
           } catch {
@@ -181,11 +226,19 @@ export const PixelIntroLoader = () => {
     // 5. Sequence Execution
     const startTime = performance.now();
     let hasDispatchedExit = false;
+    let hasNavigated = false;
     let actualExitStartTime = INTRO_CONFIG.timing.phase5_pixelExitStart;
     let actualEndTime = INTRO_CONFIG.timing.totalDuration;
 
     const renderFrame = (now) => {
       const elapsed = now - startTime;
+
+      // When the screen is 100% filled with solid teal, trigger navigation underneath
+      if (elapsed >= INTRO_CONFIG.timing.phase2_pixelFillEnd && !hasNavigated && activeSession.to) {
+        hasNavigated = true;
+        navigate(activeSession.to);
+        window.scrollTo(0, 0);
+      }
 
       // Check Readiness at 1450ms (or up to +300ms extra hold if assets still pending)
       if (elapsed >= INTRO_CONFIG.timing.phase4_logoHoldEnd && !hasDispatchedExit) {
@@ -304,7 +357,7 @@ export const PixelIntroLoader = () => {
         document.documentElement.style.overflow = prevHtmlOverflow;
         URL.revokeObjectURL(svgUrl);
         window.dispatchEvent(new CustomEvent('terraheal:intro-complete'));
-        setShouldRender(false);
+        setActiveSession(null);
         return;
       }
 
@@ -328,9 +381,9 @@ export const PixelIntroLoader = () => {
       document.documentElement.style.overflow = prevHtmlOverflow;
       URL.revokeObjectURL(svgUrl);
     };
-  }, [shouldRender]);
+  }, [activeSession, navigate]);
 
-  if (!shouldRender) return null;
+  if (!activeSession) return null;
 
   // Reduced motion accessible fallback
   if (isReducedMotion) {

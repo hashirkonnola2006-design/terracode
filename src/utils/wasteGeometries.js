@@ -226,3 +226,4 @@ export function createCoffeeCupTexture() {
   texture.wrapS = THREE.RepeatWrapping;
   return texture;
 }
+
