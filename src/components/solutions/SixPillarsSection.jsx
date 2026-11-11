@@ -1,9 +1,19 @@
-import React, { useState, useRef } from 'react';
-import { ArrowDown } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { musicEngine } from '../../audio/musicEngine';
-import { refreshGlobeScrollTriggers } from '../../config/globeScrollManager';
+import { useGameStore } from '../../store/gameStore';
 
-// Verified Six Pillars Data according to waste hierarchy & primary sources
+// ═══════════════════════════════════════════════════════════════
+// TUNABLE CONSTANTS (Easily customized values)
+// ═══════════════════════════════════════════════════════════════
+export const HOVER_DELAY_MS = 120; // Hover debounce before tab switches on desktop
+export const AUTO_ADVANCE_INTERVAL_MS = 8000; // Auto-advance duration before user interaction (8s)
+export const TRANSITION_DURATION_MS = 220; // Panel crossfade + 8px slide duration
+export const PANEL_MIN_HEIGHT = 'min-h-[440px] xl:min-h-[460px]'; // Fixed desktop panel min-height to prevent jumping
+
+// ═══════════════════════════════════════════════════════════════
+// VERIFIED SIX PILLARS DATA (Exact copy & sources preserved)
+// ═══════════════════════════════════════════════════════════════
 export const PILLARS_DATA = [
   {
     id: 'reduce',
@@ -17,8 +27,6 @@ export const PILLARS_DATA = [
     sourceNumber: 5,
     sourceName: 'UNEP "Turning off the Tap" (2023) & Ellen MacArthur Foundation',
     sourceUrl: 'https://www.unep.org/resources/turning-off-tap',
-    accentPad: 'py-10 sm:py-12',
-    indentClass: 'pl-0',
   },
   {
     id: 'reuse',
@@ -32,8 +40,6 @@ export const PILLARS_DATA = [
     sourceNumber: 6,
     sourceName: 'Ellen MacArthur Foundation: Reuse – Rethinking Packaging (2021)',
     sourceUrl: 'https://www.ellenmacarthurfoundation.org/reuse-rethinking-packaging',
-    accentPad: 'py-8 sm:py-10',
-    indentClass: 'pl-0 sm:pl-3',
   },
   {
     id: 'recycle',
@@ -47,8 +53,6 @@ export const PILLARS_DATA = [
     sourceNumber: 7,
     sourceName: 'US EPA Lifecycle Assessment & International Aluminium Institute (2023)',
     sourceUrl: 'https://www.epa.gov/recycle',
-    accentPad: 'py-8 sm:py-10',
-    indentClass: 'pl-0',
   },
   {
     id: 'compost',
@@ -62,8 +66,6 @@ export const PILLARS_DATA = [
     sourceNumber: 8,
     sourceName: 'UNEP Food Waste Index Report (2024) & IPCC Climate and Land',
     sourceUrl: 'https://www.unep.org/resources/publication/food-waste-index-report-2024',
-    accentPad: 'py-8 sm:py-10',
-    indentClass: 'pl-0 sm:pl-3',
   },
   {
     id: 'clean-energy',
@@ -77,8 +79,6 @@ export const PILLARS_DATA = [
     sourceNumber: 9,
     sourceName: 'Ember Global Electricity Review (2024)',
     sourceUrl: 'https://ember-climate.org/insights/research/global-electricity-review-2024/',
-    accentPad: 'py-8 sm:py-10',
-    indentClass: 'pl-0',
   },
   {
     id: 'restore-nature',
@@ -92,163 +92,477 @@ export const PILLARS_DATA = [
     sourceNumber: 10,
     sourceName: 'Harris et al., Nature Climate Change / FAO Forest Resources (2024)',
     sourceUrl: 'https://www.nature.com/articles/s41558-020-00976-6',
-    accentPad: 'py-9 sm:py-11',
-    indentClass: 'pl-0 sm:pl-3',
   },
 ];
 
 export const SixPillarsSection = ({ onScrollToPlay }) => {
-  const [hoveredRowId, setHoveredRowId] = useState(null);
-  const sectionRef = useRef(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [userInteracted, setUserInteracted] = useState(false);
+  const [isSectionVisible, setIsSectionVisible] = useState(false);
+  const [autoProgress, setAutoProgress] = useState(0);
 
-  const handleRowHover = (id) => {
-    setHoveredRowId(id);
-    if (id) {
-      musicEngine.playHover();
-      refreshGlobeScrollTriggers();
+  const sectionRef = useRef(null);
+  const hoverTimerRef = useRef(null);
+  const liteMode = useGameStore((s) => s.liteMode);
+
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const activePillar = PILLARS_DATA[activeIndex] || PILLARS_DATA[0];
+
+  // Observe section visibility for auto-advance timer
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsSectionVisible(entry.isIntersecting);
+      },
+      { threshold: 0.25 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Auto-advance loop: advances every 8s while visible until user interacts
+  useEffect(() => {
+    if (userInteracted || prefersReducedMotion || liteMode || !isSectionVisible) {
+      setAutoProgress(0);
+      return;
     }
-  };
+
+    const intervalTime = 100;
+    let elapsed = 0;
+
+    const timer = setInterval(() => {
+      if (document.hidden) return; // Pause when tab is hidden
+      elapsed += intervalTime;
+      const pct = Math.min(elapsed / AUTO_ADVANCE_INTERVAL_MS, 1.0);
+      setAutoProgress(pct);
+
+      if (elapsed >= AUTO_ADVANCE_INTERVAL_MS) {
+        elapsed = 0;
+        setAutoProgress(0);
+        setActiveIndex((prev) => (prev + 1) % PILLARS_DATA.length);
+      }
+    }, intervalTime);
+
+    return () => clearInterval(timer);
+  }, [userInteracted, prefersReducedMotion, liteMode, isSectionVisible, activeIndex]);
+
+  // Handle immediate click selection
+  const handlePillarSelect = useCallback((idx) => {
+    setUserInteracted(true);
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (idx !== activeIndex) {
+      setActiveIndex(idx);
+      musicEngine.playClick();
+    }
+  }, [activeIndex]);
+
+  // Handle debounced hover on desktop (120ms to prevent flicker across rows)
+  const handlePillarHover = useCallback((idx) => {
+    setUserInteracted(true);
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      if (idx !== activeIndex) {
+        setActiveIndex(idx);
+        musicEngine.playHover();
+      }
+    }, HOVER_DELAY_MS);
+  }, [activeIndex]);
+
+  const handlePillarLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  }, []);
+
+  // Keyboard navigation for ARIA tabs pattern
+  const handleKeyDown = useCallback((e, currentIdx) => {
+    setUserInteracted(true);
+    let nextIdx = null;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      nextIdx = (currentIdx + 1) % PILLARS_DATA.length;
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      nextIdx = (currentIdx - 1 + PILLARS_DATA.length) % PILLARS_DATA.length;
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      nextIdx = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      nextIdx = PILLARS_DATA.length - 1;
+    }
+
+    if (nextIdx !== null) {
+      setActiveIndex(nextIdx);
+      musicEngine.playClick();
+      const targetTab = document.getElementById(`pillar-tab-${PILLARS_DATA[nextIdx].id}`);
+      if (targetTab) targetTab.focus();
+    }
+  }, []);
 
   return (
     <section
       id="solutions"
       ref={sectionRef}
-      className="relative z-10 w-full min-h-screen py-24 sm:py-32 scroll-mt-20 overflow-hidden"
+      className="relative z-10 w-full bg-[#050505] scroll-mt-20 py-16 sm:py-20 lg:py-0 lg:h-[min(100vh,820px)] lg:min-h-[640px] flex items-center justify-center overflow-hidden"
     >
-      {/* Soft Dark Scrim behind text column only — leaves left negative space open for the 3D globe */}
-      <div className="absolute inset-0 pointer-events-none -z-10 bg-gradient-to-l from-[#050505]/95 via-[#050505]/80 to-transparent sm:to-transparent" />
+      {/* Embedded scoped animation for 8px upward slide crossfade */}
+      <style>{`
+        @keyframes pillarSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-pillar-slide {
+          animation: pillarSlideIn ${TRANSITION_DURATION_MS}ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+      `}</style>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-8">
-        {/* Two-Column Editorial Layout: Sticky Left Heading, Stacked Hairline Rows on Right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
-          {/* ── LEFT COLUMN (Sticky on Desktop, transparent so globe is prominent) ── */}
-          <div className="lg:col-span-5 lg:sticky lg:top-28 space-y-6">
-            <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-[#14e6c0]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#14e6c0]" />
-              <span>02 • The Restoration Framework</span>
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-8">
+        {/* ═══════════════════════════════════════════════════════════════
+            DESKTOP LAYOUT (1024px and up): Selector + Detail Panel
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="hidden lg:grid lg:grid-cols-12 gap-8 xl:gap-12 items-center w-full">
+          {/* ── LEFT COLUMN (About 40% / 5 cols): Heading + Selector List ── */}
+          <div className="lg:col-span-5 flex flex-col justify-center space-y-5">
+            {/* Header copy */}
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-[#14e6c0]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#14e6c0]" />
+                <span>02 · THE RESTORATION FRAMEWORK</span>
+              </div>
+
+              <h2 className="font-display font-extrabold text-3xl lg:text-[34px] xl:text-[38px] text-white tracking-tight leading-[1.08]">
+                Six things that actually move the needle.
+              </h2>
+
+              <p className="font-body font-light text-xs lg:text-[13px] xl:text-sm text-white/70 leading-relaxed">
+                Project Drawdown and UNEP modeling confirm that circular reduction, organic composting,
+                clean power grids, and habitat regeneration can collectively avoid over{' '}
+                <span className="text-white font-medium">400 gigatonnes</span> of greenhouse gases by
+                2050.
+              </p>
+
+              <p className="text-[11px] font-mono text-[#8a8a8a] tracking-wide">
+                Ordered by the waste hierarchy. Select any pillar to see concrete mechanisms.
+              </p>
             </div>
 
-            <h2 className="font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl text-white tracking-tight leading-[1.06]">
+            {/* Vertical Selector List: 6 rows separated by 1px dividers */}
+            <div
+              role="tablist"
+              aria-orientation="vertical"
+              aria-label="Restoration Framework Pillars"
+              className="border-t border-b border-[#1f1f1f] divide-y divide-[#1f1f1f]"
+            >
+              {PILLARS_DATA.map((pillar, idx) => {
+                const isActive = activeIndex === idx;
+
+                return (
+                  <button
+                    key={pillar.id}
+                    role="tab"
+                    id={`pillar-tab-${pillar.id}`}
+                    aria-selected={isActive}
+                    aria-controls={`pillar-panel-${pillar.id}`}
+                    tabIndex={isActive ? 0 : -1}
+                    onClick={() => handlePillarSelect(idx)}
+                    onMouseEnter={() => handlePillarHover(idx)}
+                    onMouseLeave={handlePillarLeave}
+                    onKeyDown={(e) => handleKeyDown(e, idx)}
+                    className={`w-full py-2.5 px-3 flex items-center justify-between text-left transition-colors duration-150 relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14e6c0] rounded-[2px] ${
+                      isActive
+                        ? 'text-[#14e6c0] bg-white/[0.03]'
+                        : 'text-white/70 hover:text-white hover:bg-white/[0.02]'
+                    }`}
+                  >
+                    {/* Active 3px indicator bar on the left edge */}
+                    {isActive && (
+                      <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#14e6c0]" />
+                    )}
+
+                    <div className="flex items-baseline gap-3 min-w-0">
+                      <span
+                        className={`font-pixel text-[20px] lg:text-[22px] font-bold leading-none shrink-0 transition-colors ${
+                          isActive ? 'text-[#14e6c0]' : 'text-[#5a5a5a]'
+                        }`}
+                      >
+                        {pillar.number}
+                      </span>
+                      <span
+                        className={`font-display font-bold text-sm lg:text-[15px] truncate ${
+                          isActive ? 'text-[#14e6c0]' : 'text-white/80'
+                        }`}
+                      >
+                        {pillar.title}
+                      </span>
+                    </div>
+
+                    {/* Small arrow on the right for active row */}
+                    {isActive ? (
+                      <ArrowRight className="w-3.5 h-3.5 text-[#14e6c0] shrink-0 ml-2" />
+                    ) : (
+                      <span className="w-3.5 h-3.5 shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── RIGHT COLUMN (About 60% / 7 cols): ONE Flat Detail Panel ── */}
+          <div className="lg:col-span-7 flex flex-col justify-center">
+            <div
+              role="tabpanel"
+              id={`pillar-panel-${activePillar.id}`}
+              aria-labelledby={`pillar-tab-${activePillar.id}`}
+              tabIndex={0}
+              className={`border border-[#1f1f1f] rounded-[4px] bg-[#0b0b0b] p-6 lg:p-7 xl:p-8 relative ${PANEL_MIN_HEIGHT} flex flex-col justify-between overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14e6c0]`}
+            >
+              {/* Very large decorative outlined number in the top-right corner */}
+              <span
+                aria-hidden="true"
+                className="font-pixel text-[110px] lg:text-[124px] xl:text-[136px] font-bold leading-none absolute top-1 right-4 select-none pointer-events-none"
+                style={{
+                  WebkitTextStroke: '1px rgba(255, 255, 255, 0.07)',
+                  color: 'transparent',
+                }}
+              >
+                {activePillar.number}
+              </span>
+
+              {/* Panel content wrapper: crossfades with 8px upward slide */}
+              <div
+                key={activePillar.id}
+                className={prefersReducedMotion ? '' : 'animate-pillar-slide'}
+              >
+                {/* Title & Subtitle */}
+                <div className="relative z-10 pr-24 mb-4">
+                  <h3 className="font-display font-extrabold text-2xl lg:text-3xl text-white tracking-tight leading-tight">
+                    {activePillar.title}
+                  </h3>
+                  <span className="font-mono text-xs text-[#8a8a8a] tracking-wider block mt-1 uppercase">
+                    {activePillar.tagline}
+                  </span>
+                </div>
+
+                {/* Description paragraph */}
+                <p className="font-body text-xs lg:text-[13px] xl:text-sm text-white/80 leading-relaxed max-w-[58ch] mb-6 relative z-10">
+                  {activePillar.desc}
+                </p>
+
+                {/* Two-column action & why row */}
+                <div
+                  className={`grid gap-5 relative z-10 mb-6 ${
+                    activePillar.whyItWorks ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
+                  }`}
+                >
+                  {/* Left: TRY THIS WEEK */}
+                  <div className="space-y-1.5">
+                    <span className="font-mono text-[10px] sm:text-[11px] uppercase tracking-wider text-[#14e6c0] font-bold block">
+                      Try This Week
+                    </span>
+                    <p className="font-body text-xs lg:text-[13px] text-white/85 leading-relaxed">
+                      {activePillar.action}
+                    </p>
+                  </div>
+
+                  {/* Right: WHY THIS MATTERS */}
+                  {activePillar.whyItWorks && (
+                    <div className="space-y-1.5">
+                      <span className="font-mono text-[10px] sm:text-[11px] uppercase tracking-wider text-[#14e6c0] font-bold block">
+                        Why This Matters
+                      </span>
+                      <p className="font-body text-xs lg:text-[13px] text-white/75 leading-relaxed">
+                        {activePillar.whyItWorks}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Source Line at bottom */}
+              <div className="pt-4 border-t border-[#1f1f1f] flex items-center gap-2 relative z-10 mt-auto">
+                <span className="font-mono text-xs text-[#8a8a8a]">
+                  [{activePillar.sourceNumber}]
+                </span>
+                <a
+                  href={activePillar.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs text-[#8a8a8a] hover:text-[#14e6c0] transition-colors underline underline-offset-4 decoration-[#8a8a8a]/30 hover:decoration-[#14e6c0]"
+                  onClick={() => musicEngine.playClick()}
+                >
+                  {activePillar.sourceName}
+                </a>
+              </div>
+
+              {/* Optional Auto-advance thin teal progress line along bottom edge */}
+              {!userInteracted && !prefersReducedMotion && !liteMode && isSectionVisible && (
+                <div
+                  className="absolute bottom-0 left-0 h-[2px] bg-[#14e6c0] pointer-events-none"
+                  style={{
+                    width: `${autoProgress * 100}%`,
+                    transition: 'width 100ms linear',
+                  }}
+                  role="progressbar"
+                  aria-label="Pillar auto-advance progress"
+                  aria-valuenow={Math.round(autoProgress * 100)}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            MOBILE / TABLET LAYOUT (Below 1024px): Compact Single-Accordion
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="lg:hidden w-full max-w-2xl mx-auto">
+          {/* Header & Intro */}
+          <div className="space-y-3 mb-6">
+            <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-[#14e6c0]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#14e6c0]" />
+              <span>02 · THE RESTORATION FRAMEWORK</span>
+            </div>
+
+            <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-white tracking-tight leading-tight">
               Six things that actually move the needle.
             </h2>
 
-            <p className="font-body font-light text-base sm:text-lg text-white/70 leading-relaxed">
+            <p className="font-body font-light text-xs sm:text-sm text-white/70 leading-relaxed">
               Project Drawdown and UNEP modeling confirm that circular reduction, organic composting,
               clean power grids, and habitat regeneration can collectively avoid over{' '}
               <span className="text-white font-medium">400 gigatonnes</span> of greenhouse gases by
               2050.
             </p>
 
-            <div className="pt-2 text-xs font-mono text-white/40 border-l border-white/10 pl-3">
-              Ordered by the waste hierarchy. Hover any pillar to see concrete mechanisms.
-            </div>
+            <p className="text-[10px] sm:text-[11px] font-mono text-[#8a8a8a] tracking-wide">
+              Ordered by the waste hierarchy. Tap any pillar to expand details.
+            </p>
           </div>
 
-          {/* ── RIGHT COLUMN (Stacked Editorial Hairline Rows, No Boxes / No Cards) ── */}
-          <div className="lg:col-span-7 space-y-0 divide-y divide-white/10 border-t border-b border-white/10">
-            {PILLARS_DATA.map((pillar) => {
-              const isHovered = hoveredRowId === pillar.id;
+          {/* Accordion Rows: Only ONE open at a time */}
+          <div className="border-t border-b border-[#1f1f1f] divide-y divide-[#1f1f1f]">
+            {PILLARS_DATA.map((pillar, idx) => {
+              const isOpen = activeIndex === idx;
 
               return (
-                <div
-                  key={pillar.id}
-                  className={`group transition-all duration-300 ${pillar.accentPad} ${pillar.indentClass} ${
-                    isHovered ? 'bg-white/[0.02]' : ''
-                  }`}
-                  onMouseEnter={() => handleRowHover(pillar.id)}
-                  onMouseLeave={() => handleRowHover(null)}
-                  tabIndex={0}
-                  onFocus={() => handleRowHover(pillar.id)}
-                  onBlur={() => handleRowHover(null)}
-                >
-                  <div className="space-y-4">
-                    {/* Top Row: Numeral + Title (Soft orange numeral, teal only on hover/focus) */}
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-baseline gap-4 sm:gap-6">
-                        <span
-                          className="font-pixel font-bold text-4xl sm:text-5xl lg:text-6xl transition-colors duration-300 leading-none text-[#f97316] group-hover:text-[#14e6c0] group-focus:text-[#14e6c0]"
-                        >
-                          {pillar.number}
-                        </span>
+                <div key={pillar.id} className="transition-colors">
+                  {/* Tap Target (Min 48px height) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      musicEngine.playClick();
+                      setUserInteracted(true);
+                      setActiveIndex(idx);
+                    }}
+                    aria-expanded={isOpen}
+                    aria-controls={`mobile-panel-${pillar.id}`}
+                    className={`w-full min-h-[48px] py-3.5 px-3 flex items-center justify-between text-left transition-colors relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14e6c0] ${
+                      isOpen
+                        ? 'bg-white/[0.04] text-[#14e6c0]'
+                        : 'text-white/80 hover:text-white hover:bg-white/[0.02]'
+                    }`}
+                  >
+                    {isOpen && (
+                      <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#14e6c0]" />
+                    )}
 
-                        <div>
-                          <h3 className="font-display font-extrabold text-2xl sm:text-3xl text-white tracking-tight group-hover:text-white transition-colors">
-                            {pillar.title}
-                          </h3>
-                          <span className="font-mono text-xs text-white/50 tracking-wider block mt-0.5">
-                            {pillar.tagline}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Description (1 to 2 short concrete sentences) */}
-                    <p className="font-body font-light text-sm sm:text-base text-white/75 leading-relaxed max-w-xl">
-                      {pillar.desc}
-                    </p>
-
-                    {/* Concrete Action Student Can Do */}
-                    <div className="pt-2 flex items-start gap-2.5 text-xs sm:text-sm text-white/90">
-                      <span className="font-label uppercase font-bold text-[10px] tracking-widest text-[#14e6c0] mt-0.5 shrink-0">
-                        Try This Week:
-                      </span>
-                      <span className="font-body text-white/80">{pillar.action}</span>
-                    </div>
-
-                    {/* Expandable "Why it works" on Hover or Keyboard Focus */}
-                    <div
-                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        isHovered ? 'max-h-36 opacity-100 pt-3' : 'max-h-0 opacity-0 pt-0'
-                      }`}
-                    >
-                      <div className="p-3.5 rounded-lg border border-[#14e6c0]/20 bg-[#14e6c0]/5 text-xs text-white/80 leading-relaxed font-body">
-                        <strong className="text-[#14e6c0] font-mono text-[11px] block mb-1">
-                          WHY THIS MATTERS:
-                        </strong>
-                        {pillar.whyItWorks}
-                      </div>
-                    </div>
-
-                    {/* Footnote Link */}
-                    <div className="pt-2 flex items-center gap-2">
-                      <span className="font-mono text-xs text-white/30">
-                        [{pillar.sourceNumber}]
-                      </span>
-                      <a
-                        href={pillar.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-mono text-xs text-white/40 hover:text-[#14e6c0] transition-colors underline underline-offset-4 decoration-white/20 hover:decoration-[#14e6c0]"
-                        onClick={() => musicEngine.playClick()}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`font-pixel text-[18px] sm:text-[20px] font-bold leading-none shrink-0 ${
+                          isOpen ? 'text-[#14e6c0]' : 'text-[#5a5a5a]'
+                        }`}
                       >
-                        {pillar.sourceName}
-                      </a>
+                        {pillar.number}
+                      </span>
+                      <span
+                        className={`font-display font-bold text-sm sm:text-base truncate ${
+                          isOpen ? 'text-[#14e6c0]' : 'text-white'
+                        }`}
+                      >
+                        {pillar.title}
+                      </span>
                     </div>
-                  </div>
+
+                    <ChevronDown
+                      className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
+                        isOpen ? 'rotate-180 text-[#14e6c0]' : 'text-[#8a8a8a]'
+                      }`}
+                    />
+                  </button>
+
+                  {/* Expanded Detail Panel */}
+                  {isOpen && (
+                    <div
+                      id={`mobile-panel-${pillar.id}`}
+                      className="px-4 py-4 sm:px-5 sm:py-5 bg-[#0b0b0b] border-t border-[#1f1f1f] space-y-4"
+                    >
+                      <div>
+                        <span className="font-mono text-[11px] text-[#8a8a8a] uppercase tracking-wider block mb-1">
+                          {pillar.tagline}
+                        </span>
+                        <p className="font-body text-xs sm:text-sm text-white/80 leading-relaxed">
+                          {pillar.desc}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 pt-1">
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-[#14e6c0] font-bold block">
+                          Try This Week
+                        </span>
+                        <p className="font-body text-xs text-white/85 leading-relaxed">
+                          {pillar.action}
+                        </p>
+                      </div>
+
+                      {pillar.whyItWorks && (
+                        <div className="space-y-1.5 pt-1">
+                          <span className="font-mono text-[10px] uppercase tracking-wider text-[#14e6c0] font-bold block">
+                            Why This Matters
+                          </span>
+                          <p className="font-body text-xs text-white/75 leading-relaxed">
+                            {pillar.whyItWorks}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="pt-3 border-t border-[#1f1f1f] flex items-center gap-2">
+                        <span className="font-mono text-[11px] text-[#8a8a8a]">
+                          [{pillar.sourceNumber}]
+                        </span>
+                        <a
+                          href={pillar.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-[11px] text-[#8a8a8a] hover:text-[#14e6c0] underline underline-offset-4 decoration-[#8a8a8a]/30"
+                          onClick={() => musicEngine.playClick()}
+                        >
+                          {pillar.sourceName}
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
-        </div>
-
-        {/* Handover to Section 3: Play Games */}
-        <div className="mt-24 sm:mt-32 pt-12 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <p className="font-display font-semibold text-xl sm:text-2xl text-white tracking-tight">
-            Knowledge is half the battle.{' '}
-            <span className="text-[#14e6c0]">Now take action.</span>
-          </p>
-
-          <button
-            onClick={() => {
-              musicEngine.playClick();
-              if (onScrollToPlay) onScrollToPlay();
-            }}
-            onMouseEnter={() => musicEngine.playHover()}
-            className="inline-flex items-center gap-3 font-label uppercase text-xs tracking-[0.2em] text-[#14e6c0] hover:text-[#5df7d9] transition-colors group cursor-pointer"
-          >
-            <span>Play games</span>
-            <ArrowDown className="w-4 h-4 group-hover:translate-y-1 transition-transform" />
-          </button>
         </div>
       </div>
     </section>
