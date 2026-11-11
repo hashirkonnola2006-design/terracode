@@ -3,7 +3,6 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../hero3d/Earth';
 import { Clouds } from '../hero3d/Clouds';
-import { Atmosphere } from '../hero3d/Atmosphere';
 import { interpolateGlobeKeyframes } from '../../config/globeKeyframes';
 import {
   DetailedCan,
@@ -311,7 +310,7 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
     const mx = mouseRef.current ? mouseRef.current.x : 0;
     const my = mouseRef.current ? mouseRef.current.y : 0;
 
-    // Guaranteed clearance from Earth: center is (0.16, -1.44), radius is 1.30, atmosphere ~1.352.
+    // Guaranteed clearance from Earth: center is (0.16, -1.44), radius is 1.30.
     // Minimum distance 1.54 guarantees ZERO intersection or entry into Earth!
     const earthCenterX = 0.16;
     const earthCenterY = -1.44;
@@ -631,13 +630,6 @@ const PersistentPlanetController = ({
           pollution={1.0 - activeHeal}
           healProgress={activeHeal}
           autoRotate={false}
-        />
-
-        {/* Atmospheric Rim in Vivid Electric Cyan */}
-        <Atmosphere
-          pollution={1.0 - activeHeal}
-          healProgress={activeHeal}
-          coldRim={true}
         />
 
         {/* Billowing Smoke Plumes rising over damaged rifts (fades as planet heals) */}
