@@ -191,3 +191,4 @@ export function interpolateGlobeKeyframes(progress, isMobile = false) {
     debrisOpacity: Math.max(0, k1.debrisOpacity + (k2.debrisOpacity - k1.debrisOpacity) * t),
   };
 }
+

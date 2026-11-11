@@ -28,10 +28,12 @@ export const GYRE_CLUSTERS = [
   { id: 3, name: 'South Pacific Ocean Gyre',    lat: -26.0, lon: -112.0, radius: 0.15 },
 ];
 
+const EMPTY_IDS = [];
+
 export const InteractiveOceans = ({ isInteractive = true }) => {
   const updateOceanSweep = useGameStore((s) => s.updateOceanSweep);
   const sweptPercent = useGameStore((s) => s.cleanup?.mission4?.sweptPercent ?? s.mission4?.sweptPercent ?? 0);
-  const storedSweptIds = useGameStore((s) => s.cleanup?.mission4?.sweptIds ?? s.mission4?.sweptIds ?? []);
+  const storedSweptIds = useGameStore((s) => s.cleanup?.mission4?.sweptIds ?? s.mission4?.sweptIds ?? EMPTY_IDS);
   const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
   const isFinished = useGameStore((s) => s.cleanup?.completed ?? s.finished ?? false);
   const mission4Completed = useGameStore((s) => s.cleanup?.mission4?.completed ?? s.mission4?.completed ?? false);

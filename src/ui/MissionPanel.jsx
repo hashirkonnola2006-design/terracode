@@ -16,6 +16,9 @@ export const MissionPanel = () => {
   const cleanup = useGameStore((s) => s.cleanup);
   const setActiveMission = useGameStore((s) => s.setActiveMission);
 
+  // Unmount completely once Earth is 100% restored to avoid ending screen clutter
+  if ((cleanup?.health ?? 0) >= 100) return null;
+
   const activeMissionId = cleanup?.activeMissionId ?? 1;
   const m1Raw = cleanup?.mission1;
   const m2Raw = cleanup?.mission2;

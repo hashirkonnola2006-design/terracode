@@ -16,6 +16,8 @@ import { InteractiveForests } from './InteractiveForests';
 import { InteractiveOceans } from './InteractiveOceans';
 import { healMask } from './HealMask';
 
+const EMPTY_REGIONS = [];
+
 const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
   const planetGroupRef = useRef(null);
   const orbitGroupRef = useRef(null);
@@ -32,7 +34,7 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
   const currentSpinSpeed = useRef(0.014);
 
   // Heal mask persistence: restore saved regions on mount
-  const healRegions = useGameStore((s) => s.cleanup?.healRegions ?? s.healRegions ?? []);
+  const healRegions = useGameStore((s) => s.cleanup?.healRegions ?? s.healRegions ?? EMPTY_REGIONS);
   useEffect(() => {
     if (healRegions && healRegions.length > 0) {
       healMask.restoreRegions(healRegions);
@@ -108,11 +110,34 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
     // Earth, Clouds, Atmosphere, Smog, Forests, Smog sources, and Oceans all rotate together in lockstep!
     if (planetGroupRef.current) {
       planetGroupRef.current.rotation.y += delta * currentSpinSpeed.current;
+
+      // When 100% healed and on desktop, smoothly frame planet in right viewport so it's not obscured by the victory card
+      const targetPosX = (!isPortrait && cleanliness >= 100) ? 0.45 : 0.0;
+      const targetPosY = (isPortrait && cleanliness >= 100) ? 0.35 : 0.0;
+      planetGroupRef.current.position.x = THREE.MathUtils.lerp(
+        planetGroupRef.current.position.x,
+        targetPosX,
+        Math.min(delta * 2.5, 1.0)
+      );
+      planetGroupRef.current.position.y = THREE.MathUtils.lerp(
+        planetGroupRef.current.position.y,
+        targetPosY,
+        Math.min(delta * 2.5, 1.0)
+      );
+
+      if (controlsRef.current) {
+        controlsRef.current.target.x = THREE.MathUtils.lerp(controlsRef.current.target.x, targetPosX, Math.min(delta * 2.5, 1.0));
+        controlsRef.current.target.y = THREE.MathUtils.lerp(controlsRef.current.target.y, targetPosY, Math.min(delta * 2.5, 1.0));
+      }
     }
 
-    // Free-floating orbit debris rotates at its own leisurely rate
+    // Free-floating orbit debris rotates at its own leisurely rate and tracks planet position
     if (orbitGroupRef.current) {
       orbitGroupRef.current.rotation.y += delta * 0.006;
+      if (planetGroupRef.current) {
+        orbitGroupRef.current.position.x = planetGroupRef.current.position.x;
+        orbitGroupRef.current.position.y = planetGroupRef.current.position.y;
+      }
     }
   });
 

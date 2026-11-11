@@ -24,6 +24,8 @@ export const Clean = () => {
   useEffect(() => {
     document.title = 'TerraHeal | Clean the Earth';
   }, []);
+  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
+  const isFinished = cleanliness >= 100;
   const muted = useGameStore((s) => s.muted);
   const toggleMute = useGameStore((s) => s.toggleMute);
   const liteMode = useGameStore((s) => s.liteMode);
@@ -54,23 +56,27 @@ export const Clean = () => {
           <TerraHealLogo markSize={24} textClass="text-sm font-semibold hidden md:inline-block" to="/solutions#play" />
         </div>
 
-        {/* Cleanliness Meter in the Center */}
-        <div className="flex-1 max-w-xs sm:max-w-sm pointer-events-auto px-2">
-          <CleanlinessMeter />
-        </div>
+        {/* Cleanliness Meter in the Center (Only during gameplay) */}
+        {!isFinished && (
+          <div className="flex-1 max-w-xs sm:max-w-sm pointer-events-auto px-2">
+            <CleanlinessMeter />
+          </div>
+        )}
 
         {/* Controls & Quick Actions on Right */}
         <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
           
-          {/* Skip / Auto-Heal (Accessibility & Demonstration) */}
-          <button
-            onClick={skipAndHealAll}
-            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#050505]/80 hover:bg-white/[0.08] text-white/70 hover:text-white border border-white/10 hover:border-white/20 font-mono text-xs transition-colors cursor-pointer"
-            title="Skip game and heal Earth automatically"
-          >
-            <FastForward className="w-3 h-3 text-[#0becc2]" />
-            <span>Skip, just heal it</span>
-          </button>
+          {/* Skip / Auto-Heal (Only during gameplay) */}
+          {!isFinished && (
+            <button
+              onClick={skipAndHealAll}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#050505]/80 hover:bg-white/[0.08] text-white/70 hover:text-white border border-white/10 hover:border-white/20 font-mono text-xs transition-colors cursor-pointer"
+              title="Skip game and heal Earth automatically"
+            >
+              <FastForward className="w-3 h-3 text-[#0becc2]" />
+              <span>Skip, just heal it</span>
+            </button>
+          )}
 
           {/* Sound Toggle */}
           <button
@@ -113,8 +119,8 @@ export const Clean = () => {
 
       </header>
 
-      {/* ── 3. Missions Drawer (Bottom-left) ── */}
-      <MissionPanel />
+      {/* ── 3. Missions Drawer (Bottom-left, active only during mission) ── */}
+      {!isFinished && <MissionPanel />}
 
       {/* ── 4. Notifications & Modals (Fact toasts & Mission completion reveals) ── */}
       <Toast />

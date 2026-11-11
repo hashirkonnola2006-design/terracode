@@ -24,9 +24,11 @@ export const SMOG_SOURCES = [
   { id: 7, name: 'Southeast Asian Shipping Hub',  lat: -6.2, lon: 106.8, type: 'solar' },
 ];
 
+const EMPTY_SOURCES = [];
+
 export const InteractiveSmog = ({ isInteractive = true }) => {
   const convertSmogSource = useGameStore((s) => s.convertSmogSource);
-  const convertedSources = useGameStore((s) => s.cleanup?.mission2?.convertedSources ?? s.mission2?.convertedSources ?? []);
+  const convertedSources = useGameStore((s) => s.cleanup?.mission2?.convertedSources ?? s.mission2?.convertedSources ?? EMPTY_SOURCES);
   const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
   const isFinished = useGameStore((s) => s.cleanup?.completed ?? s.finished ?? false);
   const mission2Completed = useGameStore((s) => s.cleanup?.mission2?.completed ?? s.mission2?.completed ?? false);

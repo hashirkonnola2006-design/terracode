@@ -75,9 +75,11 @@ function generateStumps(patchId) {
   ];
 }
 
+const EMPTY_PATCHES = [];
+
 export const InteractiveForests = ({ isInteractive = true }) => {
   const plantForestPatch = useGameStore((s) => s.plantForestPatch);
-  const plantedPatches = useGameStore((s) => s.cleanup?.mission3?.plantedPatches ?? s.mission3?.plantedPatches ?? []);
+  const plantedPatches = useGameStore((s) => s.cleanup?.mission3?.plantedPatches ?? s.mission3?.plantedPatches ?? EMPTY_PATCHES);
   const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
   const isFinished = useGameStore((s) => s.cleanup?.completed ?? s.finished ?? false);
   const mission3Completed = useGameStore((s) => s.cleanup?.mission3?.completed ?? s.mission3?.completed ?? false);

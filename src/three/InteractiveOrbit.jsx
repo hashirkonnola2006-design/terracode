@@ -12,9 +12,11 @@ import {
   createRubberTireGeometry,
 } from '../utils/wasteGeometries';
 
+const EMPTY_COLLECTED_IDS = [];
+
 export const InteractiveOrbit = ({ isInteractive = true }) => {
   const collectDebrisItem = useGameStore((s) => s.collectDebrisItem);
-  const collectedIds = useGameStore((s) => s.cleanup?.mission1?.collectedIds ?? s.mission1?.collectedIds ?? []);
+  const collectedIds = useGameStore((s) => s.cleanup?.mission1?.collectedIds ?? s.mission1?.collectedIds ?? EMPTY_COLLECTED_IDS);
   const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
   const isFinished = useGameStore((s) => s.cleanup?.completed ?? s.finished ?? false);
   const mission1Completed = useGameStore((s) => s.cleanup?.mission1?.completed ?? s.mission1?.completed ?? false);
