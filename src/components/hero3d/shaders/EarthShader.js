@@ -176,25 +176,20 @@ export const EarthShader = {
       vec3 perturbedWorld = normalize(wn + (T_world * normMap.x + B_world * normMap.y) * normStrength);
       vec3 N = normalize((viewMatrix * vec4(perturbedWorld, 0.0)).xyz);
 
-      // Key light: in standard mode keyDir = normalize(vec3(-0.35, 0.42, 0.84))
-      // In hero solutions mode: strong cold rim light from upper left with deep shadow on right
-      vec3 standardKeyDir = normalize(vec3(-0.35, 0.42, 0.84));
-      vec3 heroKeyDir     = normalize(vec3(-0.82, 0.45, 0.25));
-      vec3 keyDir = normalize(mix(standardKeyDir, heroKeyDir, uHeroSolutions));
+      // Key light: illuminates the visible hemisphere directly (matches Landing Page Rig)
+      vec3 keyDir = normalize(vec3(-0.35, 0.42, 0.84));
       float NdotL = dot(N, keyDir);
 
       // Eased diffuse curve:
       // Clean: fully lit hemisphere with gentle falloff (min 0.65)
-      // Polluted: darker night side (down to 0.06 standard, down to 0.05 in hero mode)
+      // Polluted: authentic weathered lighting floor (min 0.22, matches Landing Page)
       float cleanDiffuse = 0.65 + 0.35 * clamp(NdotL, 0.0, 1.0);
-      float standardPollutedDiffuse = clamp(NdotL * 0.84 + 0.16, 0.06, 1.0);
-      float heroPollutedDiffuse     = clamp(NdotL * 0.92 + 0.14, 0.05, 1.0);
-      float pollutedDiffuse = mix(standardPollutedDiffuse, heroPollutedDiffuse, uHeroSolutions);
+      float pollutedDiffuse = clamp(NdotL * 0.75 + 0.25, 0.22, 1.0);
       float diffuse = mix(pollutedDiffuse, cleanDiffuse, effectiveClean);
 
       // Soft limb darkening preserving 3D depth and spherical mass
       float NdotV = clamp(dot(N, V), 0.0, 1.0);
-      float limb = pow(NdotV, mix(0.28, 0.34, uHeroSolutions));
+      float limb = pow(NdotV, 0.28);
 
       // NASA Blue Marble textures
       vec3 dayTex = texture2D(uDayMap, vUv).rgb;
@@ -208,48 +203,48 @@ export const EarthShader = {
       vec3 cleanLand = dayTex;
       vec3 cleanColor = mix(cleanLand, cleanOcean, oceanMask);
 
-      // ── 2. POLLUTED DEGRADED STATE (Devastated, Scorched & Trash-Choked) ──
+      // ── 2. POLLUTED DEGRADED STATE (Devastated, Scorched & Trash-Choked, Matches Landing Page) ──
       // Continents: heavily deforested, toxic arid brown, acidic desertification, industrial soot
       float landLuma = dot(dayTex, vec3(0.299, 0.587, 0.114));
-      vec3 scorchedBasalt  = vec3(0.07, 0.06, 0.05); // Dark charred volcanic peat
-      vec3 deadAridSoil    = vec3(0.16, 0.12, 0.08); // Dried, parched desert soil
-      vec3 industrialDust  = vec3(0.14, 0.14, 0.15); // Acid smog & industrial grime
-      vec3 toxicSulfurClay = vec3(0.24, 0.19, 0.06); // Degraded chemical soil
+      vec3 scorchedBasalt  = vec3(0.22, 0.18, 0.15); // Dark peat / weathered volcanic soil
+      vec3 deadAridSoil    = vec3(0.34, 0.28, 0.21); // Parched, eroded desert wasteland soil
+      vec3 industrialDust  = vec3(0.27, 0.26, 0.25); // Acid smog & industrial grime
+      vec3 toxicSulfurClay = vec3(0.36, 0.29, 0.13); // Degraded chemical sulfur soil
 
       // Multi-octave organic mottling for dead continental wasteland
       float grime1 = sin(vUv.x * 32.0 + sin(vUv.y * 24.0) * 2.0) * cos(vUv.y * 28.0 + cos(vUv.x * 20.0) * 2.0);
       float grime2 = sin(vUv.x * 85.0 - vUv.y * 65.0) * cos(vUv.x * 65.0 + vUv.y * 85.0);
       float organicGrime = clamp((grime1 * 0.65 + grime2 * 0.35) * 0.5 + 0.5, 0.0, 1.0);
 
-      vec3 pollutedLandBase = mix(scorchedBasalt, deadAridSoil, clamp(landLuma * 1.6, 0.0, 1.0));
-      pollutedLandBase = mix(pollutedLandBase, industrialDust, organicGrime * 0.45);
-      pollutedLandBase = mix(pollutedLandBase, toxicSulfurClay, smoothstep(0.55, 0.85, organicGrime) * 0.35);
+      vec3 pollutedLandBase = mix(scorchedBasalt, deadAridSoil, clamp(landLuma * 1.5, 0.0, 1.0));
+      pollutedLandBase = mix(pollutedLandBase, industrialDust, organicGrime * 0.40);
+      pollutedLandBase = mix(pollutedLandBase, toxicSulfurClay, smoothstep(0.55, 0.85, organicGrime) * 0.30);
 
       // High-frequency soot & industrial chemical grime FBM
       float sootNoise = fbm2D(vUv * vec2(140.0, 95.0));
       float acidSmog = fbm2D(vUv * vec2(60.0, 45.0) + vec2(1.2, 3.4));
       float sulfurPatch = smoothstep(0.48, 0.82, acidSmog);
-      vec3 causticSulfur = vec3(0.26, 0.20, 0.05); // Toxic yellow-green sulfur deposits
-      vec3 deepSootChar  = vec3(0.035, 0.030, 0.028); // Heavy industrial soot fallout
+      vec3 causticSulfur = vec3(0.32, 0.26, 0.08); // Toxic yellow-green sulfur deposits
+      vec3 deepSootChar  = vec3(0.12, 0.11, 0.10); // Heavy industrial soot fallout
       
-      vec3 pollutedLand = mix(pollutedLandBase, deepSootChar, smoothstep(0.35, 0.72, sootNoise) * 0.70);
-      pollutedLand = mix(pollutedLand, causticSulfur, sulfurPatch * 0.55);
+      vec3 pollutedLand = mix(pollutedLandBase, deepSootChar, smoothstep(0.38, 0.75, sootNoise) * 0.55);
+      pollutedLand = mix(pollutedLand, causticSulfur, sulfurPatch * 0.40);
 
-      // Oceans: Murky, toxic, oily with floating plastic garbage gyres
-      vec3 murkyDeep = vec3(0.012, 0.020, 0.016); // Sickly dark green-brown dead ocean
-      vec3 murkyCoast = vec3(0.028, 0.036, 0.020); // Toxic algae & industrial runoff
+      // Oceans: Murky, toxic, oily with floating plastic garbage gyres (Matches Landing Page)
+      vec3 murkyDeep = vec3(0.14, 0.17, 0.16); // Sickly murky slate-gray / olive-brown dead ocean
+      vec3 murkyCoast = vec3(0.18, 0.21, 0.18); // Toxic algae & industrial runoff
       vec3 basePollutedOcean = mix(murkyDeep, murkyCoast, shallowShelf * 0.65);
 
       // Global Petroleum Oil Slick & Chemical Sheen covering unhealed ocean waters
       float oilNoise1 = fbm2D(vUv * vec2(38.0, 22.0) + vec2(uTime * 0.010, uTime * 0.006));
       float oilNoise2 = fbm2D(vUv * vec2(80.0, 46.0) - vec2(oilNoise1 * 0.65, uTime * 0.012));
       float oilSlickDensity = smoothstep(0.32, 0.75, oilNoise1 * 0.60 + oilNoise2 * 0.40);
-      vec3 petroleumSludge = vec3(0.065, 0.050, 0.032);
-      vec3 iridescentSheen = vec3(0.035, 0.125, 0.115);
-      vec3 toxicSulfurRun  = vec3(0.115, 0.100, 0.035);
+      vec3 petroleumSludge = vec3(0.11, 0.09, 0.06);
+      vec3 iridescentSheen = vec3(0.08, 0.18, 0.16);
+      vec3 toxicSulfurRun  = vec3(0.18, 0.16, 0.06);
       vec3 oilyFilmCol = mix(petroleumSludge, iridescentSheen, smoothstep(0.40, 0.70, oilNoise2));
       oilyFilmCol = mix(oilyFilmCol, toxicSulfurRun, smoothstep(0.55, 0.85, oilNoise1));
-      basePollutedOcean = mix(basePollutedOcean, oilyFilmCol, oilSlickDensity * 0.85 * oceanMask);
+      basePollutedOcean = mix(basePollutedOcean, oilyFilmCol, oilSlickDensity * 0.75 * oceanMask);
 
       // ── PROCEDURAL OCEAN PLASTIC GYRES & FLOATING TRASH ISLANDS ACROSS ALL BASINS ──
       // 1. Great North Pacific Garbage Patch (lon ~ -145°, lat ~ 32°) -> u ~ 0.097, v ~ 0.678
@@ -491,14 +486,8 @@ export const EarthShader = {
       // ── 6. MILESTONE RADIANT PULSE ──
       vec3 pulseGlow = vec3(0.20, 0.85, 0.45) * uPulse * 0.40;
 
-      // ── 6B. BRIGHT ELECTRIC CYAN ATMOSPHERIC RIM GLOW (Hero Mode Reference Match) ──
-      float rimDot = 1.0 - clamp(dot(N, V), 0.0, 1.0);
-      float rimPower = pow(rimDot, 6.0);
-      float rimTopFacing = smoothstep(0.12, 0.75, N.y); // Crisp on upper horizon arc
-      vec3 electricCyanRim = vec3(0.04, 0.90, 1.0) * rimPower * rimTopFacing * 2.8 * uHeroSolutions;
-
       // ── 7. FINAL COMPOSITION ──
-      vec3 litColor = (surfaceColor * diffuse * limb + sheenColor) * uDim + fireEmission + cityLightsEmission + pulseGlow + electricCyanRim;
+      vec3 litColor = (surfaceColor * diffuse * limb + sheenColor) * uDim + fireEmission + cityLightsEmission + pulseGlow;
 
       gl_FragColor = vec4(litColor, 1.0);
     }

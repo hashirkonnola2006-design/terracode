@@ -4,6 +4,99 @@ import { HERO_CONFIG } from '../../config/heroSolutions';
 import { Play, Leaf, ChevronDown } from 'lucide-react';
 import { musicEngine } from '../../audio/musicEngine';
 
+// ── 0. Giant "HEAL" Background Typography (Rendered behind 3D Earth at z-[2]) ──
+export const SolutionsHealBackground = () => {
+  const [scrollY, setScrollY] = useState(0);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Parallax scroll handler
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    const handleScroll = () => {
+      if (window.scrollY < window.innerHeight * 1.5) {
+        setScrollY(window.scrollY);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [prefersReducedMotion]);
+
+  // Mouse move handler for soft text parallax
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    const handleMouseMove = (e) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 2;
+      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      setMousePos({ x, y });
+    };
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [prefersReducedMotion]);
+
+  // Entrance animation flags
+  const { isIntroActive, isIntroExiting } = useIntroStatus();
+  const [entered, setEntered] = useState(prefersReducedMotion || !isIntroActive);
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    if (!isIntroActive) {
+      const timer = setTimeout(() => setEntered(true), 80);
+      return () => clearTimeout(timer);
+    }
+    if (isIntroExiting) {
+      setEntered(true);
+    }
+  }, [prefersReducedMotion, isIntroActive, isIntroExiting]);
+
+  const heroH = typeof window !== 'undefined' ? window.innerHeight : 900;
+  const scrollFade = Math.max(0, 1 - scrollY / (heroH * 0.65));
+  const isPastHero = scrollY > heroH * 1.1;
+
+  const healParallaxY = prefersReducedMotion ? 0 : scrollY * 0.16 + mousePos.y * -8;
+  const healParallaxX = prefersReducedMotion ? 0 : mousePos.x * -12;
+
+  if (isPastHero) return null;
+
+  return (
+    <div
+      className={`fixed top-0 left-0 w-full pointer-events-none z-[2] flex justify-center items-start transition-all duration-1000 ease-out ${
+        entered ? 'translate-y-0' : '-translate-y-10'
+      }`}
+      style={{
+        transform: `translate3d(${healParallaxX}px, ${healParallaxY}px, 0)`,
+        opacity: entered ? scrollFade : 0,
+      }}
+    >
+      <div
+        className="w-full max-w-[1920px] mx-auto px-4 sm:px-8 md:px-12 flex justify-between items-start select-none will-change-transform"
+        style={{ paddingTop: 'clamp(116px, 18.5vh, 185px)' }}
+      >
+        {['H', 'E', 'A', 'L'].map((letter, idx) => (
+          <span
+            key={idx}
+            className={`flex-1 text-center font-black ${HERO_CONFIG.healFontSize} leading-[0.74] tracking-[-0.04em] select-none`}
+            style={{
+              fontFamily: "'Outfit', 'Montserrat', sans-serif",
+              fontWeight: 900,
+              background:
+                'linear-gradient(180deg, #ffffff 0%, #e2e8f0 32%, #94a3b8 64%, rgba(56, 189, 248, 0.22) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 4px 40px rgba(255,255,255,0.08))',
+            }}
+          >
+            {letter}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
   const heroContainerRef = useRef(null);
   const [scrollY, setScrollY] = useState(0);
@@ -55,10 +148,6 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
   // HEAL text parallax and fade out when scrolled past hero
   const heroH = typeof window !== 'undefined' ? window.innerHeight : 900;
   const scrollFade = Math.max(0, 1 - scrollY / (heroH * 0.65));
-  const isPastHero = scrollY > heroH * 1.1;
-
-  const healParallaxY = prefersReducedMotion ? 0 : scrollY * 0.16 + mousePos.y * -8;
-  const healParallaxX = prefersReducedMotion ? 0 : mousePos.x * -12;
 
   const handlePlayClick = (e) => {
     e.preventDefault();
@@ -91,42 +180,6 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
       ref={heroContainerRef}
       className="relative w-full h-screen min-h-[660px] overflow-hidden bg-transparent select-none"
     >
-      {/* ── Giant "HEAL" Typography (Sits Behind WebGL Planet in Z-index, fades on scroll) ── */}
-      {!isPastHero && (
-        <div
-          className={`absolute top-0 left-0 w-full z-10 flex justify-center items-start pointer-events-none transition-all duration-1000 ease-out ${
-            entered ? 'translate-y-0' : '-translate-y-10'
-          }`}
-          style={{
-            transform: `translate3d(${healParallaxX}px, ${healParallaxY}px, 0)`,
-            opacity: entered ? scrollFade : 0,
-          }}
-        >
-          <div
-            className="w-full max-w-[1920px] mx-auto px-4 sm:px-8 md:px-12 flex justify-between items-start select-none will-change-transform"
-            style={{ paddingTop: 'clamp(116px, 18.5vh, 185px)' }}
-          >
-            {['H', 'E', 'A', 'L'].map((letter, idx) => (
-              <span
-                key={idx}
-                className={`flex-1 text-center font-black ${HERO_CONFIG.healFontSize} leading-[0.74] tracking-[-0.04em] select-none`}
-                style={{
-                  fontFamily: "'Outfit', 'Montserrat', sans-serif",
-                  fontWeight: 900,
-                  background:
-                    'linear-gradient(180deg, #ffffff 0%, #e2e8f0 32%, #94a3b8 64%, rgba(56, 189, 248, 0.22) 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 40px rgba(255,255,255,0.08))',
-                }}
-              >
-                {letter}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ── Bottom-Left Narrative Stack & CTA Buttons ── */}
       <div
         className={`absolute ${HERO_CONFIG.headlineBottomDesktop} ${HERO_CONFIG.headlineLeftDesktop} z-30 max-w-xl pointer-events-auto`}

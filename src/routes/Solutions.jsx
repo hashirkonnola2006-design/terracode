@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { GAMES } from '../config/games';
-import { SolutionsHero } from '../components/solutions/SolutionsHero';
+import { SolutionsHero, SolutionsHealBackground } from '../components/solutions/SolutionsHero';
 import { SolutionsHeroScene } from '../components/solutions/SolutionsHeroScene';
 import { SectionFade } from '../components/Common/SectionFade';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
@@ -295,18 +295,8 @@ export const Solutions = () => {
         </div>
       </header>
 
-      {/* ── 0. Fixed Persistent 3D Globe Layer (Lives behind all sections) ── */}
+      {/* ── 0. Fixed Global Space Starfield & Vignette Overlay (Layer z-0) ── */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <SolutionsHeroScene
-          isVisible={isSceneVisible}
-          liteMode={liteMode}
-          scrollProgressRef={scrollProgressRef}
-          userCleanProgress={userCleanProgress}
-        />
-      </div>
-
-      {/* ── Fixed Global Space Starfield & Vignette Overlay ── */}
-      <div className="fixed inset-0 z-[1] pointer-events-none">
         <div
           className="absolute inset-0 opacity-45"
           style={{
@@ -329,6 +319,19 @@ export const Solutions = () => {
             background:
               'radial-gradient(circle at 50% 50%, transparent 45%, rgba(5,5,5,0.40) 75%, rgba(5,5,5,0.85) 100%)',
           }}
+        />
+      </div>
+
+      {/* ── 0B. Giant "HEAL" Background Typography (Layer z-[2] - strictly behind 3D Earth) ── */}
+      <SolutionsHealBackground />
+
+      {/* ── 1. Fixed Persistent 3D Globe Layer (Layer z-[5] - sits in front of HEAL, behind UI) ── */}
+      <div className="fixed inset-0 z-[5] pointer-events-none">
+        <SolutionsHeroScene
+          isVisible={isSceneVisible}
+          liteMode={liteMode}
+          scrollProgressRef={scrollProgressRef}
+          userCleanProgress={userCleanProgress}
         />
       </div>
 

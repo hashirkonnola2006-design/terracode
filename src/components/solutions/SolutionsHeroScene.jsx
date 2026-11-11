@@ -3,7 +3,9 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../hero3d/Earth';
 import { Clouds } from '../hero3d/Clouds';
+import { Atmosphere } from '../hero3d/Atmosphere';
 import { Smog } from '../hero3d/Smog';
+import { FloatingDebris } from '../hero3d/FloatingDebris';
 import { interpolateGlobeKeyframes } from '../../config/globeKeyframes';
 import { HERO_CONFIG } from '../../config/heroSolutions';
 import {
@@ -498,10 +500,22 @@ const PersistentPlanetController = ({
           autoRotate={false}
         />
 
+        {/* Atmospheric Limb Haze (Muted rust-gray when polluted, matching landing page) */}
+        <Atmosphere
+          pollution={1.0 - activeHeal}
+          healProgress={activeHeal}
+        />
+
         {/* Global Atmospheric Industrial Smog Shell & Emitters */}
         <Smog
           pollution={1.0 - activeHeal}
           escalation={0.8}
+        />
+
+        {/* Orbital Floating Waste & Surface Plastic Clutter (like Landing Page) */}
+        <FloatingDebris
+          pollution={1.0 - activeHeal}
+          healProgress={activeHeal}
         />
 
         {/* Billowing Smoke Plumes rising over damaged rifts (fades as planet heals) */}
