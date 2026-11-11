@@ -471,6 +471,7 @@ const PersistentPlanetController = ({
   const [activeHeal, setActiveHeal] = useState(0.0);
   const [activeDim, setActiveDim] = useState(1.0);
   const [debrisOpacity, setDebrisOpacity] = useState(1.0);
+  const hasSignaledReady = useRef(false);
 
   useEffect(() => {
     camera.position.set(0, HERO_CAMERA_Y, HERO_CAMERA_Z);
@@ -478,6 +479,11 @@ const PersistentPlanetController = ({
   }, [camera]);
 
   useFrame(({ clock }, delta) => {
+    if (!hasSignaledReady.current) {
+      hasSignaledReady.current = true;
+      window.dispatchEvent(new CustomEvent('terraheal:scene-ready'));
+    }
+
     const t = clock.getElapsedTime();
     const mx = mouseRef.current ? mouseRef.current.x : 0;
     const my = mouseRef.current ? mouseRef.current.y : 0;

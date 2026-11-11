@@ -68,7 +68,14 @@ const BackgroundSceneController = ({
     }
   }, []);
 
+  const hasSignaledReady = useRef(false);
+
   useFrame((_, delta) => {
+    if (!hasSignaledReady.current) {
+      hasSignaledReady.current = true;
+      window.dispatchEvent(new CustomEvent('terraheal:scene-ready'));
+    }
+
     const targetHealth = health / 100;
     smoothHealth.current = THREE.MathUtils.lerp(
       smoothHealth.current,

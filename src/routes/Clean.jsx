@@ -23,6 +23,15 @@ import {
 export const Clean = () => {
   const navigate = useNavigate();
 
+  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
+  const isFinished = cleanliness >= 100;
+  const muted = useGameStore((s) => s.muted);
+  const toggleMute = useGameStore((s) => s.toggleMute);
+  const liteMode = useGameStore((s) => s.liteMode);
+  const toggleLiteMode = useGameStore((s) => s.toggleLiteMode);
+  const skipAndHealAll = useGameStore((s) => s.skipAndHealAll);
+  const restartGame = useGameStore((s) => s.restartGame);
+
   useEffect(() => {
     document.title = 'TerraHeal | Clean the Earth';
     musicEngine.setSection('game');
@@ -34,15 +43,6 @@ export const Clean = () => {
   useEffect(() => {
     musicEngine.setHealAmount(cleanliness);
   }, [cleanliness]);
-
-  const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
-  const isFinished = cleanliness >= 100;
-  const muted = useGameStore((s) => s.muted);
-  const toggleMute = useGameStore((s) => s.toggleMute);
-  const liteMode = useGameStore((s) => s.liteMode);
-  const toggleLiteMode = useGameStore((s) => s.toggleLiteMode);
-  const skipAndHealAll = useGameStore((s) => s.skipAndHealAll);
-  const restartGame = useGameStore((s) => s.restartGame);
 
   return (
     <div className="relative min-h-screen bg-[#030712] text-white overflow-hidden select-none">

@@ -37,6 +37,16 @@ import {
 export const Quiz = () => {
   const navigate = useNavigate();
 
+  const quiz = useGameStore((s) => s.quiz);
+  const answerQuizQuestion = useGameStore((s) => s.answerQuizQuestion);
+  const nextQuizQuestion = useGameStore((s) => s.nextQuizQuestion);
+  const retakeQuiz = useGameStore((s) => s.retakeQuiz);
+
+  const muted = useGameStore((s) => s.muted);
+  const toggleMute = useGameStore((s) => s.toggleMute);
+  const liteMode = useGameStore((s) => s.liteMode);
+  const toggleLiteMode = useGameStore((s) => s.toggleLiteMode);
+
   useEffect(() => {
     document.title = 'TerraHeal | Zero-Waste Quiz';
     musicEngine.setSection('game');
@@ -48,16 +58,6 @@ export const Quiz = () => {
   useEffect(() => {
     musicEngine.setHealAmount(quiz?.health || 0);
   }, [quiz?.health]);
-
-  const quiz = useGameStore((s) => s.quiz);
-  const answerQuizQuestion = useGameStore((s) => s.answerQuizQuestion);
-  const nextQuizQuestion = useGameStore((s) => s.nextQuizQuestion);
-  const retakeQuiz = useGameStore((s) => s.retakeQuiz);
-
-  const muted = useGameStore((s) => s.muted);
-  const toggleMute = useGameStore((s) => s.toggleMute);
-  const liteMode = useGameStore((s) => s.liteMode);
-  const toggleLiteMode = useGameStore((s) => s.toggleLiteMode);
 
   // Restore quiz heal mask on mount
   useEffect(() => {

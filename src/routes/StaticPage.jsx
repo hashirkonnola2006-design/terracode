@@ -30,6 +30,10 @@ export const StaticPage = ({
       document.head.appendChild(metaRobots);
     }
     metaRobots.setAttribute('content', 'index, follow');
+
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('terraheal:scene-ready'));
+    });
   }, [title, metaDescription]);
 
   const handleBack = () => {

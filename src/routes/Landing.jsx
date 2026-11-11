@@ -298,16 +298,17 @@ export const Landing = () => {
   const handleStartCleaning = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setScreenFlash(true);
     navigateWithTransition('/solutions', navigate);
     setTimeout(() => {
       setIsTransitioning(false);
-      setScreenFlash(false);
     }, 2000);
   };
 
   useEffect(() => {
     document.title = 'TerraHeal | Heal the Planet by Playing';
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('terraheal:scene-ready'));
+    });
   }, []);
 
   const currentBeatData = BEATS_DATA[activeBeat] || BEATS_DATA[0];

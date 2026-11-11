@@ -32,6 +32,7 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
   const isUserInteracting = useRef(false);
   const lastInteractionTime = useRef(performance.now());
   const currentSpinSpeed = useRef(0.014);
+  const hasSignaledReady = useRef(false);
 
   // Heal mask persistence: restore saved regions on mount and synchronize on game resets
   const healRegions = useGameStore((s) => s.cleanup?.healRegions ?? s.healRegions ?? EMPTY_REGIONS);
@@ -93,6 +94,11 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
 
   // Render loop: smooth pollution lerp, auto-rotation on planet group only
   useFrame((state, delta) => {
+    if (!hasSignaledReady.current) {
+      hasSignaledReady.current = true;
+      window.dispatchEvent(new CustomEvent('terraheal:scene-ready'));
+    }
+
     const target = cleanliness / 100;
     smoothCleanliness.current = THREE.MathUtils.lerp(smoothCleanliness.current, target, Math.min(delta * 3.5, 1.0));
 

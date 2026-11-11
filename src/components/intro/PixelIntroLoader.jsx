@@ -1,23 +1,27 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import INTRO_CONFIG from '../../config/intro';
 import { checkShouldPlayIntro } from './useIntroStatus';
 import introSvgRaw from '../../assets/logo/terraheal-logo-intro.svg?raw';
 
 /**
- * PixelIntroLoader — Fast Pixel-Style Intro & Page Transition Loader for TerraHeal
+ * PixelIntroLoader — Continuous, Butter-Smooth Pixel Loading & Page Transition Engine
  *
- * Sequence (total ~1.95s, driven by requestAnimationFrame & performance.now()):
- * 1. 0.00 - 0.15s: Solid black (#050505)
- * 2. 0.15 - 0.80s: Randomized pixel static wave filling to brand teal with intermediate shades
- * 3. 0.60 - 1.30s: Stepped pixel sharpening of TerraHeal logo across 5 resolution stages
- *    * At 0.80 - 0.85s (solid teal cover): Route navigate(to) is called if navigating between pages
- * 4. 1.30 - 1.45s: Solid teal hold with full crisp resolution logo
- * 5. 1.45 - 1.95s: Reverse pixel dissolve revealing new page; logo dissolves with blocks
- * 6. 1.95s: Overlay removed from DOM, scroll restored, completion events dispatched
+ * Designed for 60-120 FPS performance with zero frame drops, zero black screen breaks,
+ * and seamless route transitions.
+ *
+ * Modes:
+ * 1. Initial Site Load (isInitial === true):
+ *    Brief black hold (80ms) -> Pixel static wave fills to teal -> Logo sharpens -> Hold -> Dissolve.
+ * 2. Route Transition (isInitial === false):
+ *    NO black flash! Transparent overlay -> Teal pixels swarm directly over current page ->
+ *    Solid teal cover -> Background route navigation & render -> Logo sharpens ->
+ *    Seamless reverse dissolve revealing the pre-rendered destination scene!
  */
 export const PixelIntroLoader = () => {
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   // Active transition session: null when inactive, or { id, to, isInitial }
   const [activeSession, setActiveSession] = useState(() => {
@@ -38,7 +42,9 @@ export const PixelIntroLoader = () => {
       setActiveSession((curr) => {
         // If already transitioning to this exact target, don't restart
         if (curr && curr.to === to) return curr;
-        window.dispatchEvent(new CustomEvent('terraheal:intro-start'));
+        queueMicrotask(() => {
+          window.dispatchEvent(new CustomEvent('terraheal:intro-start'));
+        });
         return { id: Date.now(), to, isInitial: false };
       });
     };
@@ -65,6 +71,9 @@ export const PixelIntroLoader = () => {
   useEffect(() => {
     if (!activeSession) return;
 
+    const isInitial = !!activeSession.isInitial;
+    const cfg = isInitial ? INTRO_CONFIG.timing.initial : INTRO_CONFIG.timing.transition;
+
     // ── Accessibility: prefers-reduced-motion fallback ──
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (reducedMotionQuery.matches) {
@@ -90,7 +99,7 @@ export const PixelIntroLoader = () => {
             // ignore
           }
         }, INTRO_CONFIG.timing.reducedMotionDuration);
-      }, 200);
+      }, 180);
 
       return () => {
         clearTimeout(timer);
@@ -105,13 +114,13 @@ export const PixelIntroLoader = () => {
       // ignore
     }
 
-    // 1. Lock scroll and pointer interactions
+    // 1. Lock scroll
     const prevBodyOverflow = document.body.style.overflow;
     const prevHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
 
-    // 2. Setup 2D Canvas
+    // 2. Setup 2D Canvas with fixed 1.0 DPR for max throughput & authentic retro block styling
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: true });
@@ -119,10 +128,9 @@ export const PixelIntroLoader = () => {
 
     let width = window.innerWidth;
     let height = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, INTRO_CONFIG.maxDpr);
 
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(height * dpr);
+    canvas.width = width;
+    canvas.height = height;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
@@ -133,14 +141,16 @@ export const PixelIntroLoader = () => {
     let totalBlocks = 0;
     let order = new Uint32Array(0);
     let shades = new Uint8Array(0);
+    let blockX = new Int32Array(0);
+    let blockY = new Int32Array(0);
 
     const recomputeGrid = () => {
       width = window.innerWidth;
       height = window.innerHeight;
       isMobile = width < 768 || width / Math.max(1, height) < 1.05;
 
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
+      canvas.width = width;
+      canvas.height = height;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
 
@@ -157,13 +167,16 @@ export const PixelIntroLoader = () => {
       rows = Math.ceil(height / blockSize);
       totalBlocks = cols * rows;
 
-      // Seeded / precomputed shuffled index array for block order
       order = new Uint32Array(totalBlocks);
       shades = new Uint8Array(totalBlocks);
+      blockX = new Int32Array(totalBlocks);
+      blockY = new Int32Array(totalBlocks);
 
       for (let i = 0; i < totalBlocks; i++) {
         order[i] = i;
         shades[i] = Math.floor(Math.random() * 4);
+        blockX[i] = (i % cols) * blockSize;
+        blockY[i] = Math.floor(i / cols) * blockSize;
       }
 
       // True uniform Fisher-Yates shuffle
@@ -183,19 +196,12 @@ export const PixelIntroLoader = () => {
     const svgUrl = URL.createObjectURL(svgBlob);
     logoImg.src = svgUrl;
 
-    const stepCanvases = [
-      document.createElement('canvas'),
-      document.createElement('canvas'),
-      document.createElement('canvas'),
-      document.createElement('canvas'),
-      document.createElement('canvas'),
-    ];
+    const stepWidths = [16, 32, 64, 128, 580];
+    const stepCanvases = stepWidths.map(() => document.createElement('canvas'));
     let logoReady = false;
 
     const prepareLogoSteps = () => {
-      const stepWidths = [16, 32, 64, 128, 580];
       const aspect = INTRO_CONFIG.logo.aspectRatio;
-
       stepWidths.forEach((sw, idx) => {
         const sc = stepCanvases[idx];
         const sh = Math.max(1, Math.round(sw * aspect));
@@ -223,96 +229,134 @@ export const PixelIntroLoader = () => {
     const COLOR_BG = INTRO_CONFIG.colors.bgDark;
     const SHADE_PALETTE = [COLOR_BRAND, COLOR_DARKER, COLOR_LIGHTER, COLOR_BRAND];
 
-    // 5. Sequence Execution
-    const startTime = performance.now();
-    let hasDispatchedExit = false;
+    // 5. Destination Readiness Synchronization
+    let isSceneReady = !activeSession.to; // If not navigating, ready immediately
+    const handleSceneReady = () => {
+      isSceneReady = true;
+    };
+    window.addEventListener('terraheal:scene-ready', handleSceneReady);
+
+    // 6. Sequence Execution with Clamped Delta Timing
+    let lastFrameTime = performance.now();
+    let virtualElapsed = 0;
     let hasNavigated = false;
-    let actualExitStartTime = INTRO_CONFIG.timing.phase5_pixelExitStart;
-    let actualEndTime = INTRO_CONFIG.timing.totalDuration;
+    let hasDispatchedExit = false;
+    let exitStartTime = 0;
 
     const renderFrame = (now) => {
-      const elapsed = now - startTime;
+      const rawDelta = now - lastFrameTime;
+      lastFrameTime = now;
+      // Clamp delta to at most 34ms (~30fps step) to avoid sudden frame drops or skipping
+      const delta = Math.min(Math.max(rawDelta, 0), 34);
+      virtualElapsed += delta;
 
-      // When the screen is 100% filled with solid teal, trigger navigation underneath
-      if (elapsed >= INTRO_CONFIG.timing.phase2_pixelFillEnd && !hasNavigated && activeSession.to) {
+      // Base logo layout dimensions
+      const baseLogoW = Math.round(
+        width * (isMobile ? INTRO_CONFIG.logo.mobileWidthRatio : INTRO_CONFIG.logo.desktopWidthRatio)
+      );
+      const baseLogoH = Math.round(baseLogoW * INTRO_CONFIG.logo.aspectRatio);
+
+      // Trigger navigation as soon as screen is 100% covered in solid teal
+      if (virtualElapsed >= cfg.fillEnd && !hasNavigated && activeSession.to) {
         hasNavigated = true;
-        navigate(activeSession.to);
-        window.scrollTo(0, 0);
+        requestAnimationFrame(() => {
+          if (navigateRef.current) {
+            navigateRef.current(activeSession.to);
+          }
+          window.scrollTo(0, 0);
+        });
       }
 
-      // Check Readiness at 1450ms (or up to +300ms extra hold if assets still pending)
-      if (elapsed >= INTRO_CONFIG.timing.phase4_logoHoldEnd && !hasDispatchedExit) {
-        const isAppReady = document.readyState === 'complete' || document.readyState === 'interactive';
-        const extraWaited = elapsed - INTRO_CONFIG.timing.phase4_logoHoldEnd;
-
-        if (isAppReady || extraWaited >= INTRO_CONFIG.timing.maxWaitExtra) {
+      // Check if ready to begin exit dissolve
+      if (virtualElapsed >= cfg.holdEnd && !hasDispatchedExit) {
+        const extraWaited = virtualElapsed - cfg.holdEnd;
+        // Exit when the destination scene is painted, or if maxWaitExtra timeout reached
+        if (isSceneReady || extraWaited >= cfg.maxWaitExtra) {
           hasDispatchedExit = true;
-          actualExitStartTime = elapsed;
-          actualEndTime = actualExitStartTime + (INTRO_CONFIG.timing.phase5_pixelExitEnd - INTRO_CONFIG.timing.phase5_pixelExitStart);
+          exitStartTime = virtualElapsed;
           window.dispatchEvent(new CustomEvent('terraheal:intro-exit'));
         }
       }
 
-      ctx.save();
-      ctx.scale(dpr, dpr);
-
-      const logoW = Math.round(
-        width * (isMobile ? INTRO_CONFIG.logo.mobileWidthRatio : INTRO_CONFIG.logo.desktopWidthRatio)
-      );
-      const logoH = Math.round(logoW * INTRO_CONFIG.logo.aspectRatio);
-      const logoX = Math.round((width - logoW) / 2);
-      const logoY = Math.round((height - logoH) / 2);
-
-      // ── PHASE 1: 0.00s - 0.15s (Pure Black) ──
-      if (elapsed < INTRO_CONFIG.timing.phase1_blackHold) {
+      // ─────────────────────────────────────────────────────────────
+      // PHASE 1: Black hold (Only for initial cold load, never on transitions)
+      // ─────────────────────────────────────────────────────────────
+      if (isInitial && virtualElapsed < cfg.blackHold) {
         ctx.fillStyle = COLOR_BG;
         ctx.fillRect(0, 0, width, height);
       }
 
-      // ── PHASE 2, 3, 4: 0.15s - 1.45s (Pixel Fill & Stepped Logo Sharpening) ──
+      // ─────────────────────────────────────────────────────────────
+      // PHASE 2, 3, 4: Pixel Fill, Logo Sharpening, and Hold
+      // ─────────────────────────────────────────────────────────────
       else if (!hasDispatchedExit) {
         const fillP = Math.min(
           Math.max(
-            (elapsed - INTRO_CONFIG.timing.phase2_pixelFillStart) /
-              (INTRO_CONFIG.timing.phase2_pixelFillEnd - INTRO_CONFIG.timing.phase2_pixelFillStart),
+            (virtualElapsed - cfg.fillStart) / Math.max(1, cfg.fillEnd - cfg.fillStart),
             0
           ),
           1.0
         );
 
         if (fillP < 1.0) {
-          ctx.fillStyle = COLOR_BG;
-          ctx.fillRect(0, 0, width, height);
+          if (isInitial) {
+            ctx.fillStyle = COLOR_BG;
+            ctx.fillRect(0, 0, width, height);
+          } else {
+            // For route transitions: clear so previous page is visible while blocks multiply
+            ctx.clearRect(0, 0, width, height);
+          }
 
           const activeCount = Math.floor(fillP * totalBlocks);
-          const frontier = Math.max(0, activeCount - Math.floor(totalBlocks * 0.14));
+          const frontier = Math.max(0, activeCount - Math.floor(totalBlocks * 0.12));
 
-          for (let i = 0; i < activeCount; i++) {
+          // Draw solid brand blocks in one batch
+          ctx.fillStyle = COLOR_BRAND;
+          for (let i = 0; i < frontier; i++) {
             const idx = order[i];
-            const bx = (idx % cols) * blockSize;
-            const by = Math.floor(idx / cols) * blockSize;
+            ctx.fillRect(blockX[idx], blockY[idx], blockSize, blockSize);
+          }
 
-            if (i < frontier) {
-              ctx.fillStyle = COLOR_BRAND;
-            } else {
-              ctx.fillStyle = SHADE_PALETTE[shades[i]];
-            }
-            ctx.fillRect(bx, by, blockSize, blockSize);
+          // Draw trailing frontier blocks with variation
+          for (let i = frontier; i < activeCount; i++) {
+            ctx.fillStyle = SHADE_PALETTE[shades[i]];
+            const idx = order[i];
+            ctx.fillRect(blockX[idx], blockY[idx], blockSize, blockSize);
           }
         } else {
+          // 100% filled: single solid teal rect
           ctx.fillStyle = COLOR_BRAND;
           ctx.fillRect(0, 0, width, height);
         }
 
-        // Stepped Logo Appearance (0.60s - 1.30s) and Hold (1.30s - 1.45s)
-        if (elapsed >= INTRO_CONFIG.timing.phase3_logoSharpenStart && logoReady) {
+        // Stepped Logo Appearance & Sharpening
+        if (virtualElapsed >= cfg.sharpenStart && logoReady) {
+          const sharpenP = Math.min(
+            Math.max(
+              (virtualElapsed - cfg.sharpenStart) / Math.max(1, cfg.sharpenEnd - cfg.sharpenStart),
+              0
+            ),
+            1.0
+          );
+
           let stepIdx = 4;
           for (let s = 0; s < INTRO_CONFIG.logoSteps.length; s++) {
-            if (elapsed < INTRO_CONFIG.logoSteps[s].endTime) {
+            if (sharpenP <= INTRO_CONFIG.logoSteps[s].progress) {
               stepIdx = s;
               break;
             }
           }
+
+          // While holding for scene readiness, add a subtle breathing pulse
+          const isHolding = virtualElapsed >= cfg.holdEnd && !isSceneReady;
+          const breatheScale = isHolding
+            ? 1.0 + Math.sin(virtualElapsed * 0.005) * 0.015
+            : 1.0;
+
+          const logoW = Math.round(baseLogoW * breatheScale);
+          const logoH = Math.round(baseLogoH * breatheScale);
+          const logoX = Math.round((width - logoW) / 2);
+          const logoY = Math.round((height - logoH) / 2);
 
           const currentStep = stepCanvases[stepIdx];
           ctx.save();
@@ -322,46 +366,48 @@ export const PixelIntroLoader = () => {
         }
       }
 
-      // ── PHASE 5: Exit Dissolve (~1.45s - 1.95s) ──
-      else if (hasDispatchedExit && elapsed < actualEndTime) {
-        const exitDuration = actualEndTime - actualExitStartTime;
-        const exitP = Math.min(Math.max((elapsed - actualExitStartTime) / exitDuration, 0), 1.0);
-        const remainingFraction = 1.0 - exitP;
-        const remainingBlocks = Math.floor(remainingFraction * totalBlocks);
+      // ─────────────────────────────────────────────────────────────
+      // PHASE 5: Reverse Pixel Dissolve (Revealing already-rendered scene)
+      // ─────────────────────────────────────────────────────────────
+      else if (hasDispatchedExit) {
+        const exitElapsed = virtualElapsed - exitStartTime;
+        const exitP = Math.min(Math.max(exitElapsed / cfg.exitDuration, 0), 1.0);
 
-        ctx.clearRect(0, 0, width, height);
+        if (exitP < 1.0) {
+          const remainingFraction = 1.0 - exitP;
+          const remainingBlocks = Math.floor(remainingFraction * totalBlocks);
 
-        // Draw remaining blocks
-        ctx.fillStyle = COLOR_BRAND;
-        for (let i = 0; i < remainingBlocks; i++) {
-          const idx = order[i];
-          const bx = (idx % cols) * blockSize;
-          const by = Math.floor(idx / cols) * blockSize;
-          ctx.fillRect(bx, by, blockSize, blockSize);
-        }
+          ctx.clearRect(0, 0, width, height);
 
-        // Dissolve logo synchronously with blocks using source-atop
-        if (logoReady) {
-          ctx.save();
-          ctx.globalCompositeOperation = 'source-atop';
-          ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(stepCanvases[4], logoX, logoY, logoW, logoH);
-          ctx.restore();
+          // Draw remaining pixel blocks in single batch
+          ctx.fillStyle = COLOR_BRAND;
+          for (let i = 0; i < remainingBlocks; i++) {
+            const idx = order[i];
+            ctx.fillRect(blockX[idx], blockY[idx], blockSize, blockSize);
+          }
+
+          // Dissolve logo synchronously with blocks using source-atop
+          if (logoReady) {
+            const logoX = Math.round((width - baseLogoW) / 2);
+            const logoY = Math.round((height - baseLogoH) / 2);
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(stepCanvases[4], logoX, logoY, baseLogoW, baseLogoH);
+            ctx.restore();
+          }
+        } else {
+          // Sequence Complete!
+          document.body.style.overflow = prevBodyOverflow;
+          document.documentElement.style.overflow = prevHtmlOverflow;
+          URL.revokeObjectURL(svgUrl);
+          window.removeEventListener('terraheal:scene-ready', handleSceneReady);
+          window.dispatchEvent(new CustomEvent('terraheal:intro-complete'));
+          setActiveSession(null);
+          return;
         }
       }
 
-      // ── SEQUENCE COMPLETE: (1.95s normal, <= 2.3s max) ──
-      else if (elapsed >= actualEndTime) {
-        ctx.restore();
-        document.body.style.overflow = prevBodyOverflow;
-        document.documentElement.style.overflow = prevHtmlOverflow;
-        URL.revokeObjectURL(svgUrl);
-        window.dispatchEvent(new CustomEvent('terraheal:intro-complete'));
-        setActiveSession(null);
-        return;
-      }
-
-      ctx.restore();
       animFrameId.current = requestAnimationFrame(renderFrame);
     };
 
@@ -377,11 +423,12 @@ export const PixelIntroLoader = () => {
       if (animFrameId.current) cancelAnimationFrame(animFrameId.current);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
+      window.removeEventListener('terraheal:scene-ready', handleSceneReady);
       document.body.style.overflow = prevBodyOverflow;
       document.documentElement.style.overflow = prevHtmlOverflow;
       URL.revokeObjectURL(svgUrl);
     };
-  }, [activeSession, navigate]);
+  }, [activeSession?.id]);
 
   if (!activeSession) return null;
 
@@ -390,7 +437,7 @@ export const PixelIntroLoader = () => {
     const encodedSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(introSvgRaw);
     return (
       <div
-        className={`fixed inset-0 z-[99999] flex items-center justify-center bg-[#0becc2] transition-opacity duration-400 pointer-events-auto ${
+        className={`fixed inset-0 z-[99999] flex items-center justify-center bg-[#0becc2] transition-opacity duration-350 pointer-events-auto ${
           reducedFadeOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
         style={{ minHeight: '100dvh' }}

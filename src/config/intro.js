@@ -20,42 +20,54 @@ export const INTRO_CONFIG = {
     urlOverrideParam: 'intro', // ?intro=1 forces intro to replay
   },
 
-  // Sequence timings (in milliseconds from performance.now())
+  // Sequence timings (in milliseconds of virtual animation time)
   timing: {
-    totalDuration: 1950, // Normal completion at 1.95s (Hard cap 2300ms)
-    phase1_blackHold: 150, // 0.00s - 0.15s: Solid black (#050505)
-    phase2_pixelFillStart: 150, // 0.15s: Start randomized teal pixel fill
-    phase2_pixelFillEnd: 800, // 0.80s: Entire screen filled with solid teal
-    phase3_logoSharpenStart: 600, // 0.60s: Logo appears blocky & begins sharpening
-    phase3_logoSharpenEnd: 1300, // 1.30s: Logo reaches full crisp resolution
-    phase4_logoHoldEnd: 1450, // 1.30s - 1.45s: Brief hold with sharp logo
-    phase5_pixelExitStart: 1450, // 1.45s: Reverse pixel dissolve begins, revealing site
-    phase5_pixelExitEnd: 1950, // 1.95s: Overlay completely removed from DOM
-    maxWaitExtra: 300, // Up to +300ms extra hold if assets/app still loading (hard cap 2250-2300ms)
-    reducedMotionDuration: 400, // Accessibility: simple 0.4s fade out
+    // Initial entry sequence (when opening site for first time)
+    initial: {
+      blackHold: 80,
+      fillStart: 80,
+      fillEnd: 600,
+      sharpenStart: 460,
+      sharpenEnd: 980,
+      holdEnd: 1150,
+      exitDuration: 450,
+      maxWaitExtra: 1000,
+    },
+    // Page transition sequence (between routes: e.g. /solutions to /clean)
+    transition: {
+      blackHold: 0, // Zero black frame: dissolves directly over current page!
+      fillStart: 0,
+      fillEnd: 480, // Solid teal screen in ~480ms
+      sharpenStart: 320,
+      sharpenEnd: 760,
+      holdEnd: 920,
+      exitDuration: 420,
+      maxWaitExtra: 1200,
+    },
+    reducedMotionDuration: 350, // Accessibility: simple 0.35s fade out
   },
 
-  // Number of sharpening steps between 600ms and 1300ms (~140ms per step)
+  // Number of sharpening steps between sharpenStart and sharpenEnd
   logoSteps: [
-    { width: 16, endTime: 740 },
-    { width: 32, endTime: 880 },
-    { width: 64, endTime: 1020 },
-    { width: 128, endTime: 1160 },
-    { width: 'full', endTime: 1300 },
+    { width: 16, progress: 0.20 },
+    { width: 32, progress: 0.40 },
+    { width: 64, progress: 0.65 },
+    { width: 128, progress: 0.85 },
+    { width: 580, progress: 1.00 },
   ],
 
   // Block grid density (divisions across the shorter screen dimension)
   grid: {
-    desktopShortSideDivisions: 32, // ~32 blocks on 900px height -> 28px/block (~32x56 blocks)
-    mobileShortSideDivisions: 24, // ~24 blocks on 390px width -> 16px/block for fast mobile fill
-    minBlockSize: 8,
-    maxBlockSize: 48,
+    desktopShortSideDivisions: 36, // ~36 blocks on 900px height -> 25px/block
+    mobileShortSideDivisions: 24, // ~24 blocks on 390px width -> 16px/block
+    minBlockSize: 10,
+    maxBlockSize: 40,
   },
 
   // Logo sizing relative to viewport width
   logo: {
     desktopWidthRatio: 0.40, // 40% of viewport width on desktop
-    mobileWidthRatio: 0.70, // 70% of viewport width on mobile
+    mobileWidthRatio: 0.72, // 72% of viewport width on mobile
     aspectRatio: 17 / 68, // Height to width ratio (17 rows by 68 cols)
     svgPath: '/terraheal-logo-intro.svg',
   },
@@ -69,8 +81,8 @@ export const INTRO_CONFIG = {
     white: '#ffffff',
   },
 
-  // Device pixel ratio cap for 2D canvas performance
-  maxDpr: 2,
+  // Device pixel ratio cap for 2D canvas performance (1.0 = razor-sharp pixel blocks, 4x fill-rate speed)
+  maxDpr: 1.0,
 };
 
 export default INTRO_CONFIG;

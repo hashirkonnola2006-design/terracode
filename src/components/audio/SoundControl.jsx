@@ -172,3 +172,4 @@ export const SoundControl = ({ className = '', buttonClass = '' }) => {
 };
 
 export default SoundControl;
+
