@@ -343,6 +343,7 @@ const PersistentPlanetController = ({
   mouseRef,
   scrollProgressRef,
   userCleanProgress = 0,
+  storyHealProgress = null,
 }) => {
   const planetGroupRef = useRef(null);
   const { camera, size } = useThree();
@@ -393,9 +394,10 @@ const PersistentPlanetController = ({
     const target = interpolateGlobeKeyframes(progress, isMobile);
 
     // Compute effective heal progress combining storytelling curve with user's earned game progress
+    const baseHeal = typeof storyHealProgress === 'number' ? storyHealProgress : target.healProgress;
     const effectiveTargetHeal = Math.min(
       1.0,
-      Math.max(target.healProgress, (userCleanProgress || 0) * 0.82 + target.healProgress * 0.20)
+      Math.max(baseHeal, (userCleanProgress || 0) * 0.82 + baseHeal * 0.20)
     );
 
     // Smooth delta-based easing for 60fps butter-smooth transitions
@@ -539,6 +541,7 @@ export const SolutionsHeroScene = ({
   liteMode = false,
   scrollProgressRef,
   userCleanProgress = 0,
+  storyHealProgress = null,
 }) => {
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
   const internalScrollRef = useRef(0);
@@ -583,6 +586,7 @@ export const SolutionsHeroScene = ({
         mouseRef={mouseRef}
         scrollProgressRef={activeScrollRef}
         userCleanProgress={userCleanProgress}
+        storyHealProgress={storyHealProgress}
       />
     </Canvas>
   );

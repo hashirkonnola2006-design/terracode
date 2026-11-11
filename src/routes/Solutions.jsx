@@ -1,82 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
-import { GAMES } from '../config/games';
 import { SolutionsHero, SolutionsHealBackground } from '../components/solutions/SolutionsHero';
 import { SolutionsHeroScene } from '../components/solutions/SolutionsHeroScene';
+import { DamageSection } from '../components/solutions/DamageSection';
+import { SixPillarsSection } from '../components/solutions/SixPillarsSection';
+import { YourImpactSection } from '../components/solutions/YourImpactSection';
 import { SectionFade } from '../components/Common/SectionFade';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { Footer } from '../components/Footer/Footer';
 import { navigateWithTransition } from '../utils/navigation';
 import { SoundControl } from '../components/audio/SoundControl';
 import { musicEngine } from '../audio/musicEngine';
-import {
-  Leaf,
-  Sparkles,
-  HelpCircle,
-  Lock,
-  CheckCircle2,
-  ChevronDown,
-  ArrowRight,
-  RotateCcw,
-  Volume2,
-  VolumeX,
-  Code2,
-  ShieldCheck,
-  RefreshCw,
-  Recycle,
-  Sprout,
-  Sun,
-  Trees,
-  Scissors,
-  Check,
-  AlertTriangle,
-} from 'lucide-react';
-
-const SOLUTION_CARDS = [
-  {
-    id: 'reduce',
-    icon: Scissors,
-    title: '1. Reduce',
-    desc: 'Cut waste at the source before it ever exists. Avoiding disposable products and excess packaging is the most impactful climate action.',
-    fact: 'Prevention precedes all recycling.',
-  },
-  {
-    id: 'reuse',
-    icon: RefreshCw,
-    title: '2. Reuse',
-    desc: 'Repair, refill, repurpose, and share everyday containers and equipment to keep materials circulating at peak utility.',
-    fact: 'Reusables displace hundreds of single-use items.',
-  },
-  {
-    id: 'recycle',
-    icon: Recycle,
-    title: '3. Recycle',
-    desc: 'Sort, rinse, and recover infinite materials like glass and aluminum. Up to 80% of ocean plastic leakage can be halted by 2040.',
-    source: 'UN Environment Programme (UNEP 2023)',
-  },
-  {
-    id: 'compost',
-    icon: Sprout,
-    title: '4. Compost',
-    desc: 'Divert kitchen scraps and yard trimmings from anaerobic landfills into nutrient-rich humus that feeds living soils and retains water.',
-    fact: 'Prevents potent methane emissions.',
-  },
-  {
-    id: 'energy',
-    icon: Sun,
-    title: '5. Clean Energy',
-    desc: 'Electrify regional grids with solar, wind, and battery storage to replace fossil smog. Renewables supplied 30% of global electricity in 2023.',
-    source: 'Ember Global Electricity Review 2024',
-  },
-  {
-    id: 'nature',
-    icon: Trees,
-    title: '6. Restore Nature',
-    desc: 'Replant native biomes and safeguard living wetlands and oceans. Intact forests sequester 7.6 billion metric tonnes of CO2 net every year.',
-    source: 'FAO Global Forest Assessment 2024',
-  },
-];
+import { Sparkles, ArrowRight, Lock, Check } from 'lucide-react';
 
 export const Solutions = () => {
   const navigate = useNavigate();
@@ -85,12 +21,16 @@ export const Solutions = () => {
   const cleanup = useGameStore((s) => s.cleanup);
   const quiz = useGameStore((s) => s.quiz);
   const liteMode = useGameStore((s) => s.liteMode);
-  const muted = useGameStore((s) => s.muted);
-  const toggleMute = useGameStore((s) => s.toggleMute);
 
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [activeNavSection, setActiveNavSection] = useState('home');
+  const [currentSection, setCurrentSection] = useState('hero');
   const [isSceneVisible, setIsSceneVisible] = useState(true);
+
+  // Dynamic Story Heal State (driven by scroll depth, pillars reading, and user score)
+  const [pillarsHeal, setPillarsHeal] = useState(0.0);
+  const [impactHeal, setImpactHeal] = useState(0.65);
+  const [activeStoryHeal, setActiveStoryHeal] = useState(0.0);
 
   const scrollProgressRef = useRef(0);
   const userCleanProgress = (cleanup?.health || 0) / 100;
@@ -122,18 +62,33 @@ export const Solutions = () => {
       const progress = Math.min(Math.max(scrollPos / maxScroll, 0.0), 1.0);
       scrollProgressRef.current = progress;
 
+      const damageEl = document.getElementById('damage');
+      const solutionsEl = document.getElementById('solutions');
+      const impactEl = document.getElementById('impact');
       const playEl = document.getElementById('play');
-      const solutionsEl = document.getElementById('solutions-grid');
 
-      if (scrollPos < 180) {
-        setActiveNavSection('home');
-      } else if (playEl && scrollPos >= playEl.offsetTop - 300) {
-        setActiveNavSection('play');
-      } else if (solutionsEl && scrollPos >= solutionsEl.offsetTop - 340) {
-        setActiveNavSection('solutions');
+      let detectedSection = 'hero';
+      let navTarget = 'home';
+
+      if (playEl && scrollPos >= playEl.offsetTop - 300) {
+        detectedSection = 'play';
+        navTarget = 'play';
+      } else if (impactEl && scrollPos >= impactEl.offsetTop - 300) {
+        detectedSection = 'impact';
+        navTarget = 'solutions';
+      } else if (solutionsEl && scrollPos >= solutionsEl.offsetTop - 300) {
+        detectedSection = 'pillars';
+        navTarget = 'solutions';
+      } else if (damageEl && scrollPos >= damageEl.offsetTop - 320) {
+        detectedSection = 'damage';
+        navTarget = 'solutions';
       } else {
-        setActiveNavSection('home');
+        detectedSection = 'hero';
+        navTarget = 'home';
       }
+
+      setCurrentSection(detectedSection);
+      setActiveNavSection(navTarget);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -141,15 +96,37 @@ export const Solutions = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Smooth scroll to #play or redirect #sources
+  // Update Music Engine mood & chord progression according to section
   useEffect(() => {
-    const sectionName = activeNavSection === 'solutions' ? 'pillars' : activeNavSection === 'play' ? 'play' : 'hero';
-    musicEngine.setSection(sectionName);
-  }, [activeNavSection]);
+    musicEngine.setSection(currentSection);
+  }, [currentSection]);
 
+  // Unified Heal Calculation across story sections:
+  // Hero: 0.0 -> Damage: 0.0 -> Pillars: 0.0 to 0.60 -> Impact: 0.60 to ~0.82 -> Play: max(0.60, userCleanProgress)
   useEffect(() => {
-    musicEngine.setHealAmount(cleanup?.health || 0);
-  }, [cleanup?.health]);
+    let targetHeal = 0.0;
+    if (currentSection === 'hero' || currentSection === 'damage') {
+      targetHeal = 0.0;
+    } else if (currentSection === 'pillars') {
+      targetHeal = pillarsHeal;
+    } else if (currentSection === 'impact') {
+      targetHeal = impactHeal;
+    } else if (currentSection === 'play') {
+      targetHeal = Math.max(0.60, userCleanProgress);
+    }
+    setActiveStoryHeal(targetHeal);
+    musicEngine.setHealAmount(Math.round(targetHeal * 100));
+  }, [currentSection, pillarsHeal, impactHeal, userCleanProgress]);
+
+  // Pillar row scroll callback
+  const handlePillarsHealChange = useCallback((value) => {
+    setPillarsHeal(value);
+  }, []);
+
+  // User impact test score callback
+  const handleImpactHealChange = useCallback((value) => {
+    setImpactHeal(value);
+  }, []);
 
   // Smooth scroll to #play or redirect #sources
   useEffect(() => {
@@ -172,7 +149,7 @@ export const Solutions = () => {
   };
 
   const handleSolutionsClick = () => {
-    const el = document.getElementById('solutions-grid');
+    const el = document.getElementById('damage');
     if (el) {
       el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
     }
@@ -194,7 +171,7 @@ export const Solutions = () => {
 
   return (
     <div className="relative min-h-screen bg-[#050505] text-white selection:bg-[#0becc2] selection:text-black">
-      {/* ── Fixed Top Header (Transparent over hero, border appears after scrolling) ── */}
+      {/* ── Fixed Top Header (Clean, short navigation) ── */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between transition-all duration-300 ${
           headerScrolled
@@ -205,7 +182,7 @@ export const Solutions = () => {
         {/* Logo */}
         <TerraHealLogo markSize={28} textClass="text-base sm:text-lg font-bold" />
 
-        {/* Nav Links (Desktop) */}
+        {/* Nav Links (Desktop) — Home, Solutions, Play Games */}
         <nav className="hidden md:flex items-center gap-8 font-label uppercase text-xs tracking-[0.18em]">
           <button
             onClick={() => {
@@ -290,7 +267,6 @@ export const Solutions = () => {
 
         {/* Controls */}
         <div className="flex items-center gap-2">
-          {/* Chiptune Audio Control with Volume Popover */}
           <SoundControl />
         </div>
       </header>
@@ -325,218 +301,190 @@ export const Solutions = () => {
       {/* ── 0B. Giant "HEAL" Background Typography (Layer z-[2] - strictly behind 3D Earth) ── */}
       <SolutionsHealBackground />
 
-      {/* ── 1. Fixed Persistent 3D Globe Layer (Layer z-[5] - sits in front of HEAL, behind UI) ── */}
+      {/* ── 1. Single Global 3D Globe Layer (Layer z-[5] - sits in front of HEAL, behind UI) ── */}
       <div className="fixed inset-0 z-[5] pointer-events-none">
         <SolutionsHeroScene
           isVisible={isSceneVisible}
           liteMode={liteMode}
           scrollProgressRef={scrollProgressRef}
           userCleanProgress={userCleanProgress}
+          storyHealProgress={activeStoryHeal}
         />
       </div>
 
-      {/* ── 1. Rebuilt Full-Screen Solutions Hero (Transparent, sits over persistent 3D globe) ── */}
+      {/* ── 2. Full-Screen Solutions Hero (Layer z-10) ── */}
       <div className="relative z-10 w-full bg-transparent">
         <SolutionsHero
-          onScrollToPillars={() => scrollToSection('solutions-grid')}
+          onScrollToPillars={() => scrollToSection('damage')}
           onScrollToPlay={() => scrollToSection('play')}
         />
       </div>
 
-      {/* ── Content Below Hero: Transparent with backdrop-filtered cards over moving globe ── */}
+      {/* ── 3. Designed Editorial Story Flow (Layer z-10) ── */}
       <div className="relative z-10 bg-transparent">
-        <main className="pt-20 sm:pt-28 pb-20 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
-          {/* ── 2. Solutions Grid (6 Glass Cards) ── */}
-          <SectionFade>
-            <section id="solutions-grid" className="space-y-8 scroll-mt-24">
-              <div className="text-center space-y-2 relative">
-                <div className="absolute -inset-4 bg-slate-950/50 blur-xl -z-10 rounded-full pointer-events-none" />
-                <span className="font-label uppercase text-[11px] font-semibold tracking-[0.25em] text-[#14e6c0]">
-                  The Restoration Playbook
-                </span>
-                <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-white tracking-tight">
-                  Six Pillars of Planetary Healing
-                </h2>
-              </div>
+        <main className="w-full">
+          {/* SECTION 1: "THE DAMAGE" (New, between Hero and Six Pillars) */}
+          <DamageSection onScrollToPillars={() => scrollToSection('solutions')} />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {SOLUTION_CARDS.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.id}
-                      className="p-6 rounded-2xl bg-slate-950/70 backdrop-blur-xl border border-white/10 hover:border-[#14e6c0]/40 hover:bg-slate-950/85 transition-all duration-300 flex flex-col justify-between group shadow-lg"
-                    >
-                      <div className="space-y-4">
-                        <div className="w-11 h-11 rounded-xl bg-[#14e6c0]/10 border border-[#14e6c0]/25 flex items-center justify-center text-[#14e6c0] group-hover:scale-105 transition-transform duration-200">
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        <h3 className="font-display font-bold text-lg text-white group-hover:text-[#5df7d9] transition-colors">
-                          {item.title}
-                        </h3>
-                        <p className="font-body font-light text-xs sm:text-sm text-white/70 leading-relaxed">
-                          {item.desc}
-                        </p>
+          {/* SECTION 2: "SIX PILLARS" (Redesigned Editorial 2-Column, No Cards) */}
+          <SixPillarsSection
+            onScrollToImpact={() => scrollToSection('impact')}
+            onRowHealChange={handlePillarsHealChange}
+          />
+
+          {/* SECTION 3: "YOUR IMPACT" (New Personal Alignment Check & 7-Day Challenge) */}
+          <YourImpactSection
+            onScrollToPlay={() => scrollToSection('play')}
+            onUserScoreHealChange={handleImpactHealChange}
+          />
+
+          {/* SECTION 4: "PLAY GAMES" (#play) */}
+          <div className="max-w-6xl mx-auto px-4 sm:px-8 py-24 sm:py-32">
+            <SectionFade>
+              <section id="play" className="space-y-10 scroll-mt-24">
+                <div className="text-center space-y-2 relative">
+                  <div className="absolute -inset-6 bg-slate-950/60 blur-2xl -z-10 rounded-full pointer-events-none" />
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#14e6c0]/10 border border-[#14e6c0]/25 text-[#14e6c0] font-label text-[10px] font-semibold tracking-[0.2em] uppercase">
+                    <Sparkles className="w-3 h-3 text-[#14e6c0]" />
+                    Interactive Restorations
+                  </div>
+                  <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-white tracking-tight">
+                    Play to heal the planet.
+                  </h2>
+                  <p className="font-body font-light text-sm sm:text-base text-white/70 max-w-xl mx-auto leading-relaxed">
+                    Choose an interactive simulation to test your skills and heal Earth with your own hands.
+                    Progress is linked directly to the living planet above.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Card 1: Cleanup Mission */}
+                  <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-[#14e6c0]/30 shadow-[0_0_24px_rgba(20,230,192,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
+                    {cleanup.completed && (
+                      <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#14e6c0]/20 border border-[#14e6c0]/40 text-[#5df7d9] text-[10px] font-label font-bold uppercase tracking-wider">
+                        <Check className="w-3 h-3 text-[#14e6c0]" /> Restored
                       </div>
+                    )}
 
-                      {(item.source || item.fact) && (
-                        <div className="pt-5 mt-4 border-t border-white/5">
-                          <span className="font-mono text-[10px] text-[#14e6c0]/80 block">
-                            {item.source ? `Data: ${item.source}` : `Key: ${item.fact}`}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          </SectionFade>
-
-          {/* ── 3. Interactive Games Section (#play) ── */}
-          <SectionFade>
-            <section id="play" className="space-y-8 scroll-mt-24 pt-6">
-              <div className="text-center space-y-2 relative">
-                <div className="absolute -inset-6 bg-slate-950/60 blur-2xl -z-10 rounded-full pointer-events-none" />
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#14e6c0]/10 border border-[#14e6c0]/25 text-[#14e6c0] font-label text-[10px] font-semibold tracking-[0.2em] uppercase">
-                  <Sparkles className="w-3 h-3 text-[#14e6c0]" />
-                  Interactive Restorations
-                </div>
-                <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-white tracking-tight">
-                  Play to heal the planet.
-                </h2>
-                <p className="font-body font-light text-sm sm:text-base text-white/70 max-w-xl mx-auto">
-                  Choose a simulation to test your skills and heal Earth with your own hands. Every game is completely separate.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Card 1: Cleanup Mission */}
-                <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-[#14e6c0]/30 shadow-[0_0_24px_rgba(20,230,192,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
-                  {cleanup.completed && (
-                    <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#14e6c0]/20 border border-[#14e6c0]/40 text-[#5df7d9] text-[10px] font-label font-bold uppercase tracking-wider">
-                      <Check className="w-3 h-3 text-[#14e6c0]" /> Restored
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <span className="font-label uppercase text-[10px] tracking-[0.2em] text-[#14e6c0] font-semibold">
-                      Game 1 • Hands-on Sim
-                    </span>
-                    <h3 className="font-display font-extrabold text-xl text-white">
-                      Cleanup Mission
-                    </h3>
-                    <p className="font-body font-light text-xs text-white/70 leading-relaxed">
-                      Clear orbital debris, reforest degraded continents, convert industrial smog, and sweep oceanic plastic gyres.
-                    </p>
-                  </div>
-
-                  {/* Cleanup Progress */}
-                  <div className="space-y-2 pt-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
-                        Planet Health
+                    <div className="space-y-3">
+                      <span className="font-label uppercase text-[10px] tracking-[0.2em] text-[#14e6c0] font-semibold">
+                        Game 1 • Hands-on Sim
                       </span>
-                      <span className="font-mono font-bold text-[#14e6c0]">
-                        {cleanup.health}%
+                      <h3 className="font-display font-extrabold text-xl text-white">
+                        Cleanup Mission
+                      </h3>
+                      <p className="font-body font-light text-xs text-white/70 leading-relaxed">
+                        Clear orbital debris, reforest degraded continents, convert industrial smog, and sweep oceanic plastic gyres.
+                      </p>
+                    </div>
+
+                    {/* Cleanup Progress */}
+                    <div className="space-y-2 pt-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
+                          Planet Health
+                        </span>
+                        <span className="font-mono font-bold text-[#14e6c0]">
+                          {cleanup.health}%
+                        </span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-[#14e6c0] to-[#5df7d9] transition-all duration-500"
+                          style={{ width: `${Math.max(cleanup.health, 2)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => navigateWithTransition('/clean', navigate)}
+                      className="btn-aerospace-primary w-full text-xs py-3 cursor-pointer"
+                    >
+                      {cleanup.completed
+                        ? 'Play Again'
+                        : cleanup.health > 0
+                        ? 'Continue Mission'
+                        : 'Start Cleaning'}
+                    </button>
+                  </div>
+
+                  {/* Card 2: Zero-Waste Quiz */}
+                  <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-sky-500/30 shadow-[0_0_24px_rgba(56,189,248,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
+                    {quiz.completed && (
+                      <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[10px] font-label font-bold uppercase tracking-wider">
+                        <Check className="w-3 h-3 text-sky-400" /> Completed
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      <span className="font-label uppercase text-[10px] tracking-[0.2em] text-sky-400 font-semibold">
+                        Game 2 • Knowledge Sim
                       </span>
+                      <h3 className="font-display font-extrabold text-xl text-white">
+                        Zero-Waste Quiz
+                      </h3>
+                      <p className="font-body font-light text-xs text-white/70 leading-relaxed">
+                        10 questions on circular recycling, composting, and zero-waste habits. Every correct answer visibly heals Earth.
+                      </p>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#14e6c0] to-[#5df7d9] transition-all duration-500"
-                        style={{ width: `${Math.max(cleanup.health, 2)}%` }}
-                      />
+
+                    {/* Quiz Progress & Best Score */}
+                    <div className="space-y-2 pt-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
+                          Best Score
+                        </span>
+                        <span className="font-mono font-bold text-sky-400">
+                          {quiz.bestScore > 0 ? `${quiz.bestScore} / 10` : 'Not played yet'}
+                        </span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-500"
+                          style={{ width: `${Math.max(quiz.bestScore * 10, 2)}%` }}
+                        />
+                      </div>
                     </div>
+
+                    <button
+                      onClick={() => navigateWithTransition('/quiz', navigate)}
+                      className="w-full py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-extrabold text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[0_0_16px_rgba(56,189,248,0.3)] hover:shadow-[0_0_24px_rgba(56,189,248,0.5)] flex items-center justify-center gap-2"
+                    >
+                      <span>{quiz.completed ? 'Retake Quiz' : 'Play Quiz'}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  <button
-                    onClick={() => navigateWithTransition('/clean', navigate)}
-                    className="btn-aerospace-primary w-full text-xs py-3 cursor-pointer"
-                  >
-                    {cleanup.completed
-                      ? 'Play Again'
-                      : cleanup.health > 0
-                      ? 'Continue Mission'
-                      : 'Start Cleaning'}
-                  </button>
-                </div>
-
-                {/* Card 2: Zero-Waste Quiz */}
-                <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-sky-500/30 shadow-[0_0_24px_rgba(56,189,248,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
-                  {quiz.completed && (
-                    <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[10px] font-label font-bold uppercase tracking-wider">
-                      <Check className="w-3 h-3 text-sky-400" /> Completed
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <span className="font-label uppercase text-[10px] tracking-[0.2em] text-sky-400 font-semibold">
-                      Game 2 • Knowledge Sim
-                    </span>
-                    <h3 className="font-display font-extrabold text-xl text-white">
-                      Zero-Waste Quiz
-                    </h3>
-                    <p className="font-body font-light text-xs text-white/70 leading-relaxed">
-                      10 questions on circular recycling, composting, and zero-waste habits. Every correct answer visibly heals Earth.
-                    </p>
-                  </div>
-
-                  {/* Quiz Progress & Best Score */}
-                  <div className="space-y-2 pt-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
-                        Best Score
+                  {/* Card 3: Climate Strategy (Coming Soon) */}
+                  <div className="p-6 rounded-2xl bg-slate-950/40 backdrop-blur-xl border border-white/5 opacity-60 flex flex-col justify-between space-y-6">
+                    <div className="space-y-3">
+                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <span className="font-label uppercase text-[10px] tracking-[0.2em] text-white/40 font-semibold block">
+                        Game 3 • In Development
                       </span>
-                      <span className="font-mono font-bold text-sky-400">
-                        {quiz.bestScore > 0 ? `${quiz.bestScore} / 10` : 'Not played yet'}
-                      </span>
+                      <h3 className="font-display font-extrabold text-xl text-white/70">
+                        Climate Strategy
+                      </h3>
+                      <p className="font-body font-light text-xs text-white/50 leading-relaxed">
+                        A new interactive mission is on the way. Deploy global clean policies and community energy grids.
+                      </p>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-500"
-                        style={{ width: `${Math.max(quiz.bestScore * 10, 2)}%` }}
-                      />
-                    </div>
-                  </div>
 
-                  <button
-                    onClick={() => navigateWithTransition('/quiz', navigate)}
-                    className="w-full py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-extrabold text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[0_0_16px_rgba(56,189,248,0.3)] hover:shadow-[0_0_24px_rgba(56,189,248,0.5)] flex items-center justify-center gap-2"
-                  >
-                    <span>{quiz.completed ? 'Retake Quiz' : 'Play Quiz'}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Card 3: Game 3 Placeholder (Coming Soon) */}
-                <div className="p-6 rounded-2xl bg-slate-950/40 backdrop-blur-xl border border-white/5 opacity-60 flex flex-col justify-between space-y-6">
-                  <div className="space-y-3">
-                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <span className="font-label uppercase text-[10px] tracking-[0.2em] text-white/40 font-semibold block">
-                      Game 3 • In Development
-                    </span>
-                    <h3 className="font-display font-extrabold text-xl text-white/70">
-                      Climate Strategy
-                    </h3>
-                    <p className="font-body font-light text-xs text-white/50 leading-relaxed">
-                      A new interactive mission is on the way. Deploy global clean policies and community energy grids.
-                    </p>
-                  </div>
-
-                  <div className="pt-6">
-                    <div className="w-full py-3 rounded-full bg-white/5 text-white/30 font-display text-xs text-center border border-white/5 uppercase tracking-wider font-semibold">
-                      Locked (Coming Soon)
+                    <div className="pt-6">
+                      <div className="w-full py-3 rounded-full bg-white/5 text-white/30 font-display text-xs text-center border border-white/5 uppercase tracking-wider font-semibold">
+                        Locked (Coming Soon)
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </section>
-          </SectionFade>
+              </section>
+            </SectionFade>
+          </div>
         </main>
 
-        {/* ── Shared Minimal Footer ── */}
+        {/* ── Footer with Central Sources Link ── */}
         <Footer />
       </div>
     </div>
@@ -544,4 +492,3 @@ export const Solutions = () => {
 };
 
 export default Solutions;
-

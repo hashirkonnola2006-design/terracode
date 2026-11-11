@@ -402,20 +402,27 @@ class ProceduralMusicEngine {
     let targetDrums = 0.0;
     let targetCutoff = 1200 + this.healRatio * 1800; // Opens up as planet heals
 
-    if (this.activeSection === 'hero') {
-      // Hero: Pad & sparkles dominate, dark, mysterious, slow
-      targetPad = 0.75;
-      targetArp = 0.10;
-      targetBass = 0.20;
+    if (this.activeSection === 'hero' || this.activeSection === 'damage') {
+      // Hero & Damage: Pad & sparkles dominate, dark, slow, contemplative
+      targetPad = 0.78;
+      targetArp = 0.08;
+      targetBass = 0.18;
       targetDrums = 0.0;
-      targetCutoff = 950 + this.healRatio * 1200;
+      targetCutoff = 900 + this.healRatio * 1100;
     } else if (this.activeSection === 'pillars') {
-      // Pillars: Arpeggio and bass fade in, thoughtful momentum
+      // Pillars: Arpeggio and bass fade in, thoughtful momentum, warmer chords
       targetPad = 0.60;
       targetArp = 0.24;
       targetBass = 0.38;
-      targetDrums = 0.18; // Soft hi-hat
+      targetDrums = 0.16; // Soft hi-hat
       targetCutoff = 1600 + this.healRatio * 1800;
+    } else if (this.activeSection === 'impact') {
+      // Impact: Brightens as user answers, active sparkle and warm arpeggio
+      targetPad = 0.54;
+      targetArp = 0.28;
+      targetBass = 0.40;
+      targetDrums = 0.24;
+      targetCutoff = 2000 + this.healRatio * 2400;
     } else if (this.activeSection === 'play') {
       // Play Games: Full energy with percussion, hopeful, triumphant
       targetPad = 0.50;
@@ -442,7 +449,7 @@ class ProceduralMusicEngine {
   getCurrentChordList() {
     if (this.activeSection === 'play') {
       return MUSIC_CONFIG.PLAY_CHORDS;
-    } else if (this.activeSection === 'pillars') {
+    } else if (this.activeSection === 'pillars' || this.activeSection === 'impact') {
       return MUSIC_CONFIG.PILLARS_CHORDS;
     }
     return MUSIC_CONFIG.HERO_CHORDS;
