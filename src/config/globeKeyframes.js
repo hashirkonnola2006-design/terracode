@@ -38,7 +38,7 @@ export const DESKTOP_GLOBE_KEYFRAMES = [
     rotZ: -0.06,
     rotYOffset: 1.45, // Rotates to showcase Atlantic / European / African continent
     dim: 1.0,
-    healProgress: 0.25,
+    healProgress: 0.0, // Earth remains in crisis/polluted state until user plays & heals!
     debrisOpacity: 0.0,
   },
   // 2. Pillars Middle (Scroll ~0.52)
@@ -51,7 +51,7 @@ export const DESKTOP_GLOBE_KEYFRAMES = [
     rotZ: -0.02,
     rotYOffset: 2.85, // Rotates to American continent
     dim: 0.95,
-    healProgress: 0.45,
+    healProgress: 0.0, // Stays polluted
     debrisOpacity: 0.0,
   },
   // 3. Pillars to Games (Scroll ~0.76)
@@ -64,7 +64,7 @@ export const DESKTOP_GLOBE_KEYFRAMES = [
     rotZ: AXIAL_TILT_Z,
     rotYOffset: 4.20, // Pacific / Asian continent
     dim: 1.0,
-    healProgress: 0.72,
+    healProgress: 0.0, // Stays polluted
     debrisOpacity: 0.0,
   },
   // 4. Games to Footer (Scroll 1.0)
@@ -77,7 +77,7 @@ export const DESKTOP_GLOBE_KEYFRAMES = [
     rotZ: -0.08,
     rotYOffset: 5.40,
     dim: 0.65,        // Dims slightly
-    healProgress: 0.90,
+    healProgress: 0.0, // Only heals when user completes actions in game store
     debrisOpacity: 0.0,
   },
 ];
@@ -106,7 +106,7 @@ export const MOBILE_GLOBE_KEYFRAMES = [
     rotZ: -0.06,
     rotYOffset: 1.45,
     dim: 0.85,
-    healProgress: 0.25,
+    healProgress: 0.0,
     debrisOpacity: 0.0,
   },
   // 2. Pillars Middle (Scroll ~0.52)
@@ -119,7 +119,7 @@ export const MOBILE_GLOBE_KEYFRAMES = [
     rotZ: -0.02,
     rotYOffset: 2.85,
     dim: 0.80,
-    healProgress: 0.45,
+    healProgress: 0.0,
     debrisOpacity: 0.0,
   },
   // 3. Pillars to Games (Scroll ~0.76)
@@ -132,20 +132,20 @@ export const MOBILE_GLOBE_KEYFRAMES = [
     rotZ: AXIAL_TILT_Z,
     rotYOffset: 4.20,
     dim: 0.95,
-    healProgress: 0.72,
+    healProgress: 0.0,
     debrisOpacity: 0.0,
   },
   // 4. Games to Footer (Scroll 1.0)
   {
     progress: 1.0,
     posX: 0.0,
-    posY: -0.45,
+    posY: -0.62,
     scale: 0.50,
     rotX: 0.20,
     rotZ: -0.08,
     rotYOffset: 5.40,
-    dim: 0.50,
-    healProgress: 0.90,
+    dim: 0.60,
+    healProgress: 0.0,
     debrisOpacity: 0.0,
   },
 ];

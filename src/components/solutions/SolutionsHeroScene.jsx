@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../hero3d/Earth';
 import { Clouds } from '../hero3d/Clouds';
+import { Smog } from '../hero3d/Smog';
 import { interpolateGlobeKeyframes } from '../../config/globeKeyframes';
 import { HERO_CONFIG } from '../../config/heroSolutions';
 import {
@@ -221,6 +222,7 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
 
 // ── 6. BILLBOARD SMOKE PLUMES RISING FROM FIRES ──
 const SMOKE_SOURCES = [
+  // Rift Zone
   { lat: 18, lon: 58 },
   { lat: 26, lon: 56 },
   { lat: 34, lon: 54 },
@@ -233,6 +235,22 @@ const SMOKE_SOURCES = [
   { lat: 48, lon: 60 },
   { lat: 14, lon: 58 },
   { lat: 45, lon: 50 },
+  // Europe & Mediterranean (visible in Pillars view)
+  { lat: 51, lon: 10 },
+  { lat: 41, lon: 2 },
+  { lat: 38, lon: 23 },
+  { lat: 46, lon: 2 },
+  // Africa (visible in Pillars view)
+  { lat: 26, lon: 18 },
+  { lat: 12, lon: 8 },
+  { lat: -2, lon: 24 },
+  { lat: 8, lon: -10 },
+  // Americas & Asia
+  { lat: 40, lon: -78 },
+  { lat: 37, lon: -119 },
+  { lat: -6, lon: -62 },
+  { lat: 34, lon: 116 },
+  { lat: 23, lon: 82 },
 ];
 
 const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
@@ -478,6 +496,12 @@ const PersistentPlanetController = ({
           pollution={1.0 - activeHeal}
           healProgress={activeHeal}
           autoRotate={false}
+        />
+
+        {/* Global Atmospheric Industrial Smog Shell & Emitters */}
+        <Smog
+          pollution={1.0 - activeHeal}
+          escalation={0.8}
         />
 
         {/* Billowing Smoke Plumes rising over damaged rifts (fades as planet heals) */}

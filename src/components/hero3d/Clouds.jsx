@@ -86,12 +86,12 @@ const CloudShader = {
       float NdotV = clamp(dot(N, V), 0.0, 1.0);
       float limb = pow(NdotV, 0.30);
 
-      // Color: dingy sooty industrial brown-gray when polluted; pristine white when clean
-      vec3 pollutedCloud = vec3(0.32, 0.28, 0.24);
+      // Color: heavy dark toxic acid-smog charcoal ash with sulfuric grime
+      vec3 pollutedCloud = vec3(0.14, 0.12, 0.10);
       vec3 healedCloud   = vec3(1.00, 1.00, 1.00);
       vec3 cloudCol      = mix(healedCloud, pollutedCloud, effPollution) * diffuse * limb;
 
-      float baseAlpha = mix(0.40, 0.62, effPollution);
+      float baseAlpha = mix(0.40, 0.82, effPollution);
       float alpha = cloudDensity * baseAlpha;
 
       gl_FragColor = vec4(cloudCol, alpha);
