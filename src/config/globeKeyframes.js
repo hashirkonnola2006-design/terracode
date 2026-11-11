@@ -74,11 +74,11 @@ export const DESKTOP_GLOBE_KEYFRAMES = [
   // 4. Play Games (Scroll ~0.88)
   {
     progress: 0.88,
-    posX: 0.0,        // Rises from bottom center like a horizon behind cards
-    posY: -1.05,
-    scale: 1.25,
-    rotX: 0.30,
-    rotZ: -0.06,
+    posX: 0.58,        // Placed in right negative space, clear of the left-aligned game list
+    posY: -0.22,
+    scale: 0.80,
+    rotX: 0.22,
+    rotZ: -0.05,
     rotYOffset: 5.40,
     dim: 1.0,
     healProgress: 0.0, // Real game progress in Cleanup Mission is handled separately
@@ -156,12 +156,12 @@ export const MOBILE_GLOBE_KEYFRAMES = [
   {
     progress: 0.88,
     posX: 0.0,
-    posY: -1.15,
-    scale: 1.15,
-    rotX: 0.30,
-    rotZ: -0.06,
+    posY: -0.34,
+    scale: 0.56,
+    rotX: 0.22,
+    rotZ: -0.05,
     rotYOffset: 5.40,
-    dim: 1.0,
+    dim: 0.70,
     healProgress: 0.0,
     debrisOpacity: 0.0,
   },

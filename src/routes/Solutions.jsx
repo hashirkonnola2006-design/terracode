@@ -6,14 +6,12 @@ import { SolutionsHeroScene } from '../components/solutions/SolutionsHeroScene';
 import { DamageSection } from '../components/solutions/DamageSection';
 import { SixPillarsSection } from '../components/solutions/SixPillarsSection';
 import { YourImpactSection } from '../components/solutions/YourImpactSection';
-import { SectionFade } from '../components/Common/SectionFade';
+import { PlaySection } from '../components/solutions/PlaySection';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { Footer } from '../components/Footer/Footer';
-import { navigateWithTransition } from '../utils/navigation';
 import { SoundControl } from '../components/audio/SoundControl';
 import { musicEngine } from '../audio/musicEngine';
 import { initGlobeScrollTriggers, refreshGlobeScrollTriggers } from '../config/globeScrollManager';
-import { Sparkles, ArrowRight, Lock, Check } from 'lucide-react';
 
 export const Solutions = () => {
   const navigate = useNavigate();
@@ -342,157 +340,8 @@ export const Solutions = () => {
           {/* SECTION 3: "YOUR IMPACT" (New Personal Alignment Check & 7-Day Challenge) */}
           <YourImpactSection onScrollToPlay={() => scrollToSection('play')} />
 
-          {/* SECTION 4: "PLAY GAMES" (#play) */}
-          <div className="max-w-6xl mx-auto px-4 sm:px-8 py-24 sm:py-32">
-            <SectionFade>
-              <section id="play" className="space-y-10 scroll-mt-24">
-                <div className="text-center space-y-2 relative">
-                  <div className="absolute -inset-6 bg-slate-950/60 blur-2xl -z-10 rounded-full pointer-events-none" />
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#14e6c0]/10 border border-[#14e6c0]/25 text-[#14e6c0] font-label text-[10px] font-semibold tracking-[0.2em] uppercase">
-                    <Sparkles className="w-3 h-3 text-[#14e6c0]" />
-                    Interactive Restorations
-                  </div>
-                  <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-white tracking-tight">
-                    Play to heal the planet.
-                  </h2>
-                  <p className="font-body font-light text-sm sm:text-base text-white/70 max-w-xl mx-auto leading-relaxed">
-                    Choose an interactive simulation to test your skills and heal Earth with your own hands.
-                    Progress is linked directly to the living planet above.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Card 1: Cleanup Mission */}
-                  <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-[#14e6c0]/30 shadow-[0_0_24px_rgba(20,230,192,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
-                    {cleanup.completed && (
-                      <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#14e6c0]/20 border border-[#14e6c0]/40 text-[#5df7d9] text-[10px] font-label font-bold uppercase tracking-wider">
-                        <Check className="w-3 h-3 text-[#14e6c0]" /> Restored
-                      </div>
-                    )}
-
-                    <div className="space-y-3">
-                      <span className="font-label uppercase text-[10px] tracking-[0.2em] text-[#14e6c0] font-semibold">
-                        Game 1 • Hands-on Sim
-                      </span>
-                      <h3 className="font-display font-extrabold text-xl text-white">
-                        Cleanup Mission
-                      </h3>
-                      <p className="font-body font-light text-xs text-white/70 leading-relaxed">
-                        Clear orbital debris, reforest degraded continents, convert industrial smog, and sweep oceanic plastic gyres.
-                      </p>
-                    </div>
-
-                    {/* Cleanup Progress */}
-                    <div className="space-y-2 pt-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
-                          Planet Health
-                        </span>
-                        <span className="font-mono font-bold text-[#14e6c0]">
-                          {cleanup.health}%
-                        </span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#14e6c0] to-[#5df7d9] transition-all duration-500"
-                          style={{ width: `${Math.max(cleanup.health, 2)}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => navigateWithTransition('/clean', navigate)}
-                      className="btn-aerospace-primary w-full text-xs py-3 cursor-pointer"
-                    >
-                      {cleanup.completed
-                        ? 'Play Again'
-                        : cleanup.health > 0
-                        ? 'Continue Mission'
-                        : 'Start Cleaning'}
-                    </button>
-                  </div>
-
-                  {/* Card 2: Zero-Waste Quiz */}
-                  <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-sky-500/30 shadow-[0_0_24px_rgba(56,189,248,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
-                    {quiz.completed && (
-                      <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[10px] font-label font-bold uppercase tracking-wider">
-                        <Check className="w-3 h-3 text-sky-400" /> Completed
-                      </div>
-                    )}
-
-                    <div className="space-y-3">
-                      <span className="font-label uppercase text-[10px] tracking-[0.2em] text-sky-400 font-semibold">
-                        Game 2 • Knowledge Sim
-                      </span>
-                      <h3 className="font-display font-extrabold text-xl text-white">
-                        Zero-Waste Quiz
-                      </h3>
-                      <p className="font-body font-light text-xs text-white/70 leading-relaxed">
-                        10 questions on circular recycling, composting, and zero-waste habits. Every correct answer visibly heals Earth.
-                      </p>
-                    </div>
-
-                    {/* Quiz Progress & Best Score */}
-                    <div className="space-y-2 pt-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
-                          Best Score
-                        </span>
-                        <span className="font-mono font-bold text-sky-400">
-                          {quiz.bestScore > 0 ? `${quiz.bestScore} / 10` : 'Not played yet'}
-                        </span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-500"
-                          style={{ width: `${Math.max(quiz.bestScore * 10, 2)}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => navigateWithTransition('/quiz', navigate)}
-                      className="btn-aerospace-secondary w-full text-xs py-3 cursor-pointer"
-                    >
-                      {quiz.completed
-                        ? 'Retake Quiz'
-                        : quiz.bestScore > 0
-                        ? 'Improve Score'
-                        : 'Start Quiz'}
-                    </button>
-                  </div>
-
-                  {/* Card 3: System Simulation (Coming Soon) */}
-                  <div className="p-6 rounded-2xl bg-slate-950/60 backdrop-blur-xl border border-white/5 flex flex-col justify-between space-y-6 relative opacity-75">
-                    <div className="space-y-3">
-                      <span className="font-label uppercase text-[10px] tracking-[0.2em] text-white/40 font-semibold">
-                        Game 3 • City Sim
-                      </span>
-                      <h3 className="font-display font-extrabold text-xl text-white/80">
-                        Circular City
-                      </h3>
-                      <p className="font-body font-light text-xs text-white/50 leading-relaxed">
-                        Balance urban energy grids, organic compost sorting, and material reuse loops across a living metropolis.
-                      </p>
-                    </div>
-
-                    <div className="space-y-3 pt-4 border-t border-white/5">
-                      <div className="flex items-center gap-2 text-white/40 text-xs font-mono">
-                        <Lock className="w-3.5 h-3.5 text-white/40" />
-                        <span>In Development</span>
-                      </div>
-                      <button
-                        disabled
-                        className="w-full py-3 px-4 rounded-xl font-label text-xs uppercase tracking-wider bg-white/5 text-white/30 cursor-not-allowed border border-white/5 text-center"
-                      >
-                        Locked
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </SectionFade>
-          </div>
+          {/* SECTION 4: "PLAY GAMES" (#play) - Minimal Editorial Row Flow */}
+          <PlaySection />
         </main>
 
         {/* Global TerraHeal Footer */}

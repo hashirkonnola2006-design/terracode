@@ -118,23 +118,23 @@ export const GLOBE_SECTION_CONFIG = {
   },
   play: {
     desktop: {
-      posX: 0.00, // Rises from bottom center like a horizon behind cards
-      posY: -1.05,
-      scale: 1.25,
-      rotX: 0.30,
-      rotZ: -0.06,
+      posX: 0.58, // Placed in right negative space, out of the way of the left-aligned game list
+      posY: -0.22,
+      scale: 0.80,
+      rotX: 0.22,
+      rotZ: -0.05,
       rotYOffset: 5.40,
       dim: 1.0,
       debrisOpacity: 0.0,
     },
     mobile: {
       posX: 0.0,
-      posY: -1.15,
-      scale: 1.15,
-      rotX: 0.30,
-      rotZ: -0.06,
+      posY: -0.34,
+      scale: 0.56,
+      rotX: 0.22,
+      rotZ: -0.05,
       rotYOffset: 5.40,
-      dim: 1.0,
+      dim: 0.70,
       debrisOpacity: 0.0,
     },
   },
@@ -252,3 +252,4 @@ export function refreshGlobeScrollTriggers() {
     ScrollTrigger.refresh();
   }
 }
+
