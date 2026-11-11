@@ -95,6 +95,8 @@ export const Clouds = ({
   const cloudsMap = useTexture('/textures/earth_clouds_2k.jpg');
 
   useEffect(() => {
+    cloudsMap.wrapS = THREE.RepeatWrapping;
+    cloudsMap.wrapT = THREE.ClampToEdgeWrapping;
     cloudsMap.minFilter = THREE.LinearMipmapLinearFilter;
     cloudsMap.magFilter = THREE.LinearFilter;
     cloudsMap.generateMipmaps = true;

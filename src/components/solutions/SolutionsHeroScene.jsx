@@ -1,20 +1,15 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../hero3d/Earth';
 import { Clouds } from '../hero3d/Clouds';
 import { Atmosphere } from '../hero3d/Atmosphere';
-import { HERO_CONFIG } from '../../config/heroSolutions';
+import { interpolateGlobeKeyframes } from '../../config/globeKeyframes';
 
-// ═══════════════════════════════════════════════════════════════
-// TUNABLE CONSTANTS (Solutions Hero Destroyed Earth Look)
-// ═══════════════════════════════════════════════════════════════
-export const HERO_CAMERA_FOV = HERO_CONFIG.cameraFov;
-export const HERO_CAMERA_Z = HERO_CONFIG.cameraZDesktop;
+export const HERO_CAMERA_FOV = 40;
+export const HERO_CAMERA_Z = 2.18;
 export const HERO_CAMERA_Y = 0.0;
-export const HERO_PLANET_Y = HERO_CONFIG.planetYDesktop;
-export const HERO_PLANET_SCALE = HERO_CONFIG.planetScaleDesktop;
-export const HERO_ROTATION_SPEED = HERO_CONFIG.rotationSpeed;
+export const HERO_ROTATION_SPEED = 0.0030; // Slow majestic auto-rotation
 
 // Lat/Lon to Sphere Cartesian Coordinate converter
 function latLonToVector3(lat, lon, radius = 1.0) {
@@ -44,7 +39,7 @@ function createCraggyRockGeometry(seed = 1) {
   return geom;
 }
 
-// ── 2. REALISTIC PLASTIC WATER BOTTLE (Image 1 Reference) ──
+// ── 2. REALISTIC PLASTIC WATER BOTTLE ──
 function BottleObject() {
   return (
     <group scale={[1.35, 1.35, 1.35]}>
@@ -95,7 +90,7 @@ function BottleObject() {
   );
 }
 
-// ── 3. DENTED METALLIC SODA CAN (Image 1 Reference) ──
+// ── 3. DENTED METALLIC SODA CAN ──
 function SodaCanObject() {
   const dentedCanGeom = useMemo(() => {
     const geom = new THREE.CylinderGeometry(0.052, 0.052, 0.17, 16);
@@ -165,11 +160,10 @@ function CrumpledBagObject() {
   );
 }
 
-// ── 5. CINEMATIC FLOATING DEBRIS & ASTEROIDS FIELD (Image 1 Reference Match) ──
-const FloatingDebrisField = ({ mouseRef, prefersReducedMotion = false }) => {
+// ── 5. CINEMATIC FLOATING DEBRIS & ASTEROIDS FIELD ──
+const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersReducedMotion = false }) => {
   const groupRef = useRef(null);
 
-  // Rock Geometries
   const rockGeoms = useMemo(() => {
     return [
       createCraggyRockGeometry(1.2),
@@ -185,10 +179,11 @@ const FloatingDebrisField = ({ mouseRef, prefersReducedMotion = false }) => {
       roughness: 0.85,
       metalness: 0.22,
       flatShading: true,
+      transparent: true,
+      opacity: 1.0,
     });
   }, []);
 
-  // 8-12 floating objects positioned matching target Reference Image 1
   const debrisList = useMemo(() => {
     return [
       // 1. Water Bottle: Top-Left (crisply visible next to H)
@@ -209,7 +204,7 @@ const FloatingDebrisField = ({ mouseRef, prefersReducedMotion = false }) => {
         spin: [0.004, -0.003, 0.002],
         drift: 0.07,
       },
-      // 3. Dented Soda Can: Right-Bottom (lower down in space)
+      // 3. Dented Soda Can: Right-Bottom
       {
         type: 'can',
         pos: [0.80, -0.42, 0.36],
@@ -304,7 +299,7 @@ const FloatingDebrisField = ({ mouseRef, prefersReducedMotion = false }) => {
   const itemsRef = useRef([]);
 
   useFrame(({ clock }, delta) => {
-    if (prefersReducedMotion) return;
+    if (!visible || prefersReducedMotion) return;
     const t = clock.getElapsedTime();
     const mx = mouseRef.current ? mouseRef.current.x : 0;
     const my = mouseRef.current ? mouseRef.current.y : 0;
@@ -312,19 +307,23 @@ const FloatingDebrisField = ({ mouseRef, prefersReducedMotion = false }) => {
     itemsRef.current.forEach((itemObj, idx) => {
       if (!itemObj) return;
       const d = debrisList[idx];
-      // Slow realistic tumble
       itemObj.rotation.x += d.spin[0] * delta * 60;
       itemObj.rotation.y += d.spin[1] * delta * 60;
       itemObj.rotation.z += d.spin[2] * delta * 60;
 
-      // Gentle floating bob & mouse parallax
       const bobY = Math.sin(t * 0.7 + idx * 1.5) * 0.015;
       const bobX = Math.cos(t * 0.5 + idx * 1.2) * 0.012;
       itemObj.position.x = d.pos[0] + bobX + mx * d.drift;
       itemObj.position.y = d.pos[1] + bobY + my * d.drift;
       itemObj.position.z = d.pos[2];
     });
+
+    if (groupRef.current) {
+      groupRef.current.scale.setScalar(Math.max(0.001, opacity));
+    }
   });
+
+  if (!visible) return null;
 
   return (
     <group ref={groupRef}>
@@ -359,7 +358,7 @@ const SMOKE_SOURCES = [
   { lat: 12, lon: 110 },
 ];
 
-const SmokePlumes = ({ isLowEnd = false }) => {
+const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
   const meshRef = useRef(null);
   const count = isLowEnd ? 24 : 55;
   const { camera } = useThree();
@@ -401,8 +400,11 @@ const SmokePlumes = ({ isLowEnd = false }) => {
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
+  // Smoke opacity fades out smoothly as planet heals
+  const smokeFactor = THREE.MathUtils.smoothstep(healProgress, 0.55, 0.05);
+
   useFrame(({ clock }) => {
-    if (!meshRef.current || isLowEnd) return;
+    if (!meshRef.current || isLowEnd || smokeFactor <= 0.001) return;
     const t = clock.getElapsedTime();
 
     particles.forEach((p, idx) => {
@@ -410,12 +412,10 @@ const SmokePlumes = ({ isLowEnd = false }) => {
       const currentHeight = 1.002 + progress * 0.28;
       const pos = p.basePos.clone().normalize().multiplyScalar(currentHeight);
       
-      // Wind drift towards upper atmosphere
       pos.y += progress * 0.055;
       pos.x += p.drift * progress;
 
       dummy.position.copy(pos);
-      // Billboard facing camera
       dummy.quaternion.copy(camera.quaternion);
       dummy.scale.setScalar(p.scale * (1.2 + progress * 3.2));
       dummy.updateMatrix();
@@ -424,6 +424,8 @@ const SmokePlumes = ({ isLowEnd = false }) => {
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
+  if (smokeFactor <= 0.001) return null;
+
   return (
     <instancedMesh ref={meshRef} args={[null, null, count]}>
       <planeGeometry args={[1, 1]} />
@@ -431,51 +433,108 @@ const SmokePlumes = ({ isLowEnd = false }) => {
         map={smokeTexture}
         transparent
         depthWrite={false}
-        opacity={isLowEnd ? 0.35 : 0.75}
+        opacity={(isLowEnd ? 0.35 : 0.75) * smokeFactor}
         blending={THREE.NormalBlending}
       />
     </instancedMesh>
   );
 };
 
-// ── 7. SCENE CONTROLLER (Camera Drift, Slow Spin, Mouse Parallax, Lighting) ──
-const HeroPlanetController = ({ liteMode = false, mouseRef }) => {
+// ── 7. PERSISTENT PLANET CONTROLLER (Drives Globe across Sections via Keyframes) ──
+const PersistentPlanetController = ({
+  liteMode = false,
+  mouseRef,
+  scrollProgressRef,
+  userCleanProgress = 0,
+}) => {
   const planetGroupRef = useRef(null);
   const { camera, size } = useThree();
   const aspect = size.width / Math.max(1, size.height);
   const isMobile = size.width < 768 || aspect < 1.05;
 
-  const targetPlanetY = isMobile ? HERO_CONFIG.planetYMobile : HERO_CONFIG.planetYDesktop;
-  const targetPlanetX = isMobile ? HERO_CONFIG.planetXMobile : HERO_CONFIG.planetXDesktop;
-  const targetScale = isMobile ? HERO_CONFIG.planetScaleMobile : HERO_CONFIG.planetScaleDesktop;
-  const targetCamZ = isMobile ? HERO_CONFIG.cameraZMobile : HERO_CONFIG.cameraZDesktop;
-
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // Persistent smoothed state refs
+  const currentPos = useRef({ x: isMobile ? 0 : 0.16, y: isMobile ? -1.28 : -1.44 });
+  const currentScale = useRef(isMobile ? 1.18 : 1.30);
+  const currentRotX = useRef(AXIAL_TILT_X + 0.14);
+  const currentRotZ = useRef(AXIAL_TILT_Z);
+  const currentRotYOffset = useRef(0.0);
+  const currentDim = useRef(1.0);
+  const currentHeal = useRef(0.0);
+  const currentDebrisOpacity = useRef(1.0);
+
+  const baseRotationY = useRef(INITIAL_ROTATION_Y - 0.28);
+
+  const [activeHeal, setActiveHeal] = useState(0.0);
+  const [activeDim, setActiveDim] = useState(1.0);
+  const [debrisOpacity, setDebrisOpacity] = useState(1.0);
+
   useEffect(() => {
-    camera.position.set(0, HERO_CAMERA_Y, targetCamZ);
+    camera.position.set(0, HERO_CAMERA_Y, HERO_CAMERA_Z);
     camera.lookAt(0, -0.15, 0);
-  }, [camera, targetCamZ]);
+  }, [camera]);
 
   useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime();
     const mx = mouseRef.current ? mouseRef.current.x : 0;
     const my = mouseRef.current ? mouseRef.current.y : 0;
+    const progress = scrollProgressRef.current || 0.0;
 
-    // Rotate locked planet group very slowly (~1 revolution per 5 minutes)
-    if (planetGroupRef.current && !prefersReducedMotion) {
-      planetGroupRef.current.rotation.y += delta * HERO_ROTATION_SPEED;
-      // Gentle mouse tilt
-      planetGroupRef.current.rotation.x = (AXIAL_TILT_X + 0.14) + my * 0.035;
-      planetGroupRef.current.rotation.z = AXIAL_TILT_Z - mx * 0.035;
+    // Evaluate target state from keyframe interpolation
+    const target = interpolateGlobeKeyframes(progress, isMobile);
+
+    // Compute effective heal progress combining storytelling curve with user's earned game progress
+    const effectiveTargetHeal = Math.min(
+      1.0,
+      Math.max(target.healProgress, (userCleanProgress || 0) * 0.82 + target.healProgress * 0.20)
+    );
+
+    // Smooth delta-based easing for 60fps butter-smooth transitions
+    const lerpSpeed = prefersReducedMotion ? 1.0 : Math.min(delta * 4.2, 1.0);
+    const rotSpeed = prefersReducedMotion ? 1.0 : Math.min(delta * 3.2, 1.0);
+
+    currentPos.current.x = THREE.MathUtils.lerp(currentPos.current.x, target.posX, lerpSpeed);
+    currentPos.current.y = THREE.MathUtils.lerp(currentPos.current.y, target.posY, lerpSpeed);
+    currentScale.current = THREE.MathUtils.lerp(currentScale.current, target.scale, lerpSpeed);
+    currentRotX.current = THREE.MathUtils.lerp(currentRotX.current, target.rotX, rotSpeed);
+    currentRotZ.current = THREE.MathUtils.lerp(currentRotZ.current, target.rotZ, rotSpeed);
+    currentRotYOffset.current = THREE.MathUtils.lerp(currentRotYOffset.current, target.rotYOffset, rotSpeed);
+    currentDim.current = THREE.MathUtils.lerp(currentDim.current, target.dim, lerpSpeed);
+    currentHeal.current = THREE.MathUtils.lerp(currentHeal.current, effectiveTargetHeal, lerpSpeed);
+    currentDebrisOpacity.current = THREE.MathUtils.lerp(currentDebrisOpacity.current, target.debrisOpacity, lerpSpeed);
+
+    // Sync state for React child components at throttled rate
+    if (Math.abs(currentHeal.current - activeHeal) > 0.015) {
+      setActiveHeal(currentHeal.current);
+    }
+    if (Math.abs(currentDim.current - activeDim) > 0.02) {
+      setActiveDim(currentDim.current);
+    }
+    if (Math.abs(currentDebrisOpacity.current - debrisOpacity) > 0.02) {
+      setDebrisOpacity(currentDebrisOpacity.current);
     }
 
-    // Subtle natural camera drift + mouse parallax for deep cinematic dimension
+    // Majestic continuous auto-rotation
     if (!prefersReducedMotion) {
-      const driftX = Math.sin(t * 0.18) * 0.020 + mx * 0.06;
-      const driftY = Math.cos(t * 0.22) * 0.012 + my * 0.04;
+      baseRotationY.current += delta * HERO_ROTATION_SPEED;
+    }
+
+    if (planetGroupRef.current) {
+      planetGroupRef.current.position.set(currentPos.current.x, currentPos.current.y, 0);
+      planetGroupRef.current.scale.setScalar(currentScale.current);
+
+      planetGroupRef.current.rotation.x = currentRotX.current + (prefersReducedMotion ? 0 : my * 0.035);
+      planetGroupRef.current.rotation.y = baseRotationY.current + currentRotYOffset.current;
+      planetGroupRef.current.rotation.z = currentRotZ.current - (prefersReducedMotion ? 0 : mx * 0.035);
+    }
+
+    // Subtle natural camera drift + mouse parallax
+    if (!prefersReducedMotion) {
+      const driftX = Math.sin(t * 0.18) * 0.018 + mx * 0.05;
+      const driftY = Math.cos(t * 0.22) * 0.010 + my * 0.03;
       camera.position.x = driftX;
       camera.position.y = HERO_CAMERA_Y + driftY;
       camera.lookAt(0, -0.15, 0);
@@ -488,60 +547,79 @@ const HeroPlanetController = ({ liteMode = false, mouseRef }) => {
       <directionalLight
         position={[-2.4, 2.0, 1.2]}
         color="#e0f2fe"
-        intensity={3.0}
+        intensity={3.0 * activeDim}
       />
       {/* Intense Cyan Horizon Rim Light */}
       <directionalLight
         position={[-0.8, 2.4, 0.4]}
         color="#38bdf8"
-        intensity={1.8}
+        intensity={1.8 * activeDim}
       />
       {/* Specular Glint Light for Floating Debris & Asteroids */}
       <directionalLight
         position={[1.8, 1.2, 1.6]}
         color="#bae6fd"
-        intensity={0.9}
+        intensity={0.9 * activeDim}
       />
-      {/* Low Ambient Light: Keeps right side in deep shadow with golden city lights */}
-      <ambientLight color="#050811" intensity={0.10} />
+      {/* Low Ambient Light: Keeps dark hemisphere deep with golden lights */}
+      <ambientLight color="#050811" intensity={0.12 * activeDim} />
 
-      {/* ── Master Planet Group (Shifted slightly right and down for perfect composition) ── */}
+      {/* ── Master Persistent Planet Group (Choreographed across sections) ── */}
       <group
         ref={planetGroupRef}
-        position={[targetPlanetX, targetPlanetY, 0]}
-        scale={targetScale}
+        position={[currentPos.current.x, currentPos.current.y, 0]}
+        scale={currentScale.current}
         rotation={[AXIAL_TILT_X + 0.14, INITIAL_ROTATION_Y - 0.28, AXIAL_TILT_Z]}
       >
-        {/* Core Destroyed Earth with High-Res NASA Textures & Procedural Lava Fault Lines */}
+        {/* Core Earth with High-Res NASA Textures & Dynamic Story Healing */}
         <Earth
-          pollution={1.0}
+          pollution={1.0 - activeHeal}
+          healProgress={activeHeal}
           autoRotate={false}
           heroSolutions={true}
           isLowEnd={liteMode}
+          dim={activeDim}
         />
 
-        {/* Cloud Layer with Slow Parallax */}
-        <Clouds pollution={1.0} />
+        {/* Cloud Layer with Slow Parallax and Dynamic Healing Brightness */}
+        <Clouds
+          pollution={1.0 - activeHeal}
+          healProgress={activeHeal}
+          autoRotate={false}
+        />
 
         {/* Atmospheric Rim in Vivid Electric Cyan */}
-        <Atmosphere pollution={1.0} coldRim={true} />
+        <Atmosphere
+          pollution={1.0 - activeHeal}
+          healProgress={activeHeal}
+          coldRim={true}
+        />
 
-        {/* Billowing Smoke Plumes rising over damaged rifts */}
-        <SmokePlumes isLowEnd={liteMode} />
+        {/* Billowing Smoke Plumes rising over damaged rifts (fades as planet heals) */}
+        <SmokePlumes isLowEnd={liteMode} healProgress={activeHeal} />
       </group>
 
-      {/* ── Floating Debris & Asteroids Field in Foreground Space (Image 1 Reference) ── */}
+      {/* ── Floating Debris & Asteroids Field in Foreground Space (Hero only, fades out on scroll) ── */}
       <FloatingDebrisField
         mouseRef={mouseRef}
+        visible={debrisOpacity > 0.01}
+        opacity={debrisOpacity}
         prefersReducedMotion={prefersReducedMotion}
       />
     </>
   );
 };
 
-// ── 8. EXPORTED CANVAS SCENE COMPONENT ──
-export const SolutionsHeroScene = ({ isVisible = true, liteMode = false }) => {
+// ── 8. EXPORTED PERSISTENT CANVAS COMPONENT ──
+export const SolutionsHeroScene = ({
+  isVisible = true,
+  liteMode = false,
+  scrollProgressRef,
+  userCleanProgress = 0,
+}) => {
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
+  const internalScrollRef = useRef(0);
+  const activeScrollRef = scrollProgressRef || internalScrollRef;
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -577,7 +655,12 @@ export const SolutionsHeroScene = ({ isVisible = true, liteMode = false }) => {
       frameloop={isVisible ? 'always' : 'never'}
       className="w-full h-full pointer-events-none"
     >
-      <HeroPlanetController liteMode={liteMode} mouseRef={mouseRef} />
+      <PersistentPlanetController
+        liteMode={liteMode}
+        mouseRef={mouseRef}
+        scrollProgressRef={activeScrollRef}
+        userCleanProgress={userCleanProgress}
+      />
     </Canvas>
   );
 };

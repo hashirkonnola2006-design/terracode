@@ -30,7 +30,7 @@ export const Footer: React.FC<FooterProps> = ({ className = '' }) => {
   return (
     <footer
       id="sources"
-      className={`relative w-full bg-[#050505] border-t border-[#1f1f1f] text-[#ffffff] select-none ${className}`}
+      className={`relative w-full bg-[#050505]/85 backdrop-blur-md border-t border-[#1f1f1f] text-[#ffffff] select-none ${className}`}
     >
       <div className="max-w-[1224px] mx-auto px-6 sm:px-8 pt-16 pb-12">
         {/* ── Row 1: Brand & Nav Columns ── */}
@@ -40,11 +40,11 @@ export const Footer: React.FC<FooterProps> = ({ className = '' }) => {
             <Link
               to="/solutions"
               aria-label="TerraHeal Home"
-              className="inline-block font-pixel text-2xl font-bold tracking-tight leading-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-glow)] rounded-sm"
-              style={{ fontFamily: "'Pixelify Sans', monospace, sans-serif" }}
+              className="inline-block font-display text-2xl font-black tracking-tight leading-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-glow)] rounded-sm"
+              style={{ fontFamily: "'Outfit', 'Montserrat', sans-serif", letterSpacing: '-0.03em' }}
             >
               <span className="text-white">Terra</span>
-              <span className="text-[var(--brand)]">Heal</span>
+              <span className="text-[#14e6c0]">Heal</span>
             </Link>
             <p className="font-body text-[14px] text-[#8a8a8a] leading-normal">
               Heal the planet by playing.

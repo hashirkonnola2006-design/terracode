@@ -57,6 +57,8 @@ export const Earth = ({
     lightsMap.colorSpace = THREE.SRGBColorSpace;
 
     [dayMap2k, normalMap, specularMap, lightsMap].forEach((t) => {
+      t.wrapS = THREE.RepeatWrapping;
+      t.wrapT = THREE.ClampToEdgeWrapping;
       t.minFilter = THREE.LinearMipmapLinearFilter;
       t.magFilter = THREE.LinearFilter;
       t.generateMipmaps = true;
@@ -71,6 +73,8 @@ export const Earth = ({
       const loader = new THREE.TextureLoader();
       loader.load('/textures/earth_day_8k.jpg', (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
         tex.anisotropy = gl.capabilities ? gl.capabilities.getMaxAnisotropy() : 8;
         tex.minFilter = THREE.LinearMipmapLinearFilter;
         tex.magFilter = THREE.LinearFilter;

@@ -86,6 +86,10 @@ export const EarthShader = {
       vec3 normMap = texture2D(uNormalMap, vUv).rgb * 2.0 - 1.0;
       // Boost normal roughness in hero mode for cracked terrain
       float normStrength = mix(0.30, 0.58, uHeroSolutions);
+      // Smoothly taper normal perturbation to zero near poles to eliminate UV singularity / swirl pinch
+      float poleDamp = smoothstep(0.96, 0.82, abs(wn.y));
+      normStrength *= poleDamp;
+
       vec3 perturbedWorld = normalize(wn + (T_world * normMap.x + B_world * normMap.y) * normStrength);
       vec3 N = normalize((viewMatrix * vec4(perturbedWorld, 0.0)).xyz);
 
@@ -182,50 +186,17 @@ export const EarthShader = {
         float scorch = smoothstep(0.035, 0.006, minFaultDist) * riftRegion;
         currentLand = mix(currentLand, vec3(0.012, 0.010, 0.008), scorch * 0.92);
 
-        // Magma pulse & incandescent radiation
+        // Magma pulse & incandescent radiation (cools down as planet heals)
         float lavaPulse = 0.90 + 0.10 * sin(uTime * 3.2 + vUv.y * 36.0);
         vec3 lavaCoreCol = vec3(1.0, 0.98, 0.88);   // Hot white-yellow core
         vec3 lavaInnerCol = vec3(1.0, 0.58, 0.06);  // Blazing orange
         vec3 lavaOuterCol = vec3(0.95, 0.16, 0.01); // Deep magma red-orange
 
-        heroFissureEmission = (lavaCoreCol * hotCore * 5.8 + lavaInnerCol * innerGlow * 3.8 + lavaOuterCol * outerFalloff * 2.2) * lavaPulse * uHeroSolutions;
+        float lavaCooling = smoothstep(0.55, 0.05, effectiveClean);
+        heroFissureEmission = (lavaCoreCol * hotCore * 5.8 + lavaInnerCol * innerGlow * 3.8 + lavaOuterCol * outerFalloff * 2.2) * lavaPulse * uHeroSolutions * lavaCooling;
       }
 
       vec3 surfaceColor = mix(currentLand, currentOcean, oceanMask);
-
-      // ── 2C. DIRTY MELTING POLAR ICE CAP (Hero Solutions Mode) ──
-      if (uHeroSolutions > 0.01) {
-        float polarY = vUv.y;
-        float iceDist = smoothstep(0.70, 0.88, polarY);
-        if (iceDist > 0.01) {
-          float gn = sin(vUv.x * 22.0 + sin(vUv.y * 16.0) * 1.5) * 0.5 + 0.5;
-          float iceCoverage = smoothstep(0.25, 0.75, gn * iceDist);
-          vec3 glaciatedWhite = vec3(0.86, 0.89, 0.94);
-          vec3 glacierMelt    = vec3(0.18, 0.46, 0.60);
-          vec3 glacierMoraine = vec3(0.30, 0.28, 0.26);
-          float moraineVar = sin(vUv.x * 38.0 + vUv.y * 22.0) * 0.5 + 0.5;
-          vec3 glacierColor = mix(glaciatedWhite, glacierMoraine, moraineVar * 0.45);
-          glacierColor = mix(glacierColor, glacierMelt, 0.22 * (1.0 - oceanMask));
-          surfaceColor = mix(surfaceColor, glacierColor, iceCoverage * 0.85 * uHeroSolutions);
-        }
-      }
-
-      // ── 2D. HURRICANE / CYCLONE SWIRL ON RIGHT OCEAN (Hero Solutions Mode) ──
-      if (uHeroSolutions > 0.01 && oceanMask > 0.3) {
-        vec2 stormCenter = vec2(0.76, 0.54);
-        vec2 sc = (vUv - stormCenter) * vec2(2.0, 1.0);
-        float sDist = length(sc);
-        if (sDist < 0.18) {
-          float sAngle = atan(sc.y, sc.x);
-          // Logarithmic spiral cloud bands
-          float sSpiral = sin(sAngle * 4.0 - sDist * 42.0 + uTime * 0.45);
-          float spiralBands = smoothstep(-0.15, 0.90, sSpiral) * smoothstep(0.18, 0.025, sDist);
-          // Crisp cyclone eye
-          float eye = smoothstep(0.010, 0.032, sDist);
-          vec3 stormCloud = vec3(0.88, 0.91, 0.95) * (0.65 + 0.35 * sSpiral);
-          surfaceColor = mix(surfaceColor, stormCloud, spiralBands * eye * 0.92 * uHeroSolutions);
-        }
-      }
 
       // ── 3. SURFACE FIRES (Active at 0-25%, extinguishes by 50-60%) ──
       vec3 fireEmission = vec3(0.0);

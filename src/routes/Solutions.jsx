@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { GAMES } from '../config/games';
 import { SolutionsHero } from '../components/solutions/SolutionsHero';
+import { SolutionsHeroScene } from '../components/solutions/SolutionsHeroScene';
+import { SectionFade } from '../components/Common/SectionFade';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { Footer } from '../components/Footer/Footer';
 import { navigateWithTransition } from '../utils/navigation';
@@ -17,7 +19,6 @@ import {
   RotateCcw,
   Volume2,
   VolumeX,
-  Zap,
   Code2,
   ShieldCheck,
   RefreshCw,
@@ -88,6 +89,10 @@ export const Solutions = () => {
 
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [activeNavSection, setActiveNavSection] = useState('home');
+  const [isSceneVisible, setIsSceneVisible] = useState(true);
+
+  const scrollProgressRef = useRef(0);
+  const userCleanProgress = (cleanup?.health || 0) / 100;
 
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
@@ -97,20 +102,33 @@ export const Solutions = () => {
     document.title = 'TerraHeal | Solutions';
   }, []);
 
-  // Scroll listener for top header styling and active nav section highlighting
+  // Tab visibility listener for 60fps performance optimization
+  useEffect(() => {
+    const handleVis = () => {
+      setIsSceneVisible(!document.hidden);
+    };
+    document.addEventListener('visibilitychange', handleVis);
+    return () => document.removeEventListener('visibilitychange', handleVis);
+  }, []);
+
+  // Scroll listener for top header styling, scroll-spy, and globe keyframe progress
   useEffect(() => {
     const handleScroll = () => {
       const scrollPos = window.scrollY;
       setHeaderScrolled(scrollPos > 20);
 
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const progress = Math.min(Math.max(scrollPos / maxScroll, 0.0), 1.0);
+      scrollProgressRef.current = progress;
+
       const playEl = document.getElementById('play');
       const solutionsEl = document.getElementById('solutions-grid');
 
-      if (scrollPos < 120) {
+      if (scrollPos < 180) {
         setActiveNavSection('home');
-      } else if (playEl && scrollPos >= playEl.offsetTop - 280) {
+      } else if (playEl && scrollPos >= playEl.offsetTop - 300) {
         setActiveNavSection('play');
-      } else if (solutionsEl && scrollPos >= solutionsEl.offsetTop - 300) {
+      } else if (solutionsEl && scrollPos >= solutionsEl.offsetTop - 340) {
         setActiveNavSection('solutions');
       } else {
         setActiveNavSection('home');
@@ -270,199 +288,242 @@ export const Solutions = () => {
         </div>
       </header>
 
-      {/* ── 1. Rebuilt Full-Screen Solutions Hero (Reference Match) ── */}
-      <SolutionsHero
-        liteMode={liteMode}
-        onScrollToPillars={() => scrollToSection('solutions-grid')}
-        onScrollToPlay={() => scrollToSection('play')}
-      />
+      {/* ── 0. Fixed Persistent 3D Globe Layer (Lives behind all sections) ── */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <SolutionsHeroScene
+          isVisible={isSceneVisible}
+          liteMode={liteMode}
+          scrollProgressRef={scrollProgressRef}
+          userCleanProgress={userCleanProgress}
+        />
+      </div>
 
-      {/* ── Content Below Hero: Solid #050505 Background (No WebGL) ── */}
-      <div className="relative z-20 bg-[#050505]">
+      {/* ── Fixed Global Space Starfield & Vignette Overlay ── */}
+      <div className="fixed inset-0 z-[1] pointer-events-none">
+        <div
+          className="absolute inset-0 opacity-45"
+          style={{
+            backgroundImage: `radial-gradient(1px 1px at 24px 34px, #ffffff, rgba(0,0,0,0)),
+                              radial-gradient(1.5px 1.5px at 130px 85px, #cbd5e1, rgba(0,0,0,0)),
+                              radial-gradient(1px 1px at 290px 145px, #94a3b8, rgba(0,0,0,0)),
+                              radial-gradient(1px 1px at 460px 65px, #ffffff, rgba(0,0,0,0)),
+                              radial-gradient(1.5px 1.5px at 630px 185px, #e2e8f0, rgba(0,0,0,0)),
+                              radial-gradient(1px 1px at 810px 95px, #ffffff, rgba(0,0,0,0)),
+                              radial-gradient(1px 1px at 990px 225px, #cbd5e1, rgba(0,0,0,0)),
+                              radial-gradient(1.5px 1.5px at 1210px 135px, #ffffff, rgba(0,0,0,0)),
+                              radial-gradient(1px 1px at 1450px 75px, #94a3b8, rgba(0,0,0,0)),
+                              radial-gradient(1.5px 1.5px at 1690px 195px, #ffffff, rgba(0,0,0,0))`,
+            backgroundSize: '820px 420px',
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(circle at 50% 50%, transparent 45%, rgba(5,5,5,0.40) 75%, rgba(5,5,5,0.85) 100%)',
+          }}
+        />
+      </div>
+
+      {/* ── 1. Rebuilt Full-Screen Solutions Hero (Transparent, sits over persistent 3D globe) ── */}
+      <div className="relative z-10 w-full bg-transparent">
+        <SolutionsHero
+          onScrollToPillars={() => scrollToSection('solutions-grid')}
+          onScrollToPlay={() => scrollToSection('play')}
+        />
+      </div>
+
+      {/* ── Content Below Hero: Transparent with backdrop-filtered cards over moving globe ── */}
+      <div className="relative z-10 bg-transparent">
         <main className="pt-20 sm:pt-28 pb-20 px-4 sm:px-8 max-w-6xl mx-auto space-y-24 sm:space-y-32">
           {/* ── 2. Solutions Grid (6 Glass Cards) ── */}
-          <section id="solutions-grid" className="space-y-8 scroll-mt-24">
-          <div className="text-center space-y-2">
-            <span className="font-label uppercase text-[11px] font-semibold tracking-[0.25em] text-[#0becc2]">
-              The Restoration Playbook
-            </span>
-            <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-white tracking-tight">
-              Six Pillars of Planetary Healing
-            </h2>
-          </div>
+          <SectionFade>
+            <section id="solutions-grid" className="space-y-8 scroll-mt-24">
+              <div className="text-center space-y-2 relative">
+                <div className="absolute -inset-4 bg-slate-950/50 blur-xl -z-10 rounded-full pointer-events-none" />
+                <span className="font-label uppercase text-[11px] font-semibold tracking-[0.25em] text-[#14e6c0]">
+                  The Restoration Playbook
+                </span>
+                <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-white tracking-tight">
+                  Six Pillars of Planetary Healing
+                </h2>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {SOLUTION_CARDS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  className="p-6 rounded-2xl bg-slate-950/70 backdrop-blur-xl border border-white/10 hover:border-[#0becc2]/40 hover:bg-slate-950/85 transition-all duration-300 flex flex-col justify-between group"
-                >
-                  <div className="space-y-4">
-                    <div className="w-11 h-11 rounded-xl bg-[#0becc2]/10 border border-[#0becc2]/25 flex items-center justify-center text-[#0becc2] group-hover:scale-105 transition-transform duration-200">
-                      <Icon className="w-5 h-5" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {SOLUTION_CARDS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-6 rounded-2xl bg-slate-950/70 backdrop-blur-xl border border-white/10 hover:border-[#14e6c0]/40 hover:bg-slate-950/85 transition-all duration-300 flex flex-col justify-between group shadow-lg"
+                    >
+                      <div className="space-y-4">
+                        <div className="w-11 h-11 rounded-xl bg-[#14e6c0]/10 border border-[#14e6c0]/25 flex items-center justify-center text-[#14e6c0] group-hover:scale-105 transition-transform duration-200">
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <h3 className="font-display font-bold text-lg text-white group-hover:text-[#5df7d9] transition-colors">
+                          {item.title}
+                        </h3>
+                        <p className="font-body font-light text-xs sm:text-sm text-white/70 leading-relaxed">
+                          {item.desc}
+                        </p>
+                      </div>
+
+                      {(item.source || item.fact) && (
+                        <div className="pt-5 mt-4 border-t border-white/5">
+                          <span className="font-mono text-[10px] text-[#14e6c0]/80 block">
+                            {item.source ? `Data: ${item.source}` : `Key: ${item.fact}`}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <h3 className="font-display font-bold text-lg text-white group-hover:text-[#5df7d9] transition-colors">
-                      {item.title}
+                  );
+                })}
+              </div>
+            </section>
+          </SectionFade>
+
+          {/* ── 3. Interactive Games Section (#play) ── */}
+          <SectionFade>
+            <section id="play" className="space-y-8 scroll-mt-24 pt-6">
+              <div className="text-center space-y-2 relative">
+                <div className="absolute -inset-6 bg-slate-950/60 blur-2xl -z-10 rounded-full pointer-events-none" />
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#14e6c0]/10 border border-[#14e6c0]/25 text-[#14e6c0] font-label text-[10px] font-semibold tracking-[0.2em] uppercase">
+                  <Sparkles className="w-3 h-3 text-[#14e6c0]" />
+                  Interactive Restorations
+                </div>
+                <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-white tracking-tight">
+                  Play to heal the planet.
+                </h2>
+                <p className="font-body font-light text-sm sm:text-base text-white/70 max-w-xl mx-auto">
+                  Choose a simulation to test your skills and heal Earth with your own hands. Every game is completely separate.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Card 1: Cleanup Mission */}
+                <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-[#14e6c0]/30 shadow-[0_0_24px_rgba(20,230,192,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
+                  {cleanup.completed && (
+                    <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#14e6c0]/20 border border-[#14e6c0]/40 text-[#5df7d9] text-[10px] font-label font-bold uppercase tracking-wider">
+                      <Check className="w-3 h-3 text-[#14e6c0]" /> Restored
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <span className="font-label uppercase text-[10px] tracking-[0.2em] text-[#14e6c0] font-semibold">
+                      Game 1 • Hands-on Sim
+                    </span>
+                    <h3 className="font-display font-extrabold text-xl text-white">
+                      Cleanup Mission
                     </h3>
-                    <p className="font-body font-light text-xs sm:text-sm text-white/70 leading-relaxed">
-                      {item.desc}
+                    <p className="font-body font-light text-xs text-white/70 leading-relaxed">
+                      Clear orbital debris, reforest degraded continents, convert industrial smog, and sweep oceanic plastic gyres.
                     </p>
                   </div>
 
-                  {(item.source || item.fact) && (
-                    <div className="pt-5 mt-4 border-t border-white/5">
-                      <span className="font-mono text-[10px] text-[#0becc2]/80 block">
-                        {item.source ? `Data: ${item.source}` : `Key: ${item.fact}`}
+                  {/* Cleanup Progress */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
+                        Planet Health
+                      </span>
+                      <span className="font-mono font-bold text-[#14e6c0]">
+                        {cleanup.health}%
                       </span>
                     </div>
+                    <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#14e6c0] to-[#5df7d9] transition-all duration-500"
+                        style={{ width: `${Math.max(cleanup.health, 2)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => navigateWithTransition('/clean', navigate)}
+                    className="btn-aerospace-primary w-full text-xs py-3 cursor-pointer"
+                  >
+                    {cleanup.completed
+                      ? 'Play Again'
+                      : cleanup.health > 0
+                      ? 'Continue Mission'
+                      : 'Start Cleaning'}
+                  </button>
+                </div>
+
+                {/* Card 2: Zero-Waste Quiz */}
+                <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-sky-500/30 shadow-[0_0_24px_rgba(56,189,248,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
+                  {quiz.completed && (
+                    <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[10px] font-label font-bold uppercase tracking-wider">
+                      <Check className="w-3 h-3 text-sky-400" /> Completed
+                    </div>
                   )}
+
+                  <div className="space-y-3">
+                    <span className="font-label uppercase text-[10px] tracking-[0.2em] text-sky-400 font-semibold">
+                      Game 2 • Knowledge Sim
+                    </span>
+                    <h3 className="font-display font-extrabold text-xl text-white">
+                      Zero-Waste Quiz
+                    </h3>
+                    <p className="font-body font-light text-xs text-white/70 leading-relaxed">
+                      10 questions on circular recycling, composting, and zero-waste habits. Every correct answer visibly heals Earth.
+                    </p>
+                  </div>
+
+                  {/* Quiz Progress & Best Score */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
+                        Best Score
+                      </span>
+                      <span className="font-mono font-bold text-sky-400">
+                        {quiz.bestScore > 0 ? `${quiz.bestScore} / 10` : 'Not played yet'}
+                      </span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-500"
+                        style={{ width: `${Math.max(quiz.bestScore * 10, 2)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => navigateWithTransition('/quiz', navigate)}
+                    className="w-full py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-extrabold text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[0_0_16px_rgba(56,189,248,0.3)] hover:shadow-[0_0_24px_rgba(56,189,248,0.5)] flex items-center justify-center gap-2"
+                  >
+                    <span>{quiz.completed ? 'Retake Quiz' : 'Play Quiz'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-        </section>
 
-        {/* ── 3. Interactive Games Section (#play) ── */}
-        <section id="play" className="space-y-8 scroll-mt-24 pt-6">
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0becc2]/10 border border-[#0becc2]/25 text-[#0becc2] font-label text-[10px] font-semibold tracking-[0.2em] uppercase">
-              <Sparkles className="w-3 h-3 text-[#0becc2]" />
-              Interactive Restorations
-            </div>
-            <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-white tracking-tight">
-              Play to heal the planet.
-            </h2>
-            <p className="font-body font-light text-sm sm:text-base text-white/70 max-w-xl mx-auto">
-              Choose a simulation to test your skills and heal Earth with your own hands. Every game is completely separate.
-            </p>
-          </div>
+                {/* Card 3: Game 3 Placeholder (Coming Soon) */}
+                <div className="p-6 rounded-2xl bg-slate-950/40 backdrop-blur-xl border border-white/5 opacity-60 flex flex-col justify-between space-y-6">
+                  <div className="space-y-3">
+                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <span className="font-label uppercase text-[10px] tracking-[0.2em] text-white/40 font-semibold block">
+                      Game 3 • In Development
+                    </span>
+                    <h3 className="font-display font-extrabold text-xl text-white/70">
+                      Climate Strategy
+                    </h3>
+                    <p className="font-body font-light text-xs text-white/50 leading-relaxed">
+                      A new interactive mission is on the way. Deploy global clean policies and community energy grids.
+                    </p>
+                  </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1: Cleanup Mission */}
-            <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-[#0becc2]/30 shadow-[0_0_24px_rgba(11,236,194,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
-              {cleanup.completed && (
-                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#0becc2]/20 border border-[#0becc2]/40 text-[#5df7d9] text-[10px] font-label font-bold uppercase tracking-wider">
-                  <Check className="w-3 h-3 text-[#0becc2]" /> Restored
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <span className="font-label uppercase text-[10px] tracking-[0.2em] text-[#0becc2] font-semibold">
-                  Game 1 • Hands-on Sim
-                </span>
-                <h3 className="font-display font-extrabold text-xl text-white">
-                  Cleanup Mission
-                </h3>
-                <p className="font-body font-light text-xs text-white/70 leading-relaxed">
-                  Clear orbital debris, reforest degraded continents, convert industrial smog, and sweep oceanic plastic gyres.
-                </p>
-              </div>
-
-              {/* Cleanup Progress */}
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
-                    Planet Health
-                  </span>
-                  <span className="font-mono font-bold text-[#0becc2]">
-                    {cleanup.health}%
-                  </span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#0becc2] to-[#5df7d9] transition-all duration-500"
-                    style={{ width: `${Math.max(cleanup.health, 2)}%` }}
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={() => navigateWithTransition('/clean', navigate)}
-                className="btn-aerospace-primary w-full text-xs py-3 cursor-pointer"
-              >
-                {cleanup.completed
-                  ? 'Play Again'
-                  : cleanup.health > 0
-                  ? 'Continue Mission'
-                  : 'Start Cleaning'}
-              </button>
-            </div>
-
-            {/* Card 2: Zero-Waste Quiz */}
-            <div className="p-6 rounded-2xl bg-slate-950/80 backdrop-blur-2xl border border-sky-500/30 shadow-[0_0_24px_rgba(56,189,248,0.12)] flex flex-col justify-between space-y-6 relative overflow-hidden">
-              {quiz.completed && (
-                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[10px] font-label font-bold uppercase tracking-wider">
-                  <Check className="w-3 h-3 text-sky-400" /> Completed
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <span className="font-label uppercase text-[10px] tracking-[0.2em] text-sky-400 font-semibold">
-                  Game 2 • Knowledge Sim
-                </span>
-                <h3 className="font-display font-extrabold text-xl text-white">
-                  Zero-Waste Quiz
-                </h3>
-                <p className="font-body font-light text-xs text-white/70 leading-relaxed">
-                  10 questions on circular recycling, composting, and zero-waste habits. Every correct answer visibly heals Earth.
-                </p>
-              </div>
-
-              {/* Quiz Progress & Best Score */}
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-label uppercase text-[10px] tracking-wider text-white/60">
-                    Best Score
-                  </span>
-                  <span className="font-mono font-bold text-sky-400">
-                    {quiz.bestScore > 0 ? `${quiz.bestScore} / 10` : 'Not played yet'}
-                  </span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-500"
-                    style={{ width: `${Math.max(quiz.bestScore * 10, 2)}%` }}
-                  />
+                  <div className="pt-6">
+                    <div className="w-full py-3 rounded-full bg-white/5 text-white/30 font-display text-xs text-center border border-white/5 uppercase tracking-wider font-semibold">
+                      Locked (Coming Soon)
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <button
-                onClick={() => navigateWithTransition('/quiz', navigate)}
-                className="w-full py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-extrabold text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[0_0_16px_rgba(56,189,248,0.3)] hover:shadow-[0_0_24px_rgba(56,189,248,0.5)] flex items-center justify-center gap-2"
-              >
-                <span>{quiz.completed ? 'Retake Quiz' : 'Play Quiz'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Card 3: Game 3 Placeholder (Coming Soon) */}
-            <div className="p-6 rounded-2xl bg-slate-950/40 backdrop-blur-xl border border-white/5 opacity-60 flex flex-col justify-between space-y-6">
-              <div className="space-y-3">
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <span className="font-label uppercase text-[10px] tracking-[0.2em] text-white/40 font-semibold block">
-                  Game 3 • In Development
-                </span>
-                <h3 className="font-display font-extrabold text-xl text-white/70">
-                  Climate Strategy
-                </h3>
-                <p className="font-body font-light text-xs text-white/50 leading-relaxed">
-                  A new interactive mission is on the way. Deploy global clean policies and community energy grids.
-                </p>
-              </div>
-
-              <div className="pt-6">
-                <div className="w-full py-3 rounded-full bg-white/5 text-white/30 font-display text-xs text-center border border-white/5 uppercase tracking-wider font-semibold">
-                  Locked (Coming Soon)
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
+            </section>
+          </SectionFade>
         </main>
 
         {/* ── Shared Minimal Footer ── */}
