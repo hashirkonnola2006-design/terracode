@@ -369,37 +369,197 @@ function getCachedTextures() {
   hazardTexture.wrapS = THREE.RepeatWrapping;
   hazardTexture.wrapT = THREE.RepeatWrapping;
 
-  // 1H. Craggy Dark Asteroid Rock Texture (Pitted Basalt with Flecks & Craters)
-  const rockCanvas = document.createElement('canvas');
-  rockCanvas.width = 256;
-  rockCanvas.height = 256;
-  const rCtx = rockCanvas.getContext('2d');
-  if (rCtx) {
-    rCtx.fillStyle = '#1e232a';
-    rCtx.fillRect(0, 0, 256, 256);
-    // Mottled basalt texture
-    for (let i = 0; i < 400; i++) {
-      const rx = (i * 37) % 256;
-      const ry = (i * 61) % 256;
-      const rRad = 1.5 + (i % 6);
-      const shade = 28 + ((i * 13) % 40);
-      rCtx.fillStyle = `rgb(${shade}, ${shade + 2}, ${shade + 6})`;
-      rCtx.beginPath();
-      rCtx.arc(rx, ry, rRad, 0, Math.PI * 2);
-      rCtx.fill();
+  // 1H. Faded Vintage Beer Can Texture (Muted Gold & Navy with Scratches)
+  const beerCanvas = document.createElement('canvas');
+  beerCanvas.width = 512;
+  beerCanvas.height = 256;
+  const beerCtx = beerCanvas.getContext('2d');
+  if (beerCtx) {
+    const bGrad = beerCtx.createLinearGradient(0, 0, 512, 0);
+    bGrad.addColorStop(0.0, '#78350f');
+    bGrad.addColorStop(0.2, '#b45309');
+    bGrad.addColorStop(0.5, '#fde68a');
+    bGrad.addColorStop(0.8, '#b45309');
+    bGrad.addColorStop(1.0, '#78350f');
+    beerCtx.fillStyle = bGrad;
+    beerCtx.fillRect(0, 0, 512, 256);
+
+    // Weathered scuffs & scratches
+    beerCtx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    for (let i = 0; i < 40; i++) {
+      beerCtx.fillRect((i * 47) % 512, (i * 29) % 256, 30 + (i % 20), 1.2);
+    }
+
+    // Navy banner
+    beerCtx.fillStyle = '#1e3a5f';
+    beerCtx.fillRect(0, 75, 512, 100);
+    beerCtx.strokeStyle = '#f59e0b';
+    beerCtx.lineWidth = 2;
+    beerCtx.strokeRect(0, 78, 512, 94);
+
+    // Brand text
+    beerCtx.fillStyle = '#fef3c7';
+    beerCtx.font = 'bold 28px serif';
+    beerCtx.textAlign = 'center';
+    beerCtx.fillText('OLD BAVARIA', 256, 122);
+    beerCtx.font = 'italic 12px sans-serif';
+    beerCtx.fillText('PREMIUM CRAFT LAGER • 330ml', 256, 145);
+
+    // Barcode
+    beerCtx.fillStyle = '#ffffff';
+    beerCtx.fillRect(20, 195, 60, 40);
+    beerCtx.fillStyle = '#000000';
+    for (let x = 24; x < 76; x += 3) {
+      if ((x * 7) % 3 !== 0) beerCtx.fillRect(x, 198, 1.5, 30);
     }
   }
-  const rockTexture = new THREE.CanvasTexture(rockCanvas);
+  const beerTexture = new THREE.CanvasTexture(beerCanvas);
+  beerTexture.wrapS = THREE.RepeatWrapping;
+
+  // 1I. Metallic Chip Packet Texture (Shiny Golden Yellow & Bold Red Foil)
+  const chipsCanvas = document.createElement('canvas');
+  chipsCanvas.width = 512;
+  chipsCanvas.height = 512;
+  const chCtx = chipsCanvas.getContext('2d');
+  if (chCtx) {
+    const chGrad = chCtx.createLinearGradient(0, 0, 512, 512);
+    chGrad.addColorStop(0.0, '#b91c1c');
+    chGrad.addColorStop(0.4, '#eab308');
+    chGrad.addColorStop(0.7, '#facc15');
+    chGrad.addColorStop(1.0, '#991b1b');
+    chCtx.fillStyle = chGrad;
+    chCtx.fillRect(0, 0, 512, 512);
+
+    // Metallic foil highlights
+    chCtx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+    chCtx.beginPath();
+    chCtx.moveTo(0, 80);
+    chCtx.lineTo(512, 280);
+    chCtx.lineTo(512, 340);
+    chCtx.lineTo(0, 140);
+    chCtx.fill();
+
+    // Bold snack logo
+    chCtx.fillStyle = '#ffffff';
+    chCtx.shadowColor = 'rgba(0,0,0,0.6)';
+    chCtx.shadowBlur = 8;
+    chCtx.font = 'italic 900 48px sans-serif';
+    chCtx.textAlign = 'center';
+    chCtx.fillText('CRUNCH', 256, 210);
+    chCtx.fillStyle = '#fef08a';
+    chCtx.font = 'bold 24px sans-serif';
+    chCtx.fillText('SEA SALT CHIPS', 256, 255);
+
+    chCtx.shadowBlur = 0;
+    chCtx.fillStyle = 'rgba(255,255,255,0.9)';
+    chCtx.font = 'bold 14px monospace';
+    chCtx.fillText('NET WT 45g ℮', 256, 290);
+
+    // Barcode block
+    chCtx.fillStyle = '#ffffff';
+    chCtx.fillRect(206, 380, 100, 48);
+    chCtx.fillStyle = '#000000';
+    for (let x = 214; x < 298; x += 3) {
+      if ((x * 5) % 4 !== 0) chCtx.fillRect(x, 385, 1.8, 35);
+    }
+  }
+  const chipsTexture = new THREE.CanvasTexture(chipsCanvas);
+
+  // 1J. Corrugated Cardboard Fragment Texture (Kraft with Fragile Markings)
+  const cardCanvas = document.createElement('canvas');
+  cardCanvas.width = 256;
+  cardCanvas.height = 256;
+  const cdCtx = cardCanvas.getContext('2d');
+  if (cdCtx) {
+    cdCtx.fillStyle = '#b48a56'; // Kraft cardboard tan
+    cdCtx.fillRect(0, 0, 256, 256);
+
+    // Fibrous cardboard flecks
+    for (let i = 0; i < 300; i++) {
+      const fx = (i * 43) % 256;
+      const fy = (i * 67) % 256;
+      cdCtx.fillStyle = (i % 2 === 0) ? '#967140' : '#cfab78';
+      cdCtx.fillRect(fx, fy, 2 + (i % 4), 1);
+    }
+
+    // Black stenciled "FRAGILE" glass icon
+    cdCtx.strokeStyle = '#1c1917';
+    cdCtx.lineWidth = 3;
+    cdCtx.fillStyle = '#1c1917';
+    // Wine glass cup
+    cdCtx.beginPath();
+    cdCtx.moveTo(60, 70);
+    cdCtx.lineTo(60, 95);
+    cdCtx.arc(75, 95, 15, Math.PI, 0, true);
+    cdCtx.lineTo(90, 70);
+    cdCtx.closePath();
+    cdCtx.stroke();
+    // Glass stem and base
+    cdCtx.beginPath();
+    cdCtx.moveTo(75, 110);
+    cdCtx.lineTo(75, 135);
+    cdCtx.moveTo(60, 135);
+    cdCtx.lineTo(90, 135);
+    cdCtx.stroke();
+
+    // Two upward shipping arrows
+    cdCtx.fillRect(150, 85, 8, 45);
+    cdCtx.beginPath();
+    cdCtx.moveTo(142, 85);
+    cdCtx.lineTo(154, 65);
+    cdCtx.lineTo(166, 85);
+    cdCtx.closePath();
+    cdCtx.fill();
+
+    cdCtx.fillRect(180, 85, 8, 45);
+    cdCtx.beginPath();
+    cdCtx.moveTo(172, 85);
+    cdCtx.lineTo(184, 65);
+    cdCtx.lineTo(196, 85);
+    cdCtx.closePath();
+    cdCtx.fill();
+
+    cdCtx.font = 'bold 16px monospace';
+    cdCtx.fillText('FRAGILE', 52, 170);
+    cdCtx.font = '10px monospace';
+    cdCtx.fillText('HANDLE WITH CARE', 44, 190);
+  }
+  const cardboardTexture = new THREE.CanvasTexture(cardCanvas);
+
+  // 1K. Vintage Glass Bottle Paper Label Texture
+  const glassLabelCanvas = document.createElement('canvas');
+  glassLabelCanvas.width = 256;
+  glassLabelCanvas.height = 128;
+  const glCtx = glassLabelCanvas.getContext('2d');
+  if (glCtx) {
+    glCtx.fillStyle = '#fef3c7'; // Aged ivory parchment
+    glCtx.fillRect(0, 0, 256, 128);
+    glCtx.strokeStyle = '#78350f';
+    glCtx.lineWidth = 2;
+    glCtx.strokeRect(6, 6, 244, 116);
+    glCtx.fillStyle = '#451a03';
+    glCtx.font = 'bold 18px serif';
+    glCtx.textAlign = 'center';
+    glCtx.fillText('ESTATE BOTTLING', 128, 52);
+    glCtx.font = 'italic 11px serif';
+    glCtx.fillText('Pure Mineral Spring • 500ml', 128, 74);
+    glCtx.font = '9px monospace';
+    glCtx.fillText('RECYCLED GLASS', 128, 98);
+  }
+  const glassLabelTexture = new THREE.CanvasTexture(glassLabelCanvas);
 
   cachedTextures = {
     cola: colaTexture,
+    beer: beerTexture,
     energy: energyTexture,
     fizz: fizzTexture,
     bottle: bottleTexture,
     coffee: coffeeTexture,
     solar: solarTexture,
     hazard: hazardTexture,
-    rock: rockTexture,
+    chips: chipsTexture,
+    cardboard: cardboardTexture,
+    glassLabel: glassLabelTexture,
   };
 
   return cachedTextures;
@@ -546,24 +706,93 @@ function getCachedGeometries() {
   const boxGeom = new THREE.BoxGeometry(0.075, 0.045, 0.065);
   boxGeom.center();
 
-  // ── 2J. Craggy Space Asteroid / Slag (Organic High-Detail Mesh) ──
-  const slagGeom = new THREE.IcosahedronGeometry(0.042, 2);
-  const sPos = slagGeom.attributes.position;
-  for (let i = 0; i < sPos.count; i++) {
-    const x = sPos.getX(i);
-    const y = sPos.getY(i);
-    const z = sPos.getZ(i);
-    const crag = Math.sin(x * 38.0 + y * 24.0) * 0.007 +
-                 Math.cos(y * 42.0 - z * 32.0) * 0.005 +
-                 Math.sin(z * 65.0 + x * 50.0) * 0.003;
-    sPos.setXYZ(i, x + crag, y + crag, z + crag);
+  // ── 2J. Crushed & Twisted Plastic Water Bottle Geometry ──
+  const crushedBottleGeom = new THREE.LatheGeometry(bottlePts, 24);
+  const cbPos = crushedBottleGeom.attributes.position;
+  for (let i = 0; i < cbPos.count; i++) {
+    const y = cbPos.getY(i);
+    const x = cbPos.getX(i);
+    const z = cbPos.getZ(i);
+    if (y > -0.045 && y < 0.035) {
+      const pinch = 0.52 + 0.38 * Math.sin(y * 65.0 + x * 45.0);
+      const twist = Math.sin(y * 55.0) * 0.009;
+      cbPos.setXYZ(i, x * pinch + twist, y, z * (1.35 - pinch * 0.55));
+    }
   }
-  slagGeom.computeVertexNormals();
-  slagGeom.center();
+  crushedBottleGeom.computeVertexNormals();
+  crushedBottleGeom.center();
+
+  // ── 2K. Glass Beverage Bottle Lathe Profile (Punt base, crown lip, long neck) ──
+  const glassPts = [
+    new THREE.Vector2(0, -0.075),
+    new THREE.Vector2(0.012, -0.072), // Concave punt bottom
+    new THREE.Vector2(0.026, -0.068),
+    new THREE.Vector2(0.027, 0.005),  // Cylindrical body
+    new THREE.Vector2(0.025, 0.025),  // Shoulder slope
+    new THREE.Vector2(0.014, 0.048),  // Neck taper
+    new THREE.Vector2(0.011, 0.074),  // Choke
+    new THREE.Vector2(0.0135, 0.076), // Crown cap lip ring
+    new THREE.Vector2(0.010, 0.080),  // Lip opening
+    new THREE.Vector2(0, 0.080),
+  ];
+  const glassBottleGeom = new THREE.LatheGeometry(glassPts, 24);
+  glassBottleGeom.center();
+
+  // ── 2L. Crinkled Metallic Snack / Chip Packet (Crimped zigzag seals) ──
+  const chipsGeom = new THREE.PlaneGeometry(0.085, 0.115, 18, 22);
+  const cpPos = chipsGeom.attributes.position;
+  for (let i = 0; i < cpPos.count; i++) {
+    const x = cpPos.getX(i);
+    const y = cpPos.getY(i);
+    const puff = Math.cos((x / 0.042) * (Math.PI / 2)) * Math.cos((y / 0.058) * (Math.PI / 2));
+    const crinkle = Math.sin(x * 130.0 + y * 95.0) * 0.0035 + Math.cos(x * 85.0 - y * 145.0) * 0.0028;
+    const crimp = (Math.abs(y) > 0.048) ? Math.sin(x * 380.0) * 0.0022 : 0;
+    cpPos.setZ(i, Math.max(0, puff * 0.020 + crinkle + crimp));
+  }
+  chipsGeom.computeVertexNormals();
+  chipsGeom.center();
+
+  // ── 2M. Discarded Beach Sandal / Flip-Flop Foam Sole ──
+  const soleShape = new THREE.Shape();
+  soleShape.moveTo(-0.020, -0.065);
+  soleShape.bezierCurveTo(-0.024, -0.030, -0.028, 0.020, -0.025, 0.055);
+  soleShape.bezierCurveTo(-0.020, 0.075, 0.015, 0.075, 0.020, 0.055);
+  soleShape.bezierCurveTo(0.022, 0.025, 0.012, -0.010, 0.016, -0.045);
+  soleShape.bezierCurveTo(0.018, -0.065, -0.015, -0.068, -0.020, -0.065);
+  const flipflopGeom = new THREE.ExtrudeGeometry(soleShape, {
+    depth: 0.012,
+    bevelEnabled: true,
+    bevelSegments: 2,
+    steps: 1,
+    bevelSize: 0.002,
+    bevelThickness: 0.002,
+  });
+  flipflopGeom.center();
+
+  // ── 2N. Torn Corrugated Packaging Fragment (Torn ragged edge) ──
+  const cardPlane = new THREE.PlaneGeometry(0.095, 0.095, 14, 14);
+  const cbPPos = cardPlane.attributes.position;
+  for (let i = 0; i < cbPPos.count; i++) {
+    const y = cbPPos.getY(i);
+    const x = cbPPos.getX(i);
+    if (y < -0.036) {
+      const tear = Math.sin(x * 150.0) * 0.009 + Math.cos(x * 300.0) * 0.0045;
+      cbPPos.setY(i, y + tear);
+    }
+    const flute = Math.sin(y * 240.0) * 0.0015;
+    cbPPos.setZ(i, flute);
+  }
+  cardPlane.computeVertexNormals();
+  cardPlane.center();
 
   cachedGeoms = {
     can: canGeom,
     bottle: bottleGeom,
+    crushedBottle: crushedBottleGeom,
+    glassBottle: glassBottleGeom,
+    chips: chipsGeom,
+    flipflop: flipflopGeom,
+    cardboard: cardPlane,
     cup: cupGeom,
     tire: tireGeom,
     jug: jugGeom,
@@ -571,7 +800,6 @@ function getCachedGeometries() {
     solar: solarGeom,
     rocket: rocketGeom,
     box: boxGeom,
-    slag: slagGeom,
   };
 
   return cachedGeoms;
@@ -583,16 +811,18 @@ function getCachedGeometries() {
 
 export const DetailedCan = ({ brand = 'cola', scale = 1.0 }) => {
   const textures = getCachedTextures();
-  const tex = brand === 'energy' ? textures.energy : brand === 'fizz' ? textures.fizz : textures.cola;
+  const tex = brand === 'energy' ? textures.energy :
+              brand === 'beer' ? textures.beer :
+              brand === 'fizz' ? textures.fizz : textures.cola;
 
   // 1. Printed lacquered aluminum can body material
   const bodyMat = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       map: tex,
-      metalness: 0.90,
-      roughness: 0.18,
+      metalness: brand === 'beer' ? 0.78 : 0.90,
+      roughness: brand === 'beer' ? 0.32 : 0.18,
     });
-  }, [tex]);
+  }, [tex, brand]);
 
   // 2. High-grade polished raw aluminum material for rims, lids, and pull-tabs
   const silverAluminumMat = useMemo(() => {
@@ -708,18 +938,20 @@ export const DetailedCan = ({ brand = 'cola', scale = 1.0 }) => {
   );
 };
 
-export const DetailedBottle = ({ capColor = '#2563eb', scale = 1.0 }) => {
+export const DetailedBottle = ({ capColor = '#2563eb', crushed = false, scale = 1.0 }) => {
   const textures = getCachedTextures();
   const geoms = getCachedGeometries();
 
   const plasticMat = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: '#93c5fd',
-      roughness: 0.10,
-      metalness: 0.15,
+    return new THREE.MeshPhysicalMaterial({
+      color: '#e0f2fe',
+      roughness: 0.12,
+      metalness: 0.08,
+      transmission: 0.92,
+      thickness: 0.35,
+      ior: 1.50,
       transparent: true,
-      opacity: 0.68,
-      depthWrite: false,
+      opacity: 0.88,
     });
   }, []);
 
@@ -734,8 +966,8 @@ export const DetailedBottle = ({ capColor = '#2563eb', scale = 1.0 }) => {
 
   return (
     <group scale={[scale, scale, scale]}>
-      {/* Translucent Bottle Body */}
-      <mesh geometry={geoms.bottle} material={plasticMat} />
+      {/* Translucent PET Bottle Body (Smooth or Crushed) */}
+      <mesh geometry={crushed ? geoms.crushedBottle : geoms.bottle} material={plasticMat} />
       {/* Printed Label Band */}
       <mesh position={[0, -0.005, 0]}>
         <cylinderGeometry args={[0.0264, 0.0264, 0.040, 20, 1, true]} />
@@ -746,6 +978,216 @@ export const DetailedBottle = ({ capColor = '#2563eb', scale = 1.0 }) => {
         <cylinderGeometry args={[0.0135, 0.0135, 0.010, 16]} />
         <meshStandardMaterial color={capColor} roughness={0.3} metalness={0.15} />
       </mesh>
+    </group>
+  );
+};
+
+export const DetailedGlassBottle = ({ color = '#064e3b', scale = 1.0 }) => {
+  const textures = getCachedTextures();
+  const geoms = getCachedGeometries();
+
+  const glassMat = useMemo(() => {
+    return new THREE.MeshPhysicalMaterial({
+      color,
+      roughness: 0.12,
+      metalness: 0.05,
+      transmission: 0.88,
+      thickness: 0.6,
+      ior: 1.52,
+      transparent: true,
+      opacity: 0.92,
+    });
+  }, [color]);
+
+  const labelMat = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      map: textures.glassLabel,
+      roughness: 0.55,
+      side: THREE.DoubleSide,
+    });
+  }, [textures]);
+
+  const capMat = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: '#d97706',
+      metalness: 0.90,
+      roughness: 0.25,
+    });
+  }, []);
+
+  return (
+    <group scale={[scale, scale, scale]}>
+      {/* Translucent Glass Body */}
+      <mesh geometry={geoms.glassBottle} material={glassMat} />
+      {/* Vintage Paper Label */}
+      <mesh position={[0, -0.015, 0]}>
+        <cylinderGeometry args={[0.0272, 0.0272, 0.038, 24, 1, true]} />
+        <primitive object={labelMat} attach="material" />
+      </mesh>
+      {/* Crown Cap */}
+      <mesh position={[0, 0.081, 0]}>
+        <cylinderGeometry args={[0.012, 0.0125, 0.004, 20]} />
+        <primitive object={capMat} attach="material" />
+      </mesh>
+    </group>
+  );
+};
+
+export const DetailedChipPacket = ({ scale = 1.0 }) => {
+  const textures = getCachedTextures();
+  const geoms = getCachedGeometries();
+
+  const foilMat = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      map: textures.chips,
+      metalness: 0.86,
+      roughness: 0.22,
+      side: THREE.DoubleSide,
+    });
+  }, [textures]);
+
+  const crimpMat = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: '#e2e8f0',
+      metalness: 0.92,
+      roughness: 0.25,
+    });
+  }, []);
+
+  return (
+    <group scale={[scale, scale, scale]}>
+      {/* Crinkled Metallic Foil Pouch Body */}
+      <mesh geometry={geoms.chips} material={foilMat} />
+      {/* Top Heat-Sealed Crimp Line */}
+      <mesh position={[0, 0.054, 0.001]}>
+        <boxGeometry args={[0.086, 0.005, 0.002]} />
+        <primitive object={crimpMat} attach="material" />
+      </mesh>
+      {/* Bottom Heat-Sealed Crimp Line */}
+      <mesh position={[0, -0.054, 0.001]}>
+        <boxGeometry args={[0.086, 0.005, 0.002]} />
+        <primitive object={crimpMat} attach="material" />
+      </mesh>
+    </group>
+  );
+};
+
+export const DetailedFlipFlop = ({ color = '#0284c7', strapColor = '#38bdf8', scale = 1.0 }) => {
+  const geoms = getCachedGeometries();
+
+  const soleMat = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.92,
+      metalness: 0.02,
+    });
+  }, [color]);
+
+  const strapMat = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: strapColor,
+      roughness: 0.45,
+      metalness: 0.10,
+    });
+  }, [strapColor]);
+
+  const leftStrapGeom = useMemo(() => {
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0, 0.038, 0.008),
+      new THREE.Vector3(-0.016, 0.015, 0.022),
+      new THREE.Vector3(-0.022, -0.015, 0.006)
+    );
+    return new THREE.TubeGeometry(curve, 12, 0.0024, 8, false);
+  }, []);
+
+  const rightStrapGeom = useMemo(() => {
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0, 0.038, 0.008),
+      new THREE.Vector3(0.016, 0.015, 0.022),
+      new THREE.Vector3(0.018, -0.015, 0.006)
+    );
+    return new THREE.TubeGeometry(curve, 12, 0.0024, 8, false);
+  }, []);
+
+  return (
+    <group scale={[scale, scale, scale]}>
+      {/* Molded EVA Foam Sole */}
+      <mesh geometry={geoms.flipflop} material={soleMat} />
+      {/* Center Toe Post */}
+      <mesh position={[0, 0.038, 0.008]}>
+        <cylinderGeometry args={[0.0022, 0.0022, 0.006, 8]} />
+        <primitive object={strapMat} attach="material" />
+      </mesh>
+      {/* Left Thong Strap */}
+      <mesh geometry={leftStrapGeom} material={strapMat} />
+      {/* Right Thong Strap */}
+      <mesh geometry={rightStrapGeom} material={strapMat} />
+    </group>
+  );
+};
+
+export const DetailedFishingNet = ({ color = '#047857', scale = 1.0 }) => {
+  const netMat = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.82,
+      metalness: 0.12,
+    });
+  }, [color]);
+
+  const knotMat = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: '#065f46',
+      roughness: 0.90,
+      metalness: 0.08,
+    });
+  }, []);
+
+  return (
+    <group scale={[scale, scale, scale]}>
+      {/* Intertwined Monofilament Rope Loops */}
+      <mesh rotation={[0.4, 0.6, 0.2]}>
+        <torusGeometry args={[0.032, 0.0045, 8, 20]} />
+        <primitive object={netMat} attach="material" />
+      </mesh>
+      <mesh rotation={[-0.5, 0.3, 0.8]} position={[0.008, -0.005, 0.004]}>
+        <torusGeometry args={[0.028, 0.0040, 8, 20]} />
+        <primitive object={netMat} attach="material" />
+      </mesh>
+      <mesh rotation={[0.8, -0.4, 0.3]} position={[-0.006, 0.008, -0.005]}>
+        <torusGeometry args={[0.024, 0.0038, 8, 18]} />
+        <primitive object={netMat} attach="material" />
+      </mesh>
+      {/* Tangled Knots */}
+      <mesh position={[0.012, 0.015, 0.008]}>
+        <sphereGeometry args={[0.007, 8, 8]} />
+        <primitive object={knotMat} attach="material" />
+      </mesh>
+      <mesh position={[-0.010, -0.012, 0.010]}>
+        <sphereGeometry args={[0.006, 8, 8]} />
+        <primitive object={knotMat} attach="material" />
+      </mesh>
+    </group>
+  );
+};
+
+export const DetailedCardboardBox = ({ scale = 1.0 }) => {
+  const textures = getCachedTextures();
+  const geoms = getCachedGeometries();
+
+  const cardMat = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      map: textures.cardboard,
+      roughness: 0.92,
+      metalness: 0.02,
+      side: THREE.DoubleSide,
+    });
+  }, [textures]);
+
+  return (
+    <group scale={[scale, scale, scale]}>
+      {/* Torn Corrugated Cardboard Fragment */}
+      <mesh geometry={geoms.cardboard} material={cardMat} />
     </group>
   );
 };
@@ -842,12 +1284,15 @@ export const DetailedMilkJug = ({ color = '#f8fafc', capColor = '#dc2626', scale
 export const DetailedCrumpledBag = ({ color = '#f8fafc', scale = 1.0 }) => {
   const geoms = getCachedGeometries();
   const bagMat = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
+    return new THREE.MeshPhysicalMaterial({
       color,
-      roughness: 0.58,
-      metalness: 0.08,
+      roughness: 0.38,
+      metalness: 0.05,
+      transmission: 0.72,
+      thickness: 0.12,
       transparent: true,
-      opacity: 0.80,
+      opacity: 0.82,
+      side: THREE.DoubleSide,
     });
   }, [color]);
 
@@ -934,26 +1379,6 @@ export const DetailedTakeoutBox = ({ scale = 1.0 }) => {
         <boxGeometry args={[0.072, 0.004, 0.004]} />
         <meshStandardMaterial color="#e2e8f0" roughness={0.95} />
       </mesh>
-    </group>
-  );
-};
-
-export const DetailedSpaceSlag = ({ geomIdx = 0, scale = 1.0 }) => {
-  const textures = getCachedTextures();
-  const geoms = getCachedGeometries();
-  const slagMat = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      map: textures.rock,
-      color: '#cbd5e1',
-      roughness: 0.88,
-      metalness: 0.22,
-      flatShading: false,
-    });
-  }, [textures]);
-
-  return (
-    <group scale={[scale, scale, scale]}>
-      <mesh geometry={geoms.slag} material={slagMat} />
     </group>
   );
 };

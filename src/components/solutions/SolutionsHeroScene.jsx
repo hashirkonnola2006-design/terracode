@@ -1,11 +1,12 @@
 import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../hero3d/Earth';
 import { Clouds } from '../hero3d/Clouds';
 import { Atmosphere } from '../hero3d/Atmosphere';
 import { Smog } from '../hero3d/Smog';
-import { FloatingDebris } from '../hero3d/FloatingDebris';
+import { globeTargetState } from '../../config/globeScrollManager';
 import { interpolateGlobeKeyframes } from '../../config/globeKeyframes';
 import { HERO_CONFIG } from '../../config/heroSolutions';
 import {
@@ -15,10 +16,12 @@ import {
   DetailedTire,
   DetailedMilkJug,
   DetailedCrumpledBag,
-  DetailedSatelliteShard,
-  DetailedRocketHull,
+  DetailedGlassBottle,
+  DetailedChipPacket,
+  DetailedFlipFlop,
+  DetailedFishingNet,
+  DetailedCardboardBox,
   DetailedTakeoutBox,
-  DetailedSpaceSlag,
 } from '../hero3d/DetailedDebris';
 
 export const HERO_CAMERA_FOV = 40;
@@ -36,102 +39,141 @@ function latLonToVector3(lat, lon, radius = 1.0) {
   return new THREE.Vector3(x, y, z);
 }
 
-// ── 5. CINEMATIC REFERENCE-MATCHED FLOATING DEBRIS FIELD ──
+// ── CINEMATIC HIGH-DETAIL FLOATING WASTE FIELD (ZERO ASTEROIDS / ROCKS) ──
 // Strictly positioned in empty space: guaranteed to NEVER block HEAL letters,
 // NEVER overlap CTA buttons, and NEVER penetrate or touch Earth's surface or horizon!
 const DEBRIS_ITEMS = [
-  // 1. Signature Crumpled Water Bottle (Upper-Left outer space, tilted, matching reference mockup)
+  // 1. Signature Battered Coca-Cola Aluminum Can (Lower-Right foreground, crisp red & silver rim)
+  {
+    type: 'can',
+    brand: 'cola',
+    pos: [0.72, -0.24, 0.82],
+    rot: [0.32, 0.90, -0.40],
+    scale: 1.28,
+    spin: [-0.0008, 0.0018, 0.0008],
+    drift: 0.045,
+  },
+
+  // 2. Clear PET Water Bottle with Royal Blue Cap & Glacier Label (Upper-Left space)
   {
     type: 'bottle',
     brand: 'glacier',
-    capColor: '#2563eb', // Royal blue sports cap
-    pos: [-0.82, 0.12, 0.62],
+    capColor: '#2563eb',
+    crushed: false,
+    pos: [-0.80, 0.14, 0.62],
     rot: [-0.42, 0.50, -0.65],
     scale: 0.95,
     spin: [0.003, 0.004, -0.002],
     drift: 0.035,
   },
 
-  // 2. Signature Battered Metallic Soda Can (Lower-Right foreground, matching reference mockup)
+  // 3. Crushed & Pinched Plastic Water Bottle with Green Cap (Between 'H' and 'E')
   {
-    type: 'can',
-    brand: 'cola',
-    pos: [0.74, -0.25, 0.84],
-    rot: [0.32, 0.90, -0.40],
-    scale: 1.35,
-    spin: [-0.0008, 0.0018, 0.0008],
-    drift: 0.045,
-  },
-
-  // 3. Craggy Space Asteroid between 'H' and 'E' (Floats in empty gap, does NOT touch either letter)
-  {
-    type: 'slag',
-    pos: [-0.46, 0.44, 0.40],
-    rot: [0.5, 0.3, -0.4],
-    scale: 0.62,
+    type: 'bottle',
+    brand: 'glacier',
+    capColor: '#16a34a',
+    crushed: true,
+    pos: [-0.44, 0.44, 0.42],
+    rot: [0.38, -0.32, 0.45],
+    scale: 0.76,
     spin: [0.002, 0.003, -0.002],
     drift: 0.025,
   },
 
-  // 4. Craggy Space Asteroid between 'E' and 'A' (Floats in empty gap, does NOT touch either letter)
+  // 4. Crinkled Metallic Golden Chip Packet / Snack Wrapper (Between 'E' and 'A')
   {
-    type: 'slag',
-    pos: [0.00, 0.48, 0.38],
-    rot: [-0.4, 0.6, 0.3],
-    scale: 0.55,
+    type: 'chips',
+    pos: [0.00, 0.48, 0.40],
+    rot: [-0.40, 0.55, 0.35],
+    scale: 0.78,
     spin: [-0.002, 0.003, 0.003],
     drift: 0.025,
   },
 
-  // 5. Craggy Space Asteroid between 'A' and 'L' (Floats in empty gap, does NOT touch either letter)
+  // 5. Discarded Ocean Beach Sandal / Flip-Flop (Between 'A' and 'L')
   {
-    type: 'slag',
-    pos: [0.44, 0.44, 0.40],
-    rot: [0.3, -0.4, 0.5],
-    scale: 0.58,
+    type: 'flipflop',
+    color: '#0284c7',
+    strapColor: '#38bdf8',
+    pos: [0.44, 0.44, 0.42],
+    rot: [0.35, -0.45, 0.52],
+    scale: 0.72,
     spin: [0.003, -0.002, 0.003],
     drift: 0.025,
   },
 
-  // 6. Craggy Battered Rock (Far Right of 'L' in deep space)
+  // 6. Translucent Emerald Glass Beverage Bottle (Far Right of 'L' in deep space)
   {
-    type: 'slag',
-    pos: [0.94, 0.38, 0.44],
-    rot: [-0.3, 0.5, -0.5],
-    scale: 0.78,
+    type: 'glass',
+    color: '#064e3b',
+    pos: [0.92, 0.38, 0.46],
+    rot: [-0.35, 0.52, -0.48],
+    scale: 0.80,
     spin: [-0.002, 0.004, 0.002],
     drift: 0.035,
   },
 
-  // 7. Craggy Rock below 'L' on the right flank (Floats in space above soda can)
-  {
-    type: 'slag',
-    pos: [0.88, -0.04, 0.50],
-    rot: [0.4, -0.5, 0.3],
-    scale: 0.72,
-    spin: [0.003, 0.003, -0.003],
-    drift: 0.035,
-  },
-
-  // 8. Crumpled Translucent Plastic Grocery Bag (Floating in right space)
+  // 7. Crumpled Translucent Plastic Grocery Bag with Soft Refraction (Right space above can)
   {
     type: 'bag',
-    color: '#bae6fd',
-    pos: [0.92, 0.16, 0.46],
+    color: '#f0f9ff',
+    pos: [0.86, 0.12, 0.48],
     rot: [0.35, -0.30, 0.55],
-    scale: 0.68,
+    scale: 0.76,
     spin: [0.002, 0.003, -0.002],
     drift: 0.035,
   },
 
-  // 9. Distant Space Rock (Upper-Left corner, balancing the frame)
+  // 8. Dented Vintage Beer Can with Faded Retro Print (Upper-Left corner)
   {
-    type: 'slag',
-    pos: [-0.96, 0.44, 0.35],
-    rot: [0.5, -0.3, 0.4],
-    scale: 0.52,
+    type: 'can',
+    brand: 'beer',
+    pos: [-0.88, 0.42, 0.38],
+    rot: [0.45, -0.35, 0.38],
+    scale: 0.72,
     spin: [0.002, -0.003, 0.002],
     drift: 0.025,
+  },
+
+  // 9. Takeaway Coffee Cup with Kraft Sleeve & Sipping Lid (Left flank)
+  {
+    type: 'coffee',
+    pos: [-0.92, -0.10, 0.52],
+    rot: [0.25, 0.42, -0.30],
+    scale: 0.78,
+    spin: [-0.002, 0.003, -0.002],
+    drift: 0.035,
+  },
+
+  // 10. Torn Corrugated Cardboard Box Piece with Fragile Icon (Right gap near A)
+  {
+    type: 'cardboard',
+    pos: [0.48, -0.06, 0.48],
+    rot: [-0.30, 0.40, -0.25],
+    scale: 0.74,
+    spin: [0.002, 0.002, -0.002],
+    drift: 0.030,
+  },
+
+  // 11. Tangled Ghost Fishing Net Clump with Knotted Monofilament (Lower-Left negative space)
+  {
+    type: 'net',
+    color: '#047857',
+    pos: [-0.38, -0.38, 0.50],
+    rot: [0.40, 0.30, -0.40],
+    scale: 0.70,
+    spin: [0.002, -0.002, 0.003],
+    drift: 0.030,
+  },
+
+  // 12. Weathered Automotive Car Tyre with Radial Tread (Lower-Right deep space)
+  {
+    type: 'tire',
+    pos: [0.92, -0.35, 0.55],
+    rot: [0.55, 0.20, -0.45],
+    scale: 0.88,
+    spin: [-0.002, 0.002, -0.001],
+    drift: 0.035,
   },
 ];
 
@@ -140,6 +182,7 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
   const itemsRef = useRef([]);
   const { size } = useThree();
   const isMobile = size.width < 768;
+  const activeItems = useMemo(() => (isMobile ? DEBRIS_ITEMS.slice(0, 5) : DEBRIS_ITEMS), [isMobile]);
 
   useFrame(({ clock }, delta) => {
     if (!visible || prefersReducedMotion) return;
@@ -148,14 +191,15 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
     const my = mouseRef.current ? mouseRef.current.y : 0;
 
     // Guaranteed clearance from Earth: center is (0.16, HERO_CONFIG.planetYDesktop), radius is 1.30.
-    // Minimum distance 1.56 guarantees ZERO intersection or entry into Earth!
     const earthCenterX = HERO_CONFIG.planetXDesktop;
     const earthCenterY = HERO_CONFIG.planetYDesktop;
     const minDistance = 1.56;
 
     itemsRef.current.forEach((itemObj, idx) => {
       if (!itemObj) return;
-      const d = DEBRIS_ITEMS[idx];
+      const d = activeItems[idx];
+      if (!d) return;
+
       itemObj.rotation.x += d.spin[0] * delta * 60;
       itemObj.rotation.y += d.spin[1] * delta * 60;
       itemObj.rotation.z += d.spin[2] * delta * 60;
@@ -179,7 +223,6 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
       }
 
       // Strict UI Button Protection Zone: x: [-0.92, -0.12], y: [-0.46, -0.18]
-      // Guarantees NO debris ever drifts into or covers the CTA buttons!
       if (posX > -0.92 && posX < -0.12 && posY > -0.46 && posY < -0.18) {
         posY = -0.52; // Push down safely below buttons
       }
@@ -198,7 +241,7 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
 
   return (
     <group ref={groupRef}>
-      {DEBRIS_ITEMS.map((d, i) => (
+      {activeItems.map((d, i) => (
         <group
           key={i}
           ref={(el) => (itemsRef.current[i] = el)}
@@ -206,23 +249,25 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
           rotation={d.rot}
           scale={d.scale}
         >
-          {d.type === 'bottle' && <DetailedBottle brand={d.brand} capColor={d.capColor} />}
+          {d.type === 'bottle' && <DetailedBottle capColor={d.capColor} crushed={d.crushed} />}
           {d.type === 'can' && <DetailedCan brand={d.brand} />}
+          {d.type === 'glass' && <DetailedGlassBottle color={d.color} />}
           {d.type === 'coffee' && <DetailedCoffeeCup />}
+          {d.type === 'chips' && <DetailedChipPacket />}
+          {d.type === 'flipflop' && <DetailedFlipFlop color={d.color} strapColor={d.strapColor} />}
+          {d.type === 'net' && <DetailedFishingNet color={d.color} />}
+          {d.type === 'cardboard' && <DetailedCardboardBox />}
           {d.type === 'tire' && <DetailedTire />}
-          {d.type === 'jug' && <DetailedMilkJug color={d.color} capColor={d.capColor} />}
           {d.type === 'bag' && <DetailedCrumpledBag color={d.color} />}
-          {d.type === 'solar' && <DetailedSatelliteShard />}
-          {d.type === 'rocket' && <DetailedRocketHull />}
+          {d.type === 'jug' && <DetailedMilkJug color={d.color} capColor={d.capColor} />}
           {d.type === 'box' && <DetailedTakeoutBox />}
-          {d.type === 'slag' && <DetailedSpaceSlag />}
         </group>
       ))}
     </group>
   );
 };
 
-// ── 6. BILLBOARD SMOKE PLUMES RISING FROM FIRES ──
+// ── BILLBOARD SMOKE PLUMES RISING FROM FIRES ──
 const SMOKE_SOURCES = [
   // Rift Zone
   { lat: 18, lon: 58 },
@@ -282,10 +327,8 @@ const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
     for (let i = 0; i < count; i++) {
       const src = SMOKE_SOURCES[i % SMOKE_SOURCES.length];
       const basePos = latLonToVector3(src.lat, src.lon, 1.0);
-      const normal = basePos.clone().normalize();
       pts.push({
         basePos,
-        normal,
         speed: 0.012 + Math.random() * 0.020,
         scale: 0.08 + Math.random() * 0.10,
         drift: (Math.random() - 0.5) * 0.035,
@@ -297,7 +340,7 @@ const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // Smoke opacity fades out smoothly as planet heals
+  // Smoke opacity strictly active while healProgress is 0
   const smokeFactor = THREE.MathUtils.smoothstep(healProgress, 0.55, 0.05);
 
   useFrame(({ clock }) => {
@@ -305,10 +348,10 @@ const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
     const t = clock.getElapsedTime();
 
     particles.forEach((p, idx) => {
-      const progress = ((t * p.speed + p.seed) % 1.0);
+      const progress = (t * p.speed + p.seed) % 1.0;
       const currentHeight = 1.002 + progress * 0.28;
       const pos = p.basePos.clone().normalize().multiplyScalar(currentHeight);
-      
+
       pos.y += progress * 0.055;
       pos.x += p.drift * progress;
 
@@ -337,7 +380,7 @@ const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
   );
 };
 
-// ── 7. PERSISTENT PLANET CONTROLLER (Drives Globe across Sections via Keyframes) ──
+// ── PERSISTENT PLANET CONTROLLER (Drives Globe across Sections via GSAP ScrollTrigger) ──
 const PersistentPlanetController = ({
   liteMode = false,
   mouseRef,
@@ -346,13 +389,27 @@ const PersistentPlanetController = ({
   storyHealProgress = null,
 }) => {
   const planetGroupRef = useRef(null);
-  const { camera, size } = useThree();
+  const { camera, size, gl, scene } = useThree();
   const aspect = size.width / Math.max(1, size.height);
   const isMobile = size.width < 768 || aspect < 1.05;
 
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Environment reflections for metallic cans and translucent physical glass/PET
+  useEffect(() => {
+    const pmremGenerator = new THREE.PMREMGenerator(gl);
+    pmremGenerator.compileEquirectangularShader();
+    const roomEnv = new RoomEnvironment();
+    const envTexture = pmremGenerator.fromScene(roomEnv).texture;
+    scene.environment = envTexture;
+    return () => {
+      scene.environment = null;
+      envTexture.dispose();
+      pmremGenerator.dispose();
+    };
+  }, [gl, scene]);
 
   // Persistent smoothed state refs
   const currentPos = useRef({
@@ -390,18 +447,19 @@ const PersistentPlanetController = ({
     const my = mouseRef.current ? mouseRef.current.y : 0;
     const progress = scrollProgressRef.current || 0.0;
 
-    // Evaluate target state from keyframe interpolation
-    const target = interpolateGlobeKeyframes(progress, isMobile);
+    // Use reactive target state from GSAP section ScrollTriggers, fallback to keyframes if needed
+    const target = globeTargetState.posX !== undefined
+      ? globeTargetState
+      : interpolateGlobeKeyframes(progress, isMobile);
 
-    // If storyHealProgress is explicitly supplied by the active story section, use it strictly.
-    // In Hero and Damage: strictly 0.0. In Pillars: 0.0->0.60. In Impact: 0.60->0.82. In Play: linked to userCleanProgress.
-    const effectiveTargetHeal = typeof storyHealProgress === 'number'
-      ? storyHealProgress
-      : Math.min(1.0, target.healProgress);
+    // STRICT ZERO HEALING ON SCROLL:
+    // Earth stays in its damaged state the whole way down.
+    // The only time heal is non-zero is when real gameplay progress in Cleanup Mission is passed in #play.
+    const effectiveTargetHeal = typeof storyHealProgress === 'number' ? storyHealProgress : 0.0;
 
-    // Smooth delta-based easing for 60fps butter-smooth transitions
-    const lerpSpeed = prefersReducedMotion ? 1.0 : Math.min(delta * 4.2, 1.0);
-    const rotSpeed = prefersReducedMotion ? 1.0 : Math.min(delta * 3.2, 1.0);
+    // Smooth delta-based easing for 60fps butter-smooth transitions with ~0.08 damping
+    const lerpSpeed = prefersReducedMotion ? 1.0 : Math.min(delta * 4.6, 0.08);
+    const rotSpeed = prefersReducedMotion ? 1.0 : Math.min(delta * 3.6, 0.08);
 
     currentPos.current.x = THREE.MathUtils.lerp(currentPos.current.x, target.posX, lerpSpeed);
     currentPos.current.y = THREE.MathUtils.lerp(currentPos.current.y, target.posY, lerpSpeed);
@@ -411,7 +469,11 @@ const PersistentPlanetController = ({
     currentRotYOffset.current = THREE.MathUtils.lerp(currentRotYOffset.current, target.rotYOffset, rotSpeed);
     currentDim.current = THREE.MathUtils.lerp(currentDim.current, target.dim, lerpSpeed);
     currentHeal.current = THREE.MathUtils.lerp(currentHeal.current, effectiveTargetHeal, lerpSpeed);
-    currentDebrisOpacity.current = THREE.MathUtils.lerp(currentDebrisOpacity.current, target.debrisOpacity, lerpSpeed);
+    currentDebrisOpacity.current = THREE.MathUtils.lerp(
+      currentDebrisOpacity.current,
+      target.debrisOpacity !== undefined ? target.debrisOpacity : 0.0,
+      lerpSpeed
+    );
 
     // Sync state for React child components at throttled rate
     if (Math.abs(currentHeal.current - activeHeal) > 0.015) {
@@ -462,11 +524,11 @@ const PersistentPlanetController = ({
         color="#38bdf8"
         intensity={1.8 * activeDim}
       />
-      {/* Specular Glint Light for Floating Debris & Asteroids */}
+      {/* Specular Warm Rim Light (Lava-side) */}
       <directionalLight
-        position={[1.8, 1.2, 1.6]}
-        color="#bae6fd"
-        intensity={1.2 * activeDim}
+        position={[2.0, -1.0, 1.2]}
+        color="#fb923c"
+        intensity={1.4 * activeDim}
       />
       {/* Camera-facing Key Light for Debris Detail and Labels */}
       <directionalLight
@@ -517,7 +579,7 @@ const PersistentPlanetController = ({
         <SmokePlumes isLowEnd={liteMode} healProgress={activeHeal} />
       </group>
 
-      {/* ── Floating Debris & Asteroids Field in Foreground Space (Hero only, fades out on scroll) ── */}
+      {/* ── Floating Debris Field in Foreground Space (Hero & Damage sections only, zero asteroids) ── */}
       <FloatingDebrisField
         mouseRef={mouseRef}
         visible={debrisOpacity > 0.01}
@@ -528,7 +590,7 @@ const PersistentPlanetController = ({
   );
 };
 
-// ── 8. EXPORTED PERSISTENT CANVAS COMPONENT ──
+// ── EXPORTED PERSISTENT CANVAS COMPONENT ──
 export const SolutionsHeroScene = ({
   isVisible = true,
   liteMode = false,

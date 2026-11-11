@@ -98,7 +98,7 @@ export const PLEDGE_OPTIONS = [
   },
 ];
 
-export const YourImpactSection = ({ onScrollToPlay, onUserScoreHealChange }) => {
+export const YourImpactSection = ({ onScrollToPlay }) => {
   // Pre-seed default answers for instant awareness feedback
   const [answers, setAnswers] = useState({
     travel: 1, // Public Transit (85)
@@ -157,19 +157,11 @@ export const YourImpactSection = ({ onScrollToPlay, onUserScoreHealChange }) => 
     };
   }, [answers]);
 
-  // Sync heal progress with user score: 0.60 base + (score / 100) * 0.22
   useEffect(() => {
-    const dynamicHeal = 0.60 + (score / 100) * 0.22;
-    if (onUserScoreHealChange) {
-      onUserScoreHealChange(dynamicHeal);
-    }
-    // Update procedural music engine cutoff / sparkle
-    musicEngine.setHealAmount(Math.round(score * 0.85));
-
     if (!hasPlayedResultChime.current) {
       hasPlayedResultChime.current = true;
     }
-  }, [score, onUserScoreHealChange]);
+  }, [score]);
 
   const handleSelectOption = (questionId, optionIndex) => {
     musicEngine.playClick();
@@ -224,8 +216,8 @@ export const YourImpactSection = ({ onScrollToPlay, onUserScoreHealChange }) => 
           </h2>
 
           <p className="font-body font-light text-base sm:text-lg text-white/70 leading-relaxed">
-            Six quick questions across everyday habits. As you toggle your routines, the
-            planet’s healing ratio adjusts live to reflect your impact.
+            Six quick questions across everyday habits. Check where your daily routine
+            already protects the planet and where the highest-leverage gaps remain.
           </p>
         </div>
 

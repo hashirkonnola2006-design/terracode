@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { SolutionsHero, SolutionsHealBackground } from '../components/solutions/SolutionsHero';
@@ -12,6 +12,7 @@ import { Footer } from '../components/Footer/Footer';
 import { navigateWithTransition } from '../utils/navigation';
 import { SoundControl } from '../components/audio/SoundControl';
 import { musicEngine } from '../audio/musicEngine';
+import { initGlobeScrollTriggers, refreshGlobeScrollTriggers } from '../config/globeScrollManager';
 import { Sparkles, ArrowRight, Lock, Check } from 'lucide-react';
 
 export const Solutions = () => {
@@ -27,11 +28,6 @@ export const Solutions = () => {
   const [currentSection, setCurrentSection] = useState('hero');
   const [isSceneVisible, setIsSceneVisible] = useState(true);
 
-  // Dynamic Story Heal State (driven by scroll depth, pillars reading, and user score)
-  const [pillarsHeal, setPillarsHeal] = useState(0.0);
-  const [impactHeal, setImpactHeal] = useState(0.65);
-  const [activeStoryHeal, setActiveStoryHeal] = useState(0.0);
-
   const scrollProgressRef = useRef(0);
   const userCleanProgress = (cleanup?.health || 0) / 100;
 
@@ -43,6 +39,37 @@ export const Solutions = () => {
     document.title = 'TerraHeal | Solutions';
   }, []);
 
+  // Initialize continuous GSAP ScrollTriggers connecting every section pair
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    const cleanupTriggers = initGlobeScrollTriggers(isMobile);
+
+    const handleResize = () => {
+      const mobileNow = window.innerWidth < 768;
+      initGlobeScrollTriggers(mobileNow);
+      refreshGlobeScrollTriggers();
+    };
+
+    const handleSceneReady = () => {
+      refreshGlobeScrollTriggers();
+    };
+
+    window.addEventListener('resize', handleResize, { passive: true });
+    window.addEventListener('terraheal:scene-ready', handleSceneReady);
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        refreshGlobeScrollTriggers();
+      });
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('terraheal:scene-ready', handleSceneReady);
+      cleanupTriggers();
+    };
+  }, []);
+
   // Tab visibility listener for 60fps performance optimization
   useEffect(() => {
     const handleVis = () => {
@@ -52,7 +79,7 @@ export const Solutions = () => {
     return () => document.removeEventListener('visibilitychange', handleVis);
   }, []);
 
-  // Scroll listener for top header styling, scroll-spy, and globe keyframe progress
+  // Scroll listener for top header styling and navbar scroll-spy
   useEffect(() => {
     const handleScroll = () => {
       const scrollPos = window.scrollY;
@@ -70,7 +97,7 @@ export const Solutions = () => {
       let detectedSection = 'hero';
       let navTarget = 'home';
 
-      // Guard top hero viewport explicitly to prevent unmeasured offsetTop race conditions
+      // Guard top hero viewport explicitly
       if (scrollPos < 250) {
         detectedSection = 'hero';
         navTarget = 'home';
@@ -100,37 +127,16 @@ export const Solutions = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Update Music Engine mood & chord progression according to section
+  // Update Music Engine mood according to active section
   useEffect(() => {
     musicEngine.setSection(currentSection);
   }, [currentSection]);
 
-  // Unified Heal Calculation across story sections:
-  // Hero: 0.0 -> Damage: 0.0 -> Pillars: 0.0 to 0.60 -> Impact: 0.60 to ~0.82 -> Play: max(0.60, userCleanProgress)
-  useEffect(() => {
-    let targetHeal = 0.0;
-    if (currentSection === 'hero' || currentSection === 'damage') {
-      targetHeal = 0.0;
-    } else if (currentSection === 'pillars') {
-      targetHeal = pillarsHeal;
-    } else if (currentSection === 'impact') {
-      targetHeal = impactHeal;
-    } else if (currentSection === 'play') {
-      targetHeal = Math.max(0.60, userCleanProgress);
-    }
-    setActiveStoryHeal(targetHeal);
-    musicEngine.setHealAmount(Math.round(targetHeal * 100));
-  }, [currentSection, pillarsHeal, impactHeal, userCleanProgress]);
-
-  // Pillar row scroll callback
-  const handlePillarsHealChange = useCallback((value) => {
-    setPillarsHeal(value);
-  }, []);
-
-  // User impact test score callback
-  const handleImpactHealChange = useCallback((value) => {
-    setImpactHeal(value);
-  }, []);
+  // STRICT ZERO HEALING ON SCROLL:
+  // Globe stays damaged (0.0) the whole way down.
+  // The only thing allowed to change the globe's heal state is real gameplay in Cleanup Mission
+  // when the user reaches the #play section.
+  const activeStoryHeal = currentSection === 'play' && userCleanProgress > 0 ? userCleanProgress : 0.0;
 
   // Smooth scroll to #play or redirect #sources
   useEffect(() => {
@@ -317,7 +323,7 @@ export const Solutions = () => {
       </div>
 
       {/* ── 2. Full-Screen Solutions Hero (Layer z-10) ── */}
-      <div className="relative z-10 w-full bg-transparent">
+      <div id="hero" className="relative z-10 w-full bg-transparent">
         <SolutionsHero
           onScrollToPillars={() => scrollToSection('damage')}
           onScrollToPlay={() => scrollToSection('play')}
@@ -331,16 +337,10 @@ export const Solutions = () => {
           <DamageSection onScrollToPillars={() => scrollToSection('solutions')} />
 
           {/* SECTION 2: "SIX PILLARS" (Redesigned Editorial 2-Column, No Cards) */}
-          <SixPillarsSection
-            onScrollToImpact={() => scrollToSection('impact')}
-            onRowHealChange={handlePillarsHealChange}
-          />
+          <SixPillarsSection onScrollToImpact={() => scrollToSection('impact')} />
 
           {/* SECTION 3: "YOUR IMPACT" (New Personal Alignment Check & 7-Day Challenge) */}
-          <YourImpactSection
-            onScrollToPlay={() => scrollToSection('play')}
-            onUserScoreHealChange={handleImpactHealChange}
-          />
+          <YourImpactSection onScrollToPlay={() => scrollToSection('play')} />
 
           {/* SECTION 4: "PLAY GAMES" (#play) */}
           <div className="max-w-6xl mx-auto px-4 sm:px-8 py-24 sm:py-32">
@@ -452,34 +452,41 @@ export const Solutions = () => {
 
                     <button
                       onClick={() => navigateWithTransition('/quiz', navigate)}
-                      className="w-full py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-extrabold text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[0_0_16px_rgba(56,189,248,0.3)] hover:shadow-[0_0_24px_rgba(56,189,248,0.5)] flex items-center justify-center gap-2"
+                      className="btn-aerospace-secondary w-full text-xs py-3 cursor-pointer"
                     >
-                      <span>{quiz.completed ? 'Retake Quiz' : 'Play Quiz'}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      {quiz.completed
+                        ? 'Retake Quiz'
+                        : quiz.bestScore > 0
+                        ? 'Improve Score'
+                        : 'Start Quiz'}
                     </button>
                   </div>
 
-                  {/* Card 3: Climate Strategy (Coming Soon) */}
-                  <div className="p-6 rounded-2xl bg-slate-950/40 backdrop-blur-xl border border-white/5 opacity-60 flex flex-col justify-between space-y-6">
+                  {/* Card 3: System Simulation (Coming Soon) */}
+                  <div className="p-6 rounded-2xl bg-slate-950/60 backdrop-blur-xl border border-white/5 flex flex-col justify-between space-y-6 relative opacity-75">
                     <div className="space-y-3">
-                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40">
-                        <Lock className="w-4 h-4" />
-                      </div>
-                      <span className="font-label uppercase text-[10px] tracking-[0.2em] text-white/40 font-semibold block">
-                        Game 3 • In Development
+                      <span className="font-label uppercase text-[10px] tracking-[0.2em] text-white/40 font-semibold">
+                        Game 3 • City Sim
                       </span>
-                      <h3 className="font-display font-extrabold text-xl text-white/70">
-                        Climate Strategy
+                      <h3 className="font-display font-extrabold text-xl text-white/80">
+                        Circular City
                       </h3>
                       <p className="font-body font-light text-xs text-white/50 leading-relaxed">
-                        A new interactive mission is on the way. Deploy global clean policies and community energy grids.
+                        Balance urban energy grids, organic compost sorting, and material reuse loops across a living metropolis.
                       </p>
                     </div>
 
-                    <div className="pt-6">
-                      <div className="w-full py-3 rounded-full bg-white/5 text-white/30 font-display text-xs text-center border border-white/5 uppercase tracking-wider font-semibold">
-                        Locked (Coming Soon)
+                    <div className="space-y-3 pt-4 border-t border-white/5">
+                      <div className="flex items-center gap-2 text-white/40 text-xs font-mono">
+                        <Lock className="w-3.5 h-3.5 text-white/40" />
+                        <span>In Development</span>
                       </div>
+                      <button
+                        disabled
+                        className="w-full py-3 px-4 rounded-xl font-label text-xs uppercase tracking-wider bg-white/5 text-white/30 cursor-not-allowed border border-white/5 text-center"
+                      >
+                        Locked
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -488,7 +495,7 @@ export const Solutions = () => {
           </div>
         </main>
 
-        {/* ── Footer with Central Sources Link ── */}
+        {/* Global TerraHeal Footer */}
         <Footer />
       </div>
     </div>
