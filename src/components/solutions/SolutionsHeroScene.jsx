@@ -5,6 +5,18 @@ import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../hero3d
 import { Clouds } from '../hero3d/Clouds';
 import { Atmosphere } from '../hero3d/Atmosphere';
 import { interpolateGlobeKeyframes } from '../../config/globeKeyframes';
+import {
+  DetailedCan,
+  DetailedBottle,
+  DetailedCoffeeCup,
+  DetailedTire,
+  DetailedMilkJug,
+  DetailedCrumpledBag,
+  DetailedSatelliteShard,
+  DetailedRocketHull,
+  DetailedTakeoutBox,
+  DetailedSpaceSlag,
+} from '../hero3d/DetailedDebris';
 
 export const HERO_CAMERA_FOV = 40;
 export const HERO_CAMERA_Z = 2.18;
@@ -21,282 +33,277 @@ function latLonToVector3(lat, lon, radius = 1.0) {
   return new THREE.Vector3(x, y, z);
 }
 
-// ── 1. PROCEDURAL CRAGGY ASTEROID / ROCK GEOMETRY ──
-function createCraggyRockGeometry(seed = 1) {
-  const geom = new THREE.DodecahedronGeometry(1, 1);
-  const pos = geom.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    const noise =
-      Math.sin(x * 3.5 + seed * 1.7) * 0.16 +
-      Math.cos(y * 4.2 + seed * 2.3) * 0.14 +
-      Math.sin(z * 3.8 + seed * 3.1) * 0.12;
-    pos.setXYZ(i, x * (1 + noise), y * (1 + noise), z * (1 + noise));
-  }
-  geom.computeVertexNormals();
-  return geom;
-}
+// ── 5. CINEMATIC HIGH-DETAIL FLOATING DEBRIS & WASTE FIELD ──
+// Strictly positioned in orbit/space: guaranteed to NEVER penetrate or touch Earth's surface or atmosphere!
+const DEBRIS_ITEMS = [
+  // ── 1. UPPER-LEFT & 'H' REGION ──
+  {
+    // Signature tilted water bottle framing 'H' (matches reference mockup)
+    type: 'bottle',
+    brand: 'glacier',
+    capColor: '#2563eb', // Royal blue cap
+    pos: [-0.68, 0.24, 0.48],
+    rot: [-0.45, 0.55, -0.65],
+    scale: 1.15,
+    spin: [0.003, 0.004, -0.002],
+    drift: 0.05,
+  },
+  {
+    type: 'can',
+    brand: 'cola',
+    pos: [-0.58, 0.52, 0.32],
+    rot: [0.4, -0.6, 0.3],
+    scale: 1.05,
+    spin: [0.004, -0.003, 0.003],
+    drift: 0.05,
+  },
+  {
+    type: 'solar',
+    pos: [-0.82, 0.38, 0.36],
+    rot: [0.6, -0.3, 0.5],
+    scale: 1.10,
+    spin: [-0.002, 0.003, 0.004],
+    drift: 0.04,
+  },
+  {
+    type: 'coffee',
+    pos: [-0.74, 0.02, 0.42],
+    rot: [-0.3, 0.4, 0.6],
+    scale: 0.95,
+    spin: [0.003, 0.002, -0.003],
+    drift: 0.06,
+  },
+  {
+    type: 'bag',
+    color: '#f8fafc',
+    pos: [-0.52, 0.15, 0.30],
+    rot: [0.2, 0.5, -0.4],
+    scale: 0.90,
+    spin: [-0.002, 0.004, 0.002],
+    drift: 0.04,
+  },
 
-// ── 2. REALISTIC PLASTIC WATER BOTTLE ──
-function BottleObject() {
-  return (
-    <group scale={[1.35, 1.35, 1.35]}>
-      {/* Plastic Cylinder Body */}
-      <mesh position={[0, 0, 0]}>
-        <cylinderGeometry args={[0.042, 0.042, 0.17, 16]} />
-        <meshStandardMaterial
-          color="#bfdbfe"
-          roughness={0.15}
-          metalness={0.10}
-          transparent
-          opacity={0.88}
-        />
-      </mesh>
-      {/* Tapered Shoulder */}
-      <mesh position={[0, 0.110, 0]} rotation={[Math.PI, 0, 0]}>
-        <coneGeometry args={[0.042, 0.048, 16, 1, true]} />
-        <meshStandardMaterial
-          color="#bfdbfe"
-          roughness={0.15}
-          metalness={0.10}
-          transparent
-          opacity={0.88}
-        />
-      </mesh>
-      {/* Neck */}
-      <mesh position={[0, 0.148, 0]}>
-        <cylinderGeometry args={[0.018, 0.018, 0.035, 14]} />
-        <meshStandardMaterial
-          color="#bfdbfe"
-          roughness={0.15}
-          metalness={0.10}
-          transparent
-          opacity={0.88}
-        />
-      </mesh>
-      {/* Blue Cap */}
-      <mesh position={[0, 0.170, 0]}>
-        <cylinderGeometry args={[0.021, 0.021, 0.022, 14]} />
-        <meshStandardMaterial color="#2563eb" roughness={0.3} metalness={0.1} />
-      </mesh>
-      {/* Label band */}
-      <mesh position={[0, -0.01, 0]}>
-        <cylinderGeometry args={[0.043, 0.043, 0.065, 16]} />
-        <meshStandardMaterial color="#38bdf8" roughness={0.4} />
-      </mesh>
-    </group>
-  );
-}
+  // ── 2. TOP-CENTER & 'E' / 'A' REGION ──
+  {
+    type: 'can',
+    brand: 'energy',
+    pos: [-0.32, 0.54, 0.28],
+    rot: [-0.5, 0.3, 0.7],
+    scale: 1.0,
+    spin: [0.004, 0.003, -0.002],
+    drift: 0.05,
+  },
+  {
+    type: 'box',
+    pos: [-0.10, 0.32, 0.32],
+    rot: [0.5, -0.3, 0.4],
+    scale: 0.95,
+    spin: [-0.002, 0.003, 0.002],
+    drift: 0.04,
+  },
+  {
+    type: 'slag',
+    pos: [-0.18, 0.44, 0.28],
+    rot: [0.6, 0.2, -0.4],
+    scale: 1.05,
+    spin: [-0.002, 0.003, 0.002],
+    drift: 0.03,
+  },
+  {
+    type: 'jug',
+    color: '#f8fafc',
+    capColor: '#dc2626',
+    pos: [0.12, 0.56, 0.30],
+    rot: [0.3, 0.6, -0.5],
+    scale: 1.05,
+    spin: [0.002, -0.004, 0.003],
+    drift: 0.04,
+  },
+  {
+    type: 'solar',
+    pos: [0.32, 0.58, 0.30],
+    rot: [-0.4, 0.7, 0.3],
+    scale: 1.05,
+    spin: [0.003, 0.003, -0.004],
+    drift: 0.05,
+  },
+  {
+    type: 'tire',
+    pos: [-0.02, 0.50, 0.26],
+    rot: [0.8, -0.4, 0.2],
+    scale: 0.90,
+    spin: [-0.003, 0.004, 0.002],
+    drift: 0.04,
+  },
 
-// ── 3. DENTED METALLIC SODA CAN ──
-function SodaCanObject() {
-  const dentedCanGeom = useMemo(() => {
-    const geom = new THREE.CylinderGeometry(0.052, 0.052, 0.17, 16);
-    const pos = geom.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      const x = pos.getX(i);
-      if (Math.abs(y) < 0.045 && x > 0.015) {
-        pos.setX(i, x * 0.78);
-      }
-    }
-    geom.computeVertexNormals();
-    return geom;
-  }, []);
+  // ── 3. UPPER-RIGHT & 'L' REGION ──
+  {
+    type: 'bottle',
+    brand: 'glacier',
+    capColor: '#10b981', // Emerald green cap
+    pos: [0.48, 0.36, 0.34],
+    rot: [-0.3, 0.7, -0.4],
+    scale: 1.10,
+    spin: [0.004, -0.003, 0.002],
+    drift: 0.06,
+  },
+  {
+    type: 'can',
+    brand: 'fizz',
+    pos: [0.60, 0.52, 0.30],
+    rot: [0.6, -0.5, 0.3],
+    scale: 1.05,
+    spin: [-0.003, 0.005, 0.003],
+    drift: 0.06,
+  },
+  {
+    type: 'bag',
+    color: '#bae6fd',
+    pos: [0.68, 0.28, 0.32],
+    rot: [0.4, -0.3, 0.6],
+    scale: 0.95,
+    spin: [0.003, 0.004, -0.002],
+    drift: 0.05,
+  },
+  {
+    type: 'tire',
+    pos: [0.78, 0.44, 0.35],
+    rot: [-0.5, 0.4, 0.8],
+    scale: 0.95,
+    spin: [-0.002, 0.005, 0.003],
+    drift: 0.06,
+  },
+  {
+    type: 'slag',
+    pos: [0.55, 0.62, 0.30],
+    rot: [0.3, -0.4, 0.5],
+    scale: 1.15,
+    spin: [-0.003, 0.002, -0.003],
+    drift: 0.04,
+  },
+  {
+    type: 'rocket',
+    pos: [0.76, 0.16, 0.38],
+    rot: [0.4, -0.6, 0.5],
+    scale: 1.0,
+    spin: [0.003, -0.004, 0.002],
+    drift: 0.06,
+  },
 
-  return (
-    <group scale={[1.15, 1.15, 1.15]}>
-      <mesh geometry={dentedCanGeom}>
-        <meshStandardMaterial
-          color="#e2e8f0"
-          metalness={0.92}
-          roughness={0.24}
-        />
-      </mesh>
-      {/* Top rim */}
-      <mesh position={[0, 0.085, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.05, 0.005, 8, 16]} />
-        <meshStandardMaterial color="#cbd5e1" metalness={0.96} roughness={0.18} />
-      </mesh>
-      {/* Tab */}
-      <mesh position={[0.012, 0.086, 0]}>
-        <boxGeometry args={[0.018, 0.003, 0.032]} />
-        <meshStandardMaterial color="#cbd5e1" metalness={0.96} roughness={0.18} />
-      </mesh>
-    </group>
-  );
-}
+  // ── 4. FOREGROUND SIGNATURE FLANK & ORBIT (Matches Reference Mockup) ──
+  {
+    // Signature crisp metallic soda can on the right flank (Foreground like mockup!)
+    type: 'can',
+    brand: 'cola',
+    pos: [0.62, -0.20, 0.78],
+    rot: [0.35, 0.75, -0.28],
+    scale: 1.25,
+    spin: [-0.003, 0.005, 0.003],
+    drift: 0.07,
+  },
+  {
+    type: 'coffee',
+    pos: [0.68, -0.02, 0.46],
+    rot: [0.5, 0.3, -0.4],
+    scale: 1.0,
+    spin: [0.004, -0.003, 0.003],
+    drift: 0.05,
+  },
+  {
+    type: 'slag',
+    pos: [0.70, -0.38, 0.65],
+    rot: [-0.4, 0.5, 0.3],
+    scale: 1.10,
+    spin: [0.002, 0.003, -0.003],
+    drift: 0.05,
+  },
+  {
+    type: 'bottle',
+    brand: 'glacier',
+    capColor: '#f97316', // Orange sports cap
+    pos: [-0.82, -0.12, 0.46],
+    rot: [-0.6, 0.4, -0.5],
+    scale: 1.05,
+    spin: [0.003, -0.005, 0.002],
+    drift: 0.06,
+  },
+  {
+    type: 'tire',
+    pos: [-0.76, 0.62, 0.32],
+    rot: [0.7, -0.5, 0.3],
+    scale: 0.90,
+    spin: [-0.004, 0.003, -0.003],
+    drift: 0.06,
+  },
+  {
+    type: 'jug',
+    color: '#e0f2fe',
+    capColor: '#0284c7',
+    pos: [-0.48, 0.38, 0.30],
+    rot: [0.2, -0.7, 0.4],
+    scale: 0.95,
+    spin: [0.002, 0.004, -0.003],
+    drift: 0.04,
+  },
+  {
+    type: 'rocket',
+    pos: [-0.38, 0.65, 0.28],
+    rot: [-0.3, 0.5, 0.7],
+    scale: 0.90,
+    spin: [-0.003, 0.003, 0.004],
+    drift: 0.05,
+  },
+  {
+    type: 'box',
+    pos: [0.38, 0.48, 0.28],
+    rot: [0.4, -0.4, 0.5],
+    scale: 0.90,
+    spin: [0.003, -0.002, 0.003],
+    drift: 0.04,
+  },
+  {
+    type: 'slag',
+    pos: [0.22, 0.32, 0.28],
+    rot: [-0.5, 0.4, 0.6],
+    scale: 0.95,
+    spin: [0.003, -0.003, 0.002],
+    drift: 0.03,
+  },
+  {
+    type: 'bottle',
+    brand: 'glacier',
+    capColor: '#ffffff',
+    pos: [0.36, 0.14, 0.42],
+    rot: [0.2, 0.8, -0.3],
+    scale: 0.95,
+    spin: [0.003, -0.004, 0.002],
+    drift: 0.04,
+  },
+  {
+    type: 'can',
+    brand: 'energy',
+    pos: [-0.24, 0.12, 0.40],
+    rot: [-0.4, 0.5, 0.3],
+    scale: 0.95,
+    spin: [-0.003, 0.003, -0.002],
+    drift: 0.04,
+  },
+  {
+    type: 'bag',
+    color: '#f8fafc',
+    pos: [0.08, 0.10, 0.46],
+    rot: [0.5, -0.3, 0.2],
+    scale: 0.90,
+    spin: [0.002, 0.004, 0.003],
+    drift: 0.04,
+  },
+];
 
-// ── 4. CRUMPLED PLASTIC BAG ──
-function CrumpledBagObject() {
-  const bagGeom = useMemo(() => {
-    const geom = new THREE.IcosahedronGeometry(0.09, 1);
-    const pos = geom.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const y = pos.getY(i);
-      const z = pos.getZ(i);
-      const d = Math.sin(x * 12) * Math.cos(z * 12) * 0.035;
-      pos.setXYZ(i, x + d, y * 0.75 + d, z + d);
-    }
-    geom.computeVertexNormals();
-    return geom;
-  }, []);
-
-  return (
-    <group scale={[0.95, 0.95, 0.95]}>
-      <mesh geometry={bagGeom}>
-        <meshStandardMaterial
-          color="#f8fafc"
-          roughness={0.65}
-          metalness={0.1}
-          transparent
-          opacity={0.82}
-        />
-      </mesh>
-    </group>
-  );
-}
-
-// ── 5. CINEMATIC FLOATING DEBRIS & ASTEROIDS FIELD ──
 const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersReducedMotion = false }) => {
   const groupRef = useRef(null);
-
-  const rockGeoms = useMemo(() => {
-    return [
-      createCraggyRockGeometry(1.2),
-      createCraggyRockGeometry(2.7),
-      createCraggyRockGeometry(4.1),
-      createCraggyRockGeometry(5.8),
-    ];
-  }, []);
-
-  const rockMat = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: '#333842',
-      roughness: 0.85,
-      metalness: 0.22,
-      flatShading: true,
-      transparent: true,
-      opacity: 1.0,
-    });
-  }, []);
-
-  const debrisList = useMemo(() => {
-    return [
-      // 1. Water Bottle: Top-Left (crisply visible next to H)
-      {
-        type: 'bottle',
-        pos: [-0.88, 0.20, 0.28],
-        rot: [-0.45, 0.62, -0.65],
-        scale: 1.0,
-        spin: [0.003, 0.005, -0.002],
-        drift: 0.08,
-      },
-      // 2. Crumpled Bag: Right Upper Quadrant
-      {
-        type: 'bag',
-        pos: [0.82, 0.32, 0.22],
-        rot: [0.35, -0.42, 0.75],
-        scale: 1.0,
-        spin: [0.004, -0.003, 0.002],
-        drift: 0.07,
-      },
-      // 3. Dented Soda Can: Right-Bottom
-      {
-        type: 'can',
-        pos: [0.80, -0.42, 0.36],
-        rot: [0.55, 0.75, -0.42],
-        scale: 1.0,
-        spin: [-0.003, 0.006, 0.004],
-        drift: 0.10,
-      },
-      // 4. Foreground Asteroid Rock: Left Bottom
-      {
-        type: 'rock',
-        geomIdx: 0,
-        pos: [-0.78, -0.62, 0.40],
-        rot: [0.2, 0.4, 0.1],
-        scale: 0.11,
-        spin: [0.002, 0.003, 0.001],
-        drift: 0.12,
-      },
-      // 5. Small Asteroid Rock: Mid-Left
-      {
-        type: 'rock',
-        geomIdx: 1,
-        pos: [-0.58, 0.06, 0.15],
-        rot: [0.6, 0.2, -0.3],
-        scale: 0.030,
-        spin: [-0.004, 0.003, 0.002],
-        drift: 0.05,
-      },
-      // 6. Upper-Left Small Rock
-      {
-        type: 'rock',
-        geomIdx: 2,
-        pos: [-0.72, 0.46, 0.18],
-        rot: [0.1, -0.5, 0.4],
-        scale: 0.026,
-        spin: [0.003, -0.002, 0.003],
-        drift: 0.03,
-      },
-      // 7. Upper-Right Faceted Rock (near A)
-      {
-        type: 'rock',
-        geomIdx: 3,
-        pos: [0.52, 0.44, 0.22],
-        rot: [0.8, -0.3, 0.5],
-        scale: 0.052,
-        spin: [0.003, 0.004, -0.003],
-        drift: 0.06,
-      },
-      // 8. Far-Right Crisp Craggy Rock (Near top right of L)
-      {
-        type: 'rock',
-        geomIdx: 1,
-        pos: [0.94, 0.38, 0.25],
-        rot: [-0.3, 0.6, 0.2],
-        scale: 0.058,
-        spin: [-0.002, 0.004, 0.003],
-        drift: 0.08,
-      },
-      // 9. Right-Middle Craggy Rock
-      {
-        type: 'rock',
-        geomIdx: 0,
-        pos: [0.98, -0.08, 0.28],
-        rot: [0.4, -0.7, 0.3],
-        scale: 0.060,
-        spin: [0.003, -0.002, 0.004],
-        drift: 0.09,
-      },
-      // 10. Lower-Right Small Rock
-      {
-        type: 'rock',
-        geomIdx: 2,
-        pos: [0.58, -0.58, 0.20],
-        rot: [-0.5, 0.3, 0.6],
-        scale: 0.035,
-        spin: [-0.003, 0.003, -0.002],
-        drift: 0.05,
-      },
-      // 11. Lower Center-Left Small Rock
-      {
-        type: 'rock',
-        geomIdx: 3,
-        pos: [-0.38, -0.56, 0.22],
-        rot: [0.3, -0.2, 0.8],
-        scale: 0.030,
-        spin: [0.002, -0.003, 0.002],
-        drift: 0.04,
-      },
-    ];
-  }, []);
-
   const itemsRef = useRef([]);
+  const { size } = useThree();
+  const isMobile = size.width < 768;
 
   useFrame(({ clock }, delta) => {
     if (!visible || prefersReducedMotion) return;
@@ -304,18 +311,40 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
     const mx = mouseRef.current ? mouseRef.current.x : 0;
     const my = mouseRef.current ? mouseRef.current.y : 0;
 
+    // Guaranteed clearance from Earth: center is (0.16, -1.44), radius is 1.30, atmosphere ~1.352.
+    // Minimum distance 1.54 guarantees ZERO intersection or entry into Earth!
+    const earthCenterX = 0.16;
+    const earthCenterY = -1.44;
+    const minDistance = 1.54;
+
     itemsRef.current.forEach((itemObj, idx) => {
       if (!itemObj) return;
-      const d = debrisList[idx];
+      const d = DEBRIS_ITEMS[idx];
       itemObj.rotation.x += d.spin[0] * delta * 60;
       itemObj.rotation.y += d.spin[1] * delta * 60;
       itemObj.rotation.z += d.spin[2] * delta * 60;
 
-      const bobY = Math.sin(t * 0.7 + idx * 1.5) * 0.015;
-      const bobX = Math.cos(t * 0.5 + idx * 1.2) * 0.012;
-      itemObj.position.x = d.pos[0] + bobX + mx * d.drift;
-      itemObj.position.y = d.pos[1] + bobY + my * d.drift;
-      itemObj.position.z = d.pos[2];
+      const bobY = Math.sin(t * 0.7 + idx * 1.5) * 0.012;
+      const bobX = Math.cos(t * 0.5 + idx * 1.2) * 0.010;
+
+      let posX = d.pos[0] + bobX + mx * d.drift;
+      let posY = d.pos[1] + bobY + my * d.drift;
+      let posZ = Math.max(0.24, d.pos[2]);
+
+      // Dynamic collision avoidance: push outward radially away from Earth center
+      const dx = posX - earthCenterX;
+      const dy = posY - earthCenterY;
+      const dist = Math.hypot(dx, dy, posZ);
+
+      if (dist < minDistance) {
+        const factor = minDistance / Math.max(0.001, dist);
+        posX = earthCenterX + dx * factor;
+        posY = earthCenterY + dy * factor;
+      }
+
+      itemObj.position.set(posX, posY, posZ);
+      const responsiveScale = isMobile ? d.scale * 0.75 : d.scale;
+      itemObj.scale.setScalar(responsiveScale);
     });
 
     if (groupRef.current) {
@@ -327,7 +356,7 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
 
   return (
     <group ref={groupRef}>
-      {debrisList.map((d, i) => (
+      {DEBRIS_ITEMS.map((d, i) => (
         <group
           key={i}
           ref={(el) => (itemsRef.current[i] = el)}
@@ -335,12 +364,16 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
           rotation={d.rot}
           scale={d.scale}
         >
-          {d.type === 'bottle' && <BottleObject />}
-          {d.type === 'can' && <SodaCanObject />}
-          {d.type === 'bag' && <CrumpledBagObject />}
-          {d.type === 'rock' && (
-            <mesh geometry={rockGeoms[d.geomIdx]} material={rockMat} />
-          )}
+          {d.type === 'bottle' && <DetailedBottle brand={d.brand} capColor={d.capColor} />}
+          {d.type === 'can' && <DetailedCan brand={d.brand} />}
+          {d.type === 'coffee' && <DetailedCoffeeCup />}
+          {d.type === 'tire' && <DetailedTire />}
+          {d.type === 'jug' && <DetailedMilkJug color={d.color} capColor={d.capColor} />}
+          {d.type === 'bag' && <DetailedCrumpledBag color={d.color} />}
+          {d.type === 'solar' && <DetailedSatelliteShard />}
+          {d.type === 'rocket' && <DetailedRocketHull />}
+          {d.type === 'box' && <DetailedTakeoutBox />}
+          {d.type === 'slag' && <DetailedSpaceSlag />}
         </group>
       ))}
     </group>
@@ -565,10 +598,16 @@ const PersistentPlanetController = ({
       <directionalLight
         position={[1.8, 1.2, 1.6]}
         color="#bae6fd"
-        intensity={0.9 * activeDim}
+        intensity={1.2 * activeDim}
+      />
+      {/* Camera-facing Key Light for Debris Detail and Labels */}
+      <directionalLight
+        position={[0.4, 0.8, 2.5]}
+        color="#f8fafc"
+        intensity={1.1 * activeDim}
       />
       {/* Low Ambient Light: Keeps dark hemisphere deep with golden lights */}
-      <ambientLight color="#050811" intensity={0.12 * activeDim} />
+      <ambientLight color="#0f172a" intensity={0.25 * activeDim} />
 
       {/* ── Master Persistent Planet Group (Choreographed across sections) ── */}
       <group
