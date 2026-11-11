@@ -85,7 +85,6 @@ export const Solutions = () => {
   const cleanup = useGameStore((s) => s.cleanup);
   const quiz = useGameStore((s) => s.quiz);
   const liteMode = useGameStore((s) => s.liteMode);
-  const toggleLiteMode = useGameStore((s) => s.toggleLiteMode);
   const muted = useGameStore((s) => s.muted);
   const toggleMute = useGameStore((s) => s.toggleMute);
 
@@ -293,20 +292,6 @@ export const Solutions = () => {
         <div className="flex items-center gap-2">
           {/* Chiptune Audio Control with Volume Popover */}
           <SoundControl />
-
-          {/* Theme / Lite Mode */}
-          <button
-            onClick={toggleLiteMode}
-            className={`p-2 rounded-lg backdrop-blur-md border text-xs transition-colors cursor-pointer ${
-              liteMode
-                ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                : 'bg-slate-900/80 border-white/10 text-slate-300 hover:text-white hover:bg-white/[0.08]'
-            }`}
-            title={liteMode ? 'Switch to Cinematic High-DPI' : 'Switch to Eco/Lite Mode'}
-            aria-label="Toggle Mode"
-          >
-            <Sun className="w-4 h-4" />
-          </button>
         </div>
       </header>
 
