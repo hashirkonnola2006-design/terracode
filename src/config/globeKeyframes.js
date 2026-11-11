@@ -5,11 +5,10 @@
  *
  * Defines the camera / planet choreography across the story sections:
  *  - Section 0: Hero (progress = 0.00) -> close-up damaged Earth with HEAL & debris
- *  - Section 1: The Damage (progress ~ 0.22) -> slides right, scale 0.62, text on left
- *  - Section 2: Six Pillars (progress ~ 0.48) -> left negative space, scale 0.84, lava cracks clearly visible
- *  - Section 3: Your Impact (progress ~ 0.72) -> shifts right/bottom, scale 0.72, away from form
- *  - Section 4: Play Games (progress ~ 0.88) -> rises to bottom-center horizon, scale 1.25
- *  - Section 5: Footer (progress = 1.00) -> settles small at bottom-right corner, scale 0.44
+ *  - Section 1: The Damage (progress ~ 0.28) -> slides right, scale 0.62, text on left
+ *  - Section 2: Six Pillars (progress ~ 0.60) -> left negative space, scale 0.84, lava cracks clearly visible
+ *  - Section 3: Play Games (progress ~ 0.88) -> right negative space, scale 0.80, clear of game list
+ *  - Section 4: Footer (progress = 1.00) -> settles small at bottom-right corner, scale 0.44
  *
  * NOTE: The globe NEVER heals from scroll. Heal progress is strictly 0.0
  * unless the user earns it in the Cleanup Mission gameplay.
@@ -45,9 +44,9 @@ export const DESKTOP_GLOBE_KEYFRAMES = [
     healProgress: 0.0, // Earth remains damaged
     debrisOpacity: 0.85,
   },
-  // 2. Six Pillars (Scroll ~0.48)
+  // 2. Six Pillars (Scroll ~0.60)
   {
-    progress: 0.48,
+    progress: 0.60,
     posX: -0.62,      // Left negative space, curved edge & lava cracks clearly visible
     posY: -0.10,
     scale: 0.84,      // Large enough so planet is prominent
@@ -58,20 +57,7 @@ export const DESKTOP_GLOBE_KEYFRAMES = [
     healProgress: 0.0, // Strictly 0.0 — reading does not heal planet
     debrisOpacity: 0.0,
   },
-  // 3. Your Impact (Scroll ~0.72)
-  {
-    progress: 0.72,
-    posX: 0.60,        // Right and bottom, medium size, away from form
-    posY: -0.38,
-    scale: 0.72,
-    rotX: 0.20,
-    rotZ: -0.05,
-    rotYOffset: 4.40,
-    dim: 1.0,
-    healProgress: 0.0, // Strictly 0.0
-    debrisOpacity: 0.0,
-  },
-  // 4. Play Games (Scroll ~0.88)
+  // 3. Play Games (Scroll ~0.88)
   {
     progress: 0.88,
     posX: 0.58,        // Placed in right negative space, clear of the left-aligned game list
@@ -126,9 +112,9 @@ export const MOBILE_GLOBE_KEYFRAMES = [
     healProgress: 0.0,
     debrisOpacity: 0.0,
   },
-  // 2. Six Pillars (Scroll ~0.48)
+  // 2. Six Pillars (Scroll ~0.60)
   {
-    progress: 0.48,
+    progress: 0.60,
     posX: 0.0,
     posY: -0.25,
     scale: 0.60,
@@ -139,20 +125,7 @@ export const MOBILE_GLOBE_KEYFRAMES = [
     healProgress: 0.0,
     debrisOpacity: 0.0,
   },
-  // 3. Your Impact (Scroll ~0.72)
-  {
-    progress: 0.72,
-    posX: 0.0,
-    posY: -0.30,
-    scale: 0.58,
-    rotX: 0.20,
-    rotZ: -0.05,
-    rotYOffset: 4.40,
-    dim: 0.75,
-    healProgress: 0.0,
-    debrisOpacity: 0.0,
-  },
-  // 4. Play Games (Scroll ~0.88)
+  // 3. Play Games (Scroll ~0.88)
   {
     progress: 0.88,
     posX: 0.0,

@@ -1,32 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { SolutionsHero, SolutionsHealBackground } from '../components/solutions/SolutionsHero';
 import { SolutionsHeroScene } from '../components/solutions/SolutionsHeroScene';
 import { DamageSection } from '../components/solutions/DamageSection';
 import { SixPillarsSection } from '../components/solutions/SixPillarsSection';
-import { YourImpactSection } from '../components/solutions/YourImpactSection';
 import { PlaySection } from '../components/solutions/PlaySection';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { Footer } from '../components/Footer/Footer';
 import { SoundControl } from '../components/audio/SoundControl';
 import { musicEngine } from '../audio/musicEngine';
 import { initGlobeScrollTriggers, refreshGlobeScrollTriggers } from '../config/globeScrollManager';
+import { Menu, X, ArrowUpRight } from 'lucide-react';
+
+const NAV_ITEMS = [
+  { id: 'hero', hash: '', label: 'Home', num: '01' },
+  { id: 'damage', hash: '#damage', label: 'Damage', num: '02' },
+  { id: 'solutions', hash: '#solutions', label: 'Solutions', num: '03' },
+  { id: 'play', hash: '#play', label: 'Play Games', num: '04' },
+];
 
 export const Solutions = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const cleanup = useGameStore((s) => s.cleanup);
-  const quiz = useGameStore((s) => s.quiz);
   const liteMode = useGameStore((s) => s.liteMode);
 
   const [headerScrolled, setHeaderScrolled] = useState(false);
-  const [activeNavSection, setActiveNavSection] = useState('home');
-  const [currentSection, setCurrentSection] = useState('hero');
+  const [activeSection, setActiveSection] = useState('hero');
+  const [scrollPercent, setScrollPercent] = useState(0);
   const [isSceneVisible, setIsSceneVisible] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const scrollProgressRef = useRef(0);
+  const lastHashRef = useRef('');
+  const mobileMenuRef = useRef(null);
+  const menuButtonRef = useRef(null);
+
   const userCleanProgress = (cleanup?.health || 0) / 100;
 
   const prefersReducedMotion =
@@ -35,6 +46,15 @@ export const Solutions = () => {
 
   useEffect(() => {
     document.title = 'TerraHeal | Solutions';
+  }, []);
+
+  // ── One-Time LocalStorage Cleanup for Deleted "Your Impact" Keys ──
+  useEffect(() => {
+    try {
+      localStorage.removeItem('terraheal_pledge_streak');
+      localStorage.removeItem('terraheal_impact_answers');
+      localStorage.removeItem('terraheal_impact_score');
+    } catch (_) {}
   }, []);
 
   // Initialize continuous GSAP ScrollTriggers connecting every section pair
@@ -77,47 +97,111 @@ export const Solutions = () => {
     return () => document.removeEventListener('visibilitychange', handleVis);
   }, []);
 
-  // Scroll listener for top header styling and navbar scroll-spy
+  // Close mobile menu on Escape key press
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollPos = window.scrollY;
-      setHeaderScrolled(scrollPos > 20);
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
 
-      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-      const progress = Math.min(Math.max(scrollPos / maxScroll, 0.0), 1.0);
-      scrollProgressRef.current = progress;
+  // Close mobile menu on click outside
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleClickOutside = (e) => {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(e.target) &&
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(e.target)
+      ) {
+        setMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [mobileMenuOpen]);
 
-      const damageEl = document.getElementById('damage');
-      const solutionsEl = document.getElementById('solutions');
-      const impactEl = document.getElementById('impact');
-      const playEl = document.getElementById('play');
-
-      let detectedSection = 'hero';
-      let navTarget = 'home';
-
-      // Guard top hero viewport explicitly
-      if (scrollPos < 250) {
-        detectedSection = 'hero';
-        navTarget = 'home';
-      } else if (playEl && playEl.offsetTop > 400 && scrollPos >= playEl.offsetTop - 300) {
-        detectedSection = 'play';
-        navTarget = 'play';
-      } else if (impactEl && impactEl.offsetTop > 400 && scrollPos >= impactEl.offsetTop - 300) {
-        detectedSection = 'impact';
-        navTarget = 'solutions';
-      } else if (solutionsEl && solutionsEl.offsetTop > 400 && scrollPos >= solutionsEl.offsetTop - 300) {
-        detectedSection = 'pillars';
-        navTarget = 'solutions';
-      } else if (damageEl && damageEl.offsetTop > 400 && scrollPos >= damageEl.offsetTop - 320) {
-        detectedSection = 'damage';
-        navTarget = 'solutions';
-      } else {
-        detectedSection = 'hero';
-        navTarget = 'home';
+  // Section scroll executor with header height offset
+  const scrollToSection = useCallback(
+    (id) => {
+      if (id === 'hero') {
+        window.scrollTo({
+          top: 0,
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        });
+        if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname);
+          lastHashRef.current = '';
+        }
+        setActiveSection('hero');
+        return;
       }
 
-      setCurrentSection(detectedSection);
-      setActiveNavSection(navTarget);
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+        const targetHash = `#${id}`;
+        window.history.replaceState(null, '', targetHash);
+        lastHashRef.current = targetHash;
+        setActiveSection(id);
+      }
+    },
+    [prefersReducedMotion]
+  );
+
+  // Scroll listener for top header styling, progress line, and scroll-spy with URL hash sync
+  useEffect(() => {
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+
+      requestAnimationFrame(() => {
+        const scrollPos = window.scrollY;
+        setHeaderScrolled(scrollPos > 20);
+
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const progress = Math.min(Math.max(scrollPos / maxScroll, 0.0), 1.0);
+        scrollProgressRef.current = progress;
+        setScrollPercent(progress * 100);
+
+        const damageEl = document.getElementById('damage');
+        const solutionsEl = document.getElementById('solutions');
+        const playEl = document.getElementById('play');
+
+        // Scroll spy detection with threshold offsets
+        let detected = 'hero';
+        if (scrollPos < 250) {
+          detected = 'hero';
+        } else if (playEl && scrollPos >= playEl.offsetTop - 320) {
+          detected = 'play';
+        } else if (solutionsEl && scrollPos >= solutionsEl.offsetTop - 320) {
+          detected = 'solutions';
+        } else if (damageEl && scrollPos >= damageEl.offsetTop - 340) {
+          detected = 'damage';
+        } else {
+          detected = 'hero';
+        }
+
+        setActiveSection(detected);
+
+        // Quietly update URL hash without jump or history clutter
+        const expectedHash = detected === 'hero' ? '' : `#${detected}`;
+        if (window.location.hash !== expectedHash && lastHashRef.current !== expectedHash) {
+          lastHashRef.current = expectedHash;
+          const newUrl = expectedHash ? expectedHash : window.location.pathname;
+          window.history.replaceState(null, '', newUrl);
+        }
+
+        ticking = false;
+      });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -127,157 +211,166 @@ export const Solutions = () => {
 
   // Update Music Engine mood according to active section
   useEffect(() => {
-    musicEngine.setSection(currentSection);
-  }, [currentSection]);
+    musicEngine.setSection(activeSection);
+  }, [activeSection]);
 
   // STRICT ZERO HEALING ON SCROLL:
-  // Globe stays damaged (0.0) the whole way down.
-  // The only thing allowed to change the globe's heal state is real gameplay in Cleanup Mission
-  // when the user reaches the #play section.
-  const activeStoryHeal = currentSection === 'play' && userCleanProgress > 0 ? userCleanProgress : 0.0;
+  // Globe stays damaged (0.0) throughout Hero, Damage, and Six Pillars.
+  // Real gameplay progress in Cleanup Mission in #play is the only driver of healing.
+  const activeStoryHeal = activeSection === 'play' && userCleanProgress > 0 ? userCleanProgress : 0.0;
 
-  // Smooth scroll to #play or redirect #sources
+  // Initial URL hash navigation on load (e.g. #damage, #solutions, #play, #sources)
   useEffect(() => {
-    if (location.hash === '#play') {
-      setTimeout(() => {
-        const el = document.getElementById('play');
-        if (el) el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
-      }, 150);
-    } else if (location.hash === '#sources') {
+    const rawHash = location.hash.replace('#', '');
+    if (rawHash === 'sources') {
       navigate('/sources', { replace: true });
+      return;
     }
-  }, [location.hash, navigate, prefersReducedMotion]);
 
-  const handleHomeClick = () => {
-    if (window.scrollY === 0) return;
-    window.scrollTo({
-      top: 0,
-      behavior: prefersReducedMotion ? 'auto' : 'smooth',
-    });
-  };
-
-  const handleSolutionsClick = () => {
-    const el = document.getElementById('damage');
-    if (el) {
-      el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    if (rawHash && ['damage', 'solutions', 'play'].includes(rawHash)) {
+      const timer = setTimeout(() => {
+        scrollToSection(rawHash);
+      }, 160);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [location.hash, navigate, scrollToSection]);
 
-  const handlePlayClick = () => {
-    const el = document.getElementById('play');
-    if (el) {
-      el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
-    }
-  };
-
-  const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
-    }
+  const handleNavClick = (id) => {
+    musicEngine.playClick();
+    scrollToSection(id);
+    setMobileMenuOpen(false);
   };
 
   return (
     <div className="relative min-h-screen bg-[#050505] text-white selection:bg-[#0becc2] selection:text-black">
-      {/* ── Fixed Top Header (Clean, short navigation) ── */}
+      {/* ── Accessible Skip to Content Link ── */}
+      <a
+        href="#damage"
+        onClick={(e) => {
+          e.preventDefault();
+          scrollToSection('damage');
+        }}
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#14e6c0] focus:text-black focus:font-semibold focus:text-xs focus:tracking-wider focus:uppercase focus:rounded-sm focus:outline-none shadow-2xl"
+      >
+        Skip to content
+      </a>
+
+      {/* ── Fixed Top Header (All 4 Sections One Click Away) ── */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between transition-all duration-300 ${
-          headerScrolled
-            ? 'backdrop-blur-md bg-slate-950/70 border-b border-white/10 shadow-lg'
+          headerScrolled || mobileMenuOpen
+            ? 'backdrop-blur-md bg-slate-950/85 border-b border-white/10 shadow-lg'
             : 'bg-transparent border-b border-transparent'
         }`}
       >
-        {/* Logo */}
-        <TerraHealLogo markSize={28} textClass="text-base sm:text-lg font-bold" />
+        {/* Logo (Clicks to Top / Home) */}
+        <button
+          type="button"
+          onClick={() => handleNavClick('hero')}
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14e6c0] rounded-sm cursor-pointer"
+          aria-label="TerraHeal Home"
+        >
+          <TerraHealLogo markSize={28} textClass="text-base sm:text-lg font-bold" />
+        </button>
 
-        {/* Nav Links (Desktop) — Home, Solutions, Play Games */}
-        <nav className="hidden md:flex items-center gap-8 font-label uppercase text-xs tracking-[0.18em]">
-          <button
-            onClick={() => {
-              musicEngine.playClick();
-              handleHomeClick();
-            }}
-            onMouseEnter={() => musicEngine.playHover()}
-            className={`transition-colors cursor-pointer relative py-1 ${
-              activeNavSection === 'home'
-                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
-                : 'text-white/60 hover:text-white'
-            }`}
-          >
-            Home
-          </button>
-          <button
-            onClick={() => {
-              musicEngine.playClick();
-              handleSolutionsClick();
-            }}
-            onMouseEnter={() => musicEngine.playHover()}
-            className={`transition-colors cursor-pointer relative py-1 ${
-              activeNavSection === 'solutions'
-                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
-                : 'text-white/60 hover:text-white'
-            }`}
-          >
-            Solutions
-          </button>
-          <button
-            onClick={() => {
-              musicEngine.playClick();
-              handlePlayClick();
-            }}
-            onMouseEnter={() => musicEngine.playHover()}
-            className={`transition-colors cursor-pointer relative py-1 ${
-              activeNavSection === 'play'
-                ? 'text-[#14e6c0] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
-                : 'text-[#14e6c0]/90 hover:text-[#14e6c0]'
-            }`}
-          >
-            Play Games
-          </button>
+        {/* Nav Links (Desktop) — Home, Damage, Solutions, Play Games */}
+        <nav
+          aria-label="Primary Navigation"
+          className="hidden md:flex items-center gap-7 font-label uppercase text-xs tracking-[0.16em]"
+        >
+          {NAV_ITEMS.map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleNavClick(item.id)}
+                onMouseEnter={() => musicEngine.playHover()}
+                className={`transition-colors cursor-pointer relative py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14e6c0] rounded-sm ${
+                  isActive
+                    ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
+                    : item.id === 'play'
+                    ? 'text-[#14e6c0]/90 hover:text-[#14e6c0]'
+                    : 'text-white/60 hover:text-white'
+                }`}
+                aria-current={isActive ? 'location' : undefined}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
 
-        {/* Nav Links (Mobile) */}
-        <nav className="flex md:hidden items-center gap-3 font-label uppercase text-[10px] tracking-[0.14em]">
-          <button
-            onClick={() => {
-              musicEngine.playClick();
-              handleHomeClick();
-            }}
-            className={`transition-colors cursor-pointer py-1 ${
-              activeNavSection === 'home' ? 'text-white font-semibold' : 'text-white/60'
-            }`}
-          >
-            Home
-          </button>
-          <button
-            onClick={() => {
-              musicEngine.playClick();
-              handleSolutionsClick();
-            }}
-            className={`transition-colors cursor-pointer py-1 ${
-              activeNavSection === 'solutions' ? 'text-white font-semibold' : 'text-white/60'
-            }`}
-          >
-            Solutions
-          </button>
-          <button
-            onClick={() => {
-              musicEngine.playClick();
-              handlePlayClick();
-            }}
-            className={`transition-colors cursor-pointer py-1 ${
-              activeNavSection === 'play' ? 'text-[#14e6c0] font-semibold' : 'text-[#14e6c0]/80'
-            }`}
-          >
-            Play
-          </button>
-        </nav>
-
-        {/* Controls */}
-        <div className="flex items-center gap-2">
+        {/* Right Controls: Sound & Mobile Menu Toggle */}
+        <div className="flex items-center gap-3">
           <SoundControl />
+
+          {/* Mobile Menu Button */}
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={() => {
+              musicEngine.playClick();
+              setMobileMenuOpen((prev) => !prev);
+            }}
+            className="md:hidden p-1.5 text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14e6c0] rounded-sm"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav-menu"
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5 text-[#14e6c0]" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
+
+        {/* ── Slim 1.5px Scroll Progress Indicator Line ── */}
+        <div
+          className="absolute bottom-0 left-0 h-[1.5px] bg-[#14e6c0] pointer-events-none transition-[width] duration-100 ease-out"
+          style={{ width: `${scrollPercent}%` }}
+          role="progressbar"
+          aria-valuenow={Math.round(scrollPercent)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Page scroll progress"
+        />
       </header>
+
+      {/* ── Mobile Drawer Sheet (Large Type, Keyboard Accessible, Backdrop Blur) ── */}
+      {mobileMenuOpen && (
+        <div
+          id="mobile-nav-menu"
+          ref={mobileMenuRef}
+          className="fixed top-[57px] left-0 right-0 z-30 md:hidden backdrop-blur-2xl bg-black/95 border-b border-white/10 px-6 py-6 space-y-2 shadow-2xl transition-all duration-200"
+          role="dialog"
+          aria-label="Mobile Navigation"
+        >
+          {NAV_ITEMS.map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleNavClick(item.id)}
+                className={`w-full py-3 px-3 flex items-center justify-between text-left rounded-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14e6c0] ${
+                  isActive
+                    ? 'bg-white/[0.08] text-white font-semibold border-l-2 border-[#14e6c0]'
+                    : 'text-white/70 hover:text-white hover:bg-white/[0.03]'
+                }`}
+                aria-current={isActive ? 'location' : undefined}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-pixel text-xs text-[#14e6c0]/70">{item.num}</span>
+                  <span className="font-display text-lg tracking-tight">{item.label}</span>
+                </div>
+                {isActive ? (
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#14e6c0]">Active</span>
+                ) : (
+                  <ArrowUpRight className="w-4 h-4 text-white/30" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── 0. Fixed Global Space Starfield & Vignette Overlay (Layer z-0) ── */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -331,16 +424,13 @@ export const Solutions = () => {
       {/* ── 3. Designed Editorial Story Flow (Layer z-10) ── */}
       <div className="relative z-10 bg-transparent">
         <main className="w-full">
-          {/* SECTION 1: "THE DAMAGE" (New, between Hero and Six Pillars) */}
+          {/* SECTION 1: "THE DAMAGE" (Between Hero and Six Pillars) */}
           <DamageSection onScrollToPillars={() => scrollToSection('solutions')} />
 
           {/* SECTION 2: "SIX PILLARS" (Redesigned Editorial 2-Column, No Cards) */}
-          <SixPillarsSection onScrollToImpact={() => scrollToSection('impact')} />
+          <SixPillarsSection onScrollToPlay={() => scrollToSection('play')} />
 
-          {/* SECTION 3: "YOUR IMPACT" (New Personal Alignment Check & 7-Day Challenge) */}
-          <YourImpactSection onScrollToPlay={() => scrollToSection('play')} />
-
-          {/* SECTION 4: "PLAY GAMES" (#play) - Minimal Editorial Row Flow */}
+          {/* SECTION 3: "PLAY GAMES" (#play) - Minimal Editorial Row Flow */}
           <PlaySection />
         </main>
 

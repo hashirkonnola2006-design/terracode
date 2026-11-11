@@ -416,13 +416,6 @@ class ProceduralMusicEngine {
       targetBass = 0.38;
       targetDrums = 0.16; // Soft hi-hat
       targetCutoff = 1600 + this.healRatio * 1800;
-    } else if (this.activeSection === 'impact') {
-      // Impact: Brightens as user answers, active sparkle and warm arpeggio
-      targetPad = 0.54;
-      targetArp = 0.28;
-      targetBass = 0.40;
-      targetDrums = 0.24;
-      targetCutoff = 2000 + this.healRatio * 2400;
     } else if (this.activeSection === 'play') {
       // Play Games: Full energy with percussion, hopeful, triumphant
       targetPad = 0.50;
@@ -449,7 +442,7 @@ class ProceduralMusicEngine {
   getCurrentChordList() {
     if (this.activeSection === 'play') {
       return MUSIC_CONFIG.PLAY_CHORDS;
-    } else if (this.activeSection === 'pillars' || this.activeSection === 'impact') {
+    } else if (this.activeSection === 'pillars') {
       return MUSIC_CONFIG.PILLARS_CHORDS;
     }
     return MUSIC_CONFIG.HERO_CHORDS;

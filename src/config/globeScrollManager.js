@@ -94,28 +94,6 @@ export const GLOBE_SECTION_CONFIG = {
       debrisOpacity: 0.0,
     },
   },
-  impact: {
-    desktop: {
-      posX: 0.60, // Right and bottom, medium size, away from form
-      posY: -0.38,
-      scale: 0.72,
-      rotX: 0.20,
-      rotZ: -0.05,
-      rotYOffset: 4.40,
-      dim: 1.0,
-      debrisOpacity: 0.0,
-    },
-    mobile: {
-      posX: 0.0,
-      posY: -0.30,
-      scale: 0.58,
-      rotX: 0.20,
-      rotZ: -0.05,
-      rotYOffset: 4.40,
-      dim: 0.75,
-      debrisOpacity: 0.0,
-    },
-  },
   play: {
     desktop: {
       posX: 0.58, // Placed in right negative space, out of the way of the left-aligned game list
@@ -209,8 +187,7 @@ export function initGlobeScrollTriggers(isMobile = false) {
   const transitions = [
     { fromKey: 'hero', toKey: 'damage', fromId: 'hero', toId: 'damage' },
     { fromKey: 'damage', toKey: 'pillars', fromId: 'damage', toId: 'solutions' },
-    { fromKey: 'pillars', toKey: 'impact', fromId: 'solutions', toId: 'impact' },
-    { fromKey: 'impact', toKey: 'play', fromId: 'impact', toId: 'play' },
+    { fromKey: 'pillars', toKey: 'play', fromId: 'solutions', toId: 'play' },
     { fromKey: 'play', toKey: 'footer', fromId: 'play', toId: 'footer' },
   ];
 

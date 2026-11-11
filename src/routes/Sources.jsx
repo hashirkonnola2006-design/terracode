@@ -12,7 +12,7 @@ export const Sources = () => {
       <p className="text-white/80 leading-relaxed font-body">
         Every metric, statistic, and environmental benchmark presented in TerraHeal is drawn
         directly from peer-reviewed scientific literature and international agency assessments.
-        Below is the complete bibliography cited across The Damage, Six Pillars, Your Impact, and
+        Below is the complete bibliography cited across The Damage, Six Pillars, and
         the interactive simulations.
       </p>
 

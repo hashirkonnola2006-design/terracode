@@ -73,7 +73,11 @@ export const PlaySection = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-8">
         <div className="max-w-3xl">
           {/* Section Header: Minimal, left-aligned, display font + one quiet grey line */}
-          <div className="space-y-2 mb-12 sm:mb-16">
+          <div className="space-y-3 mb-12 sm:mb-16">
+            <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-[#14e6c0]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#14e6c0]" />
+              <span>03 • Interactive Simulations</span>
+            </div>
             <h2 className="font-display font-extrabold text-3xl sm:text-5xl text-white tracking-tight leading-[1.06]">
               Play to heal the planet.
             </h2>
@@ -180,3 +184,4 @@ export const PlaySection = () => {
 };
 
 export default PlaySection;
+

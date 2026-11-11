@@ -97,7 +97,7 @@ export const PILLARS_DATA = [
   },
 ];
 
-export const SixPillarsSection = ({ onScrollToImpact }) => {
+export const SixPillarsSection = ({ onScrollToPlay }) => {
   const [hoveredRowId, setHoveredRowId] = useState(null);
   const sectionRef = useRef(null);
 
@@ -231,22 +231,22 @@ export const SixPillarsSection = ({ onScrollToImpact }) => {
           </div>
         </div>
 
-        {/* Handover to Section 3: Your Impact */}
+        {/* Handover to Section 3: Play Games */}
         <div className="mt-24 sm:mt-32 pt-12 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <p className="font-display font-semibold text-xl sm:text-2xl text-white tracking-tight">
             Knowledge is half the battle.{' '}
-            <span className="text-[#14e6c0]">How much of this is already in your routine?</span>
+            <span className="text-[#14e6c0]">Now take action.</span>
           </p>
 
           <button
             onClick={() => {
               musicEngine.playClick();
-              if (onScrollToImpact) onScrollToImpact();
+              if (onScrollToPlay) onScrollToPlay();
             }}
             onMouseEnter={() => musicEngine.playHover()}
             className="inline-flex items-center gap-3 font-label uppercase text-xs tracking-[0.2em] text-[#14e6c0] hover:text-[#5df7d9] transition-colors group cursor-pointer"
           >
-            <span>Check your impact</span>
+            <span>Play games</span>
             <ArrowDown className="w-4 h-4 group-hover:translate-y-1 transition-transform" />
           </button>
         </div>
