@@ -32,269 +32,102 @@ function latLonToVector3(lat, lon, radius = 1.0) {
   return new THREE.Vector3(x, y, z);
 }
 
-// ── 5. CINEMATIC HIGH-DETAIL FLOATING DEBRIS & WASTE FIELD ──
-// Strictly positioned in orbit/space: guaranteed to NEVER penetrate or touch Earth's surface or atmosphere!
+// ── 5. CINEMATIC REFERENCE-MATCHED FLOATING DEBRIS FIELD ──
+// Strictly positioned in empty space: guaranteed to NEVER block HEAL letters,
+// NEVER overlap CTA buttons, and NEVER penetrate or touch Earth's surface or horizon!
 const DEBRIS_ITEMS = [
-  // ── 1. UPPER-LEFT & 'H' REGION ──
+  // 1. Signature Crumpled Water Bottle (Upper-Left outer space, tilted, matching reference mockup)
   {
-    // Signature tilted water bottle framing 'H' (matches reference mockup)
     type: 'bottle',
     brand: 'glacier',
-    capColor: '#2563eb', // Royal blue cap
-    pos: [-0.68, 0.24, 0.48],
-    rot: [-0.45, 0.55, -0.65],
-    scale: 1.15,
+    capColor: '#2563eb', // Royal blue sports cap
+    pos: [-0.94, 0.08, 0.58],
+    rot: [-0.42, 0.50, -0.65],
+    scale: 0.82,
     spin: [0.003, 0.004, -0.002],
-    drift: 0.05,
+    drift: 0.035,
   },
+
+  // 2. Signature Battered Metallic Soda Can (Lower-Right foreground, matching reference mockup)
   {
     type: 'can',
     brand: 'cola',
-    pos: [-0.58, 0.52, 0.32],
-    rot: [0.4, -0.6, 0.3],
-    scale: 1.05,
-    spin: [0.004, -0.003, 0.003],
-    drift: 0.05,
-  },
-  {
-    type: 'solar',
-    pos: [-0.82, 0.38, 0.36],
-    rot: [0.6, -0.3, 0.5],
+    pos: [0.78, -0.26, 0.78],
+    rot: [0.42, 0.68, -0.35],
     scale: 1.10,
-    spin: [-0.002, 0.003, 0.004],
-    drift: 0.04,
-  },
-  {
-    type: 'coffee',
-    pos: [-0.74, 0.02, 0.42],
-    rot: [-0.3, 0.4, 0.6],
-    scale: 0.95,
-    spin: [0.003, 0.002, -0.003],
-    drift: 0.06,
-  },
-  {
-    type: 'bag',
-    color: '#f8fafc',
-    pos: [-0.52, 0.15, 0.30],
-    rot: [0.2, 0.5, -0.4],
-    scale: 0.90,
-    spin: [-0.002, 0.004, 0.002],
-    drift: 0.04,
+    spin: [-0.003, 0.004, 0.003],
+    drift: 0.055,
   },
 
-  // ── 2. TOP-CENTER & 'E' / 'A' REGION ──
-  {
-    type: 'can',
-    brand: 'energy',
-    pos: [-0.32, 0.54, 0.28],
-    rot: [-0.5, 0.3, 0.7],
-    scale: 1.0,
-    spin: [0.004, 0.003, -0.002],
-    drift: 0.05,
-  },
-  {
-    type: 'box',
-    pos: [-0.10, 0.32, 0.32],
-    rot: [0.5, -0.3, 0.4],
-    scale: 0.95,
-    spin: [-0.002, 0.003, 0.002],
-    drift: 0.04,
-  },
+  // 3. Craggy Space Asteroid between 'H' and 'E' (Floats in empty gap, does NOT touch either letter)
   {
     type: 'slag',
-    pos: [-0.18, 0.44, 0.28],
-    rot: [0.6, 0.2, -0.4],
-    scale: 1.05,
-    spin: [-0.002, 0.003, 0.002],
-    drift: 0.03,
-  },
-  {
-    type: 'jug',
-    color: '#f8fafc',
-    capColor: '#dc2626',
-    pos: [0.12, 0.56, 0.30],
-    rot: [0.3, 0.6, -0.5],
-    scale: 1.05,
-    spin: [0.002, -0.004, 0.003],
-    drift: 0.04,
-  },
-  {
-    type: 'solar',
-    pos: [0.32, 0.58, 0.30],
-    rot: [-0.4, 0.7, 0.3],
-    scale: 1.05,
-    spin: [0.003, 0.003, -0.004],
-    drift: 0.05,
-  },
-  {
-    type: 'tire',
-    pos: [-0.02, 0.50, 0.26],
-    rot: [0.8, -0.4, 0.2],
-    scale: 0.90,
-    spin: [-0.003, 0.004, 0.002],
-    drift: 0.04,
+    pos: [-0.48, 0.46, 0.38],
+    rot: [0.5, 0.3, -0.4],
+    scale: 0.48,
+    spin: [0.002, 0.003, -0.002],
+    drift: 0.025,
   },
 
-  // ── 3. UPPER-RIGHT & 'L' REGION ──
+  // 4. Craggy Space Asteroid between 'E' and 'A' (Floats in empty gap, does NOT touch either letter)
   {
-    type: 'bottle',
-    brand: 'glacier',
-    capColor: '#10b981', // Emerald green cap
-    pos: [0.48, 0.36, 0.34],
-    rot: [-0.3, 0.7, -0.4],
-    scale: 1.10,
-    spin: [0.004, -0.003, 0.002],
-    drift: 0.06,
+    type: 'slag',
+    pos: [0.00, 0.48, 0.38],
+    rot: [-0.4, 0.6, 0.3],
+    scale: 0.42,
+    spin: [-0.002, 0.003, 0.003],
+    drift: 0.025,
   },
+
+  // 5. Craggy Space Asteroid between 'A' and 'L' (Floats in empty gap, does NOT touch either letter)
   {
-    type: 'can',
-    brand: 'fizz',
-    pos: [0.60, 0.52, 0.30],
-    rot: [0.6, -0.5, 0.3],
-    scale: 1.05,
-    spin: [-0.003, 0.005, 0.003],
-    drift: 0.06,
+    type: 'slag',
+    pos: [0.46, 0.46, 0.38],
+    rot: [0.3, -0.4, 0.5],
+    scale: 0.45,
+    spin: [0.003, -0.002, 0.003],
+    drift: 0.025,
   },
+
+  // 6. Craggy Battered Rock (Far Right of 'L' in deep space)
+  {
+    type: 'slag',
+    pos: [0.96, 0.32, 0.42],
+    rot: [-0.3, 0.5, -0.5],
+    scale: 0.52,
+    spin: [-0.002, 0.004, 0.002],
+    drift: 0.035,
+  },
+
+  // 7. Craggy Rock below 'L' on the right flank (Floats in space above soda can)
+  {
+    type: 'slag',
+    pos: [0.90, -0.02, 0.46],
+    rot: [0.4, -0.5, 0.3],
+    scale: 0.58,
+    spin: [0.003, 0.003, -0.003],
+    drift: 0.035,
+  },
+
+  // 8. Crumpled Translucent Plastic Grocery Bag (Floating in right space)
   {
     type: 'bag',
     color: '#bae6fd',
-    pos: [0.68, 0.28, 0.32],
-    rot: [0.4, -0.3, 0.6],
-    scale: 0.95,
-    spin: [0.003, 0.004, -0.002],
-    drift: 0.05,
-  },
-  {
-    type: 'tire',
-    pos: [0.78, 0.44, 0.35],
-    rot: [-0.5, 0.4, 0.8],
-    scale: 0.95,
-    spin: [-0.002, 0.005, 0.003],
-    drift: 0.06,
-  },
-  {
-    type: 'slag',
-    pos: [0.55, 0.62, 0.30],
-    rot: [0.3, -0.4, 0.5],
-    scale: 1.15,
-    spin: [-0.003, 0.002, -0.003],
-    drift: 0.04,
-  },
-  {
-    type: 'rocket',
-    pos: [0.76, 0.16, 0.38],
-    rot: [0.4, -0.6, 0.5],
-    scale: 1.0,
-    spin: [0.003, -0.004, 0.002],
-    drift: 0.06,
+    pos: [0.94, 0.16, 0.44],
+    rot: [0.35, -0.30, 0.55],
+    scale: 0.65,
+    spin: [0.002, 0.003, -0.002],
+    drift: 0.035,
   },
 
-  // ── 4. FOREGROUND SIGNATURE FLANK & ORBIT (Matches Reference Mockup) ──
-  {
-    // Signature crisp metallic soda can on the right flank (Foreground like mockup!)
-    type: 'can',
-    brand: 'cola',
-    pos: [0.62, -0.20, 0.78],
-    rot: [0.35, 0.75, -0.28],
-    scale: 1.25,
-    spin: [-0.003, 0.005, 0.003],
-    drift: 0.07,
-  },
-  {
-    type: 'coffee',
-    pos: [0.68, -0.02, 0.46],
-    rot: [0.5, 0.3, -0.4],
-    scale: 1.0,
-    spin: [0.004, -0.003, 0.003],
-    drift: 0.05,
-  },
+  // 9. Distant Space Rock (Upper-Left corner, balancing the frame)
   {
     type: 'slag',
-    pos: [0.70, -0.38, 0.65],
-    rot: [-0.4, 0.5, 0.3],
-    scale: 1.10,
-    spin: [0.002, 0.003, -0.003],
-    drift: 0.05,
-  },
-  {
-    type: 'bottle',
-    brand: 'glacier',
-    capColor: '#f97316', // Orange sports cap
-    pos: [-0.82, -0.12, 0.46],
-    rot: [-0.6, 0.4, -0.5],
-    scale: 1.05,
-    spin: [0.003, -0.005, 0.002],
-    drift: 0.06,
-  },
-  {
-    type: 'tire',
-    pos: [-0.76, 0.62, 0.32],
-    rot: [0.7, -0.5, 0.3],
-    scale: 0.90,
-    spin: [-0.004, 0.003, -0.003],
-    drift: 0.06,
-  },
-  {
-    type: 'jug',
-    color: '#e0f2fe',
-    capColor: '#0284c7',
-    pos: [-0.48, 0.38, 0.30],
-    rot: [0.2, -0.7, 0.4],
-    scale: 0.95,
-    spin: [0.002, 0.004, -0.003],
-    drift: 0.04,
-  },
-  {
-    type: 'rocket',
-    pos: [-0.38, 0.65, 0.28],
-    rot: [-0.3, 0.5, 0.7],
-    scale: 0.90,
-    spin: [-0.003, 0.003, 0.004],
-    drift: 0.05,
-  },
-  {
-    type: 'box',
-    pos: [0.38, 0.48, 0.28],
-    rot: [0.4, -0.4, 0.5],
-    scale: 0.90,
-    spin: [0.003, -0.002, 0.003],
-    drift: 0.04,
-  },
-  {
-    type: 'slag',
-    pos: [0.22, 0.32, 0.28],
-    rot: [-0.5, 0.4, 0.6],
-    scale: 0.95,
-    spin: [0.003, -0.003, 0.002],
-    drift: 0.03,
-  },
-  {
-    type: 'bottle',
-    brand: 'glacier',
-    capColor: '#ffffff',
-    pos: [0.36, 0.14, 0.42],
-    rot: [0.2, 0.8, -0.3],
-    scale: 0.95,
-    spin: [0.003, -0.004, 0.002],
-    drift: 0.04,
-  },
-  {
-    type: 'can',
-    brand: 'energy',
-    pos: [-0.24, 0.12, 0.40],
-    rot: [-0.4, 0.5, 0.3],
-    scale: 0.95,
-    spin: [-0.003, 0.003, -0.002],
-    drift: 0.04,
-  },
-  {
-    type: 'bag',
-    color: '#f8fafc',
-    pos: [0.08, 0.10, 0.46],
-    rot: [0.5, -0.3, 0.2],
-    scale: 0.90,
-    spin: [0.002, 0.004, 0.003],
-    drift: 0.04,
+    pos: [-0.96, 0.44, 0.35],
+    rot: [0.5, -0.3, 0.4],
+    scale: 0.45,
+    spin: [0.002, -0.003, 0.002],
+    drift: 0.025,
   },
 ];
 
@@ -311,10 +144,10 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
     const my = mouseRef.current ? mouseRef.current.y : 0;
 
     // Guaranteed clearance from Earth: center is (0.16, -1.44), radius is 1.30.
-    // Minimum distance 1.54 guarantees ZERO intersection or entry into Earth!
+    // Minimum distance 1.56 guarantees ZERO intersection or entry into Earth!
     const earthCenterX = 0.16;
     const earthCenterY = -1.44;
-    const minDistance = 1.54;
+    const minDistance = 1.56;
 
     itemsRef.current.forEach((itemObj, idx) => {
       if (!itemObj) return;
@@ -339,6 +172,12 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
         const factor = minDistance / Math.max(0.001, dist);
         posX = earthCenterX + dx * factor;
         posY = earthCenterY + dy * factor;
+      }
+
+      // Strict UI Button Protection Zone: x: [-0.92, -0.12], y: [-0.46, -0.18]
+      // Guarantees NO debris ever drifts into or covers the CTA buttons!
+      if (posX > -0.92 && posX < -0.12 && posY > -0.46 && posY < -0.18) {
+        posY = -0.52; // Push down safely below buttons
       }
 
       itemObj.position.set(posX, posY, posZ);
@@ -381,18 +220,23 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
 
 // ── 6. BILLBOARD SMOKE PLUMES RISING FROM FIRES ──
 const SMOKE_SOURCES = [
-  { lat: 28, lon: 110 },
-  { lat: 22, lon: 108 },
-  { lat: 34, lon: 112 },
-  { lat: 16, lon: 106 },
-  { lat: 26, lon: 114 },
-  { lat: 30, lon: 107 },
-  { lat: 12, lon: 110 },
+  { lat: 18, lon: 58 },
+  { lat: 26, lon: 56 },
+  { lat: 34, lon: 54 },
+  { lat: 42, lon: 56 },
+  { lat: 50, lon: 55 },
+  { lat: 38, lon: 48 },
+  { lat: 28, lon: 46 },
+  { lat: 24, lon: 66 },
+  { lat: 32, lon: 68 },
+  { lat: 48, lon: 60 },
+  { lat: 14, lon: 58 },
+  { lat: 45, lon: 50 },
 ];
 
 const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
   const meshRef = useRef(null);
-  const count = isLowEnd ? 24 : 55;
+  const count = isLowEnd ? 32 : 75;
   const { camera } = useThree();
 
   const smokeTexture = useMemo(() => {
@@ -401,10 +245,10 @@ const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
     const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    grad.addColorStop(0, 'rgba(38, 40, 46, 0.92)');
-    grad.addColorStop(0.35, 'rgba(28, 30, 36, 0.60)');
-    grad.addColorStop(0.70, 'rgba(20, 22, 28, 0.22)');
-    grad.addColorStop(1, 'rgba(10, 12, 16, 0.0)');
+    grad.addColorStop(0, 'rgba(24, 22, 20, 0.95)');
+    grad.addColorStop(0.35, 'rgba(36, 32, 28, 0.65)');
+    grad.addColorStop(0.70, 'rgba(48, 42, 38, 0.25)');
+    grad.addColorStop(1, 'rgba(10, 10, 10, 0.0)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 128, 128);
     const tex = new THREE.CanvasTexture(canvas);
@@ -448,7 +292,11 @@ const SmokePlumes = ({ isLowEnd = false, healProgress = 0.0 }) => {
       pos.x += p.drift * progress;
 
       dummy.position.copy(pos);
-      dummy.quaternion.copy(camera.quaternion);
+      if (meshRef.current.parent) {
+        dummy.quaternion.copy(meshRef.current.parent.quaternion).invert().multiply(camera.quaternion);
+      } else {
+        dummy.quaternion.copy(camera.quaternion);
+      }
       dummy.scale.setScalar(p.scale * (1.2 + progress * 3.2));
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(idx, dummy.matrix);
@@ -491,14 +339,14 @@ const PersistentPlanetController = ({
   // Persistent smoothed state refs
   const currentPos = useRef({ x: isMobile ? 0 : 0.16, y: isMobile ? -1.28 : -1.44 });
   const currentScale = useRef(isMobile ? 1.18 : 1.30);
-  const currentRotX = useRef(AXIAL_TILT_X + 0.14);
-  const currentRotZ = useRef(AXIAL_TILT_Z);
+  const currentRotX = useRef(-0.38);
+  const currentRotZ = useRef(-0.06);
   const currentRotYOffset = useRef(0.0);
   const currentDim = useRef(1.0);
   const currentHeal = useRef(0.0);
   const currentDebrisOpacity = useRef(1.0);
 
-  const baseRotationY = useRef(INITIAL_ROTATION_Y - 0.28);
+  const baseRotationY = useRef(3.80);
 
   const [activeHeal, setActiveHeal] = useState(0.0);
   const [activeDim, setActiveDim] = useState(1.0);
@@ -613,7 +461,7 @@ const PersistentPlanetController = ({
         ref={planetGroupRef}
         position={[currentPos.current.x, currentPos.current.y, 0]}
         scale={currentScale.current}
-        rotation={[AXIAL_TILT_X + 0.14, INITIAL_ROTATION_Y - 0.28, AXIAL_TILT_Z]}
+        rotation={[-0.38, 3.80, -0.06]}
       >
         {/* Core Earth with High-Res NASA Textures & Dynamic Story Healing */}
         <Earth

@@ -63,6 +63,13 @@ export const EarthShader = {
     varying vec3 vWorldNormal;
     varying vec3 vWorldPos;
 
+    float distToSegment(vec2 p, vec2 a, vec2 b) {
+      vec2 pa = p - a;
+      vec2 ba = b - a;
+      float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+      return length(pa - ba * h);
+    }
+
     void main() {
       // ── LOCAL HEAL MASK & GLOBAL STAGING ──
       float maskVal = 0.0;
@@ -96,7 +103,7 @@ export const EarthShader = {
       // Key light: in standard mode keyDir = normalize(vec3(-0.35, 0.42, 0.84))
       // In hero solutions mode: strong cold rim light from upper left with deep shadow on right
       vec3 standardKeyDir = normalize(vec3(-0.35, 0.42, 0.84));
-      vec3 heroKeyDir     = normalize(vec3(-0.62, 0.52, 0.58));
+      vec3 heroKeyDir     = normalize(vec3(-0.88, 0.38, -0.05));
       vec3 keyDir = normalize(mix(standardKeyDir, heroKeyDir, uHeroSolutions));
       float NdotL = dot(N, keyDir);
 
@@ -125,26 +132,62 @@ export const EarthShader = {
       vec3 cleanLand = dayTex;
       vec3 cleanColor = mix(cleanLand, cleanOcean, oceanMask);
 
-      // ── 2. POLLUTED DEGRADED STATE ──
-      // Continents: Desaturated and darkened toward dead, dusty gray-brown
+      // ── 2. POLLUTED DEGRADED STATE (Devastated, Scorched & Trash-Choked) ──
+      // Continents: heavily deforested, toxic arid brown, acidic desertification, industrial soot
       float landLuma = dot(dayTex, vec3(0.299, 0.587, 0.114));
-      vec3 desatLand = mix(dayTex, vec3(landLuma), 0.82);
-      vec3 deadDustyBrown = vec3(0.24, 0.20, 0.16);
-      vec3 heroScorchedBrown = vec3(0.18, 0.14, 0.11); // Burnt arid tone
-      vec3 targetDeadLand = mix(deadDustyBrown, heroScorchedBrown, uHeroSolutions);
-      vec3 pollutedLand = mix(desatLand * mix(0.64, 0.52, uHeroSolutions), targetDeadLand, mix(0.55, 0.68, uHeroSolutions));
-      // In hero mode: high contrast, crisp dark land (remove muddy grey-brown)
-      vec3 heroCrispLand = mix(dayTex * 0.78, vec3(landLuma * 0.55), 0.28);
-      pollutedLand = mix(pollutedLand, heroCrispLand, uHeroSolutions);
+      vec3 scorchedBasalt  = vec3(0.08, 0.07, 0.06); // Dark charred volcanic peat
+      vec3 deadAridSoil    = vec3(0.18, 0.14, 0.10); // Dried, parched desert soil
+      vec3 industrialDust  = vec3(0.16, 0.16, 0.17); // Acid smog & industrial grime
+      vec3 toxicSulfurClay = vec3(0.24, 0.18, 0.07); // Degraded chemical soil
 
-      // Oceans: Murkier, darker, greenish-gray in standard; deep sapphire blue in hero mode
-      vec3 murkyOcean = vec3(0.016, 0.038, 0.032);
-      vec3 murkyCoast = vec3(0.026, 0.046, 0.038);
-      vec3 pollutedOcean = mix(murkyOcean, murkyCoast, shallowShelf * 0.40);
-      vec3 heroDeepOcean = vec3(0.014, 0.052, 0.22);
-      vec3 heroCoastalOcean = vec3(0.022, 0.12, 0.35);
-      vec3 heroOcean = mix(heroDeepOcean, heroCoastalOcean, shallowShelf * 0.65);
-      pollutedOcean = mix(pollutedOcean, heroOcean, uHeroSolutions);
+      // Multi-octave organic mottling for dead continental wasteland (NO repeating dots!)
+      float grime1 = sin(vUv.x * 32.0 + sin(vUv.y * 24.0) * 2.0) * cos(vUv.y * 28.0 + cos(vUv.x * 20.0) * 2.0);
+      float grime2 = sin(vUv.x * 85.0 - vUv.y * 65.0) * cos(vUv.x * 65.0 + vUv.y * 85.0);
+      float organicGrime = clamp((grime1 * 0.65 + grime2 * 0.35) * 0.5 + 0.5, 0.0, 1.0);
+
+      vec3 pollutedLandBase = mix(scorchedBasalt, deadAridSoil, clamp(landLuma * 1.6, 0.0, 1.0));
+      pollutedLandBase = mix(pollutedLandBase, industrialDust, organicGrime * 0.45);
+      pollutedLandBase = mix(pollutedLandBase, toxicSulfurClay, smoothstep(0.55, 0.85, organicGrime) * 0.35);
+
+      // Deforestation: completely replace bright green with scorched/arid tones
+      vec3 pollutedLand = mix(pollutedLandBase, vec3(landLuma * 0.22), 0.35);
+
+      // Oceans: Murky, toxic, oily with floating plastic garbage gyres
+      vec3 murkyDeep = vec3(0.010, 0.018, 0.024);
+      vec3 murkyCoast = vec3(0.018, 0.030, 0.028);
+      vec3 basePollutedOcean = mix(murkyDeep, murkyCoast, shallowShelf * 0.50);
+
+      // ── PROCEDURAL OCEAN PLASTIC GYRES & FLOATING TRASH ISLANDS ──
+      // 1. Indian Ocean Garbage Patch (directly visible in hero framing: lon ~ 70°-90°E, lat -15° to 10°)
+      vec2 indGyrePos = vec2(0.725, 0.440);
+      float dInd = length((vUv - indGyrePos) * vec2(1.2, 1.8));
+      float indMask = smoothstep(0.16, 0.02, dInd);
+
+      // 2. North Pacific Garbage Patch
+      vec2 pacGyrePos = vec2(0.920, 0.580);
+      float dPac = length((vUv - pacGyrePos) * vec2(1.0, 1.4));
+      float pacMask = smoothstep(0.20, 0.03, dPac);
+
+      // 3. South China Sea / Southeast Asia plastic convergence zone
+      vec2 seaGyrePos = vec2(0.810, 0.480);
+      float dSea = length((vUv - seaGyrePos) * vec2(1.5, 2.0));
+      float seaMask = smoothstep(0.12, 0.02, dSea);
+
+      // Procedural micro-swirl plastic scum pattern
+      float oceanSwirl = sin(vUv.x * 75.0 + sin(vUv.y * 55.0) * 2.8) * cos(vUv.y * 75.0 + cos(vUv.x * 55.0) * 2.8);
+      float trashDensity = smoothstep(0.15, 0.75, oceanSwirl * 0.5 + 0.5);
+
+      float totalTrashGyre = max(indMask, max(pacMask, seaMask)) * trashDensity * oceanMask;
+      vec3 plasticScumCol = vec3(0.45, 0.48, 0.50); // Weathered microplastics & floating foam
+      vec3 oilySludgeCol  = vec3(0.12, 0.14, 0.10); // Dirty chemical film
+      vec3 gyreTrashCol   = mix(oilySludgeCol, plasticScumCol, smoothstep(0.35, 0.75, trashDensity));
+
+      // Coastal industrial toxic runoff bleeding from river deltas
+      float coastalPollution = smoothstep(0.04, 0.25, shallowShelf) * (1.0 - shallowShelf) * 0.45;
+      vec3 toxicRunoff = vec3(0.06, 0.08, 0.05);
+
+      vec3 pollutedOcean = mix(basePollutedOcean, toxicRunoff, coastalPollution);
+      pollutedOcean = mix(pollutedOcean, gyreTrashCol, totalTrashGyre * 0.65);
 
       // Eased Sub-Values for Global & Local Milestones:
       float oceanClarity = smoothstep(0.05, 0.65, effectiveClean);
@@ -153,90 +196,89 @@ export const EarthShader = {
       float landGreen = smoothstep(0.12, 0.80, effectiveClean);
       vec3 currentLand = mix(pollutedLand, cleanLand, landGreen);
 
-      // ── 2B. PROCEDURAL CONTINUOUS TECTONIC LAVA FAULT LINES (Hero Solutions Mode) ──
+      // ── 2B. PROCEDURAL HIGH-DETAIL BRANCHING TECTONIC FAULT LINES & MAGMA FISSURES ──
       vec3 heroFissureEmission = vec3(0.0);
-      if (uHeroSolutions > 0.01 && oceanMask < 0.35) {
-        // Continuous tectonic volcanic canyon fault line down the central continent (vUv.x ~ 0.745)
-        float riftPath = 0.745 + sin(vUv.y * 8.5 + 1.2) * 0.022 + cos(vUv.y * 16.5) * 0.010 + sin(vUv.y * 32.0) * 0.004;
-        float distToMain = abs(vUv.x - riftPath);
+      if (uHeroSolutions > 0.01) {
+        // High-frequency fractal jitter for jagged tectonic canyon walls
+        float fJitter = sin(vUv.y * 45.0) * 0.0035 + 
+                        sin(vUv.y * 110.0 + vUv.x * 80.0) * 0.0018 + 
+                        sin(vUv.y * 320.0 - vUv.x * 240.0) * 0.0008 +
+                        cos(vUv.y * 640.0) * 0.0004;
+        vec2 p = vUv + vec2(fJitter, fJitter * 0.35);
 
-        // Branching fault (southeast toward coast)
-        float branchPath = riftPath + smoothstep(0.35, 0.62, vUv.y) * 0.038 + sin(vUv.y * 18.0) * 0.007;
-        float distToBranch = abs(vUv.x - branchPath) + smoothstep(0.65, 0.38, vUv.y) * 0.25;
+        // Main Tectonic Rift Spine (runs down center u ~ 0.655 from y=0.90 to y=0.32)
+        float s0 = distToSegment(p, vec2(0.650, 0.90), vec2(0.652, 0.78));
+        float s1 = distToSegment(p, vec2(0.652, 0.78), vec2(0.655, 0.66));
+        float s2 = distToSegment(p, vec2(0.655, 0.66), vec2(0.658, 0.54));
+        float s3 = distToSegment(p, vec2(0.658, 0.54), vec2(0.662, 0.42));
+        float s4 = distToSegment(p, vec2(0.662, 0.42), vec2(0.665, 0.32));
+        float dSpine = min(min(min(s0, s1), min(s2, s3)), s4);
 
-        // Fine jagged fracture noise along canyon
-        float microFracture = sin(vUv.x * 180.0 + vUv.y * 120.0) * cos(vUv.x * 120.0 - vUv.y * 180.0) * 0.0020;
+        // Branching Tributaries (Tectonic fracture forks)
+        float b1 = distToSegment(p, vec2(0.652, 0.78), vec2(0.630, 0.72));
+        float b2 = distToSegment(p, vec2(0.630, 0.72), vec2(0.612, 0.64));
+        float b3 = distToSegment(p, vec2(0.655, 0.66), vec2(0.680, 0.60));
+        float b4 = distToSegment(p, vec2(0.680, 0.60), vec2(0.702, 0.52));
+        float b5 = distToSegment(p, vec2(0.658, 0.54), vec2(0.638, 0.47));
+        float b6 = distToSegment(p, vec2(0.638, 0.47), vec2(0.620, 0.40));
+        float b7 = distToSegment(p, vec2(0.654, 0.71), vec2(0.675, 0.74));
+        float b8 = distToSegment(p, vec2(0.660, 0.48), vec2(0.682, 0.44));
+        float dBranch = min(min(min(min(b1, b2), min(b3, b4)), min(b5, b6)), min(b7, b8));
 
-        float minFaultDist = min(distToMain, distToBranch) + microFracture;
+        // Micro-Fractures (Capillary magma cracks)
+        float m1 = distToSegment(p, vec2(0.630, 0.72), vec2(0.638, 0.67));
+        float m2 = distToSegment(p, vec2(0.680, 0.60), vec2(0.672, 0.55));
+        float m3 = distToSegment(p, vec2(0.656, 0.62), vec2(0.642, 0.58));
+        float dMicro = min(min(m1, m2), m3);
 
-        // Continental corridor mask for active tectonic zone
-        float riftRegion = smoothstep(0.24, 0.35, vUv.y) * smoothstep(0.85, 0.75, vUv.y) * smoothstep(0.68, 0.72, vUv.x) * smoothstep(0.82, 0.77, vUv.x);
-        riftRegion *= (1.0 - oceanMask);
+        // Incandescent Core & Magma Heat
+        float hotCoreSpine   = (1.0 - smoothstep(0.00010, 0.00055, dSpine));
+        float plasmaSpine    = (1.0 - smoothstep(0.00030, 0.00120, dSpine));
+        float magmaSpine     = (1.0 - smoothstep(0.00070, 0.00280, dSpine));
+        float outerSpine     = (1.0 - smoothstep(0.00160, 0.00580, dSpine));
 
-        // Thin, razor-sharp hot incandescent white-yellow core
-        float hotCore = smoothstep(0.0024, 0.0003, minFaultDist) * riftRegion;
+        float hotCoreBranch  = (1.0 - smoothstep(0.00008, 0.00045, dBranch)) * 0.85;
+        float plasmaBranch   = (1.0 - smoothstep(0.00025, 0.00100, dBranch)) * 0.80;
+        float magmaBranch    = (1.0 - smoothstep(0.00060, 0.00240, dBranch)) * 0.70;
+        float outerBranch    = (1.0 - smoothstep(0.00140, 0.00480, dBranch)) * 0.60;
 
-        // Blazing golden-orange inner glow
-        float innerGlow = smoothstep(0.0085, 0.0012, minFaultDist) * riftRegion;
+        float hotCoreMicro   = (1.0 - smoothstep(0.00006, 0.00030, dMicro)) * 0.70;
+        float magmaMicro     = (1.0 - smoothstep(0.00045, 0.00180, dMicro)) * 0.60;
 
-        // Fiery deep red-orange outer heat falloff
-        float outerFalloff = smoothstep(0.022, 0.0035, minFaultDist) * riftRegion;
+        float hotCore    = max(max(hotCoreSpine, hotCoreBranch), hotCoreMicro);
+        float plasmaGlow = max(plasmaSpine, plasmaBranch);
+        float innerGlow  = max(max(magmaSpine, magmaBranch), magmaMicro);
+        float outerGlow  = max(outerSpine, outerBranch);
 
-        // Scorched charred rock canyon walls along the crack
-        float scorch = smoothstep(0.035, 0.006, minFaultDist) * riftRegion;
-        currentLand = mix(currentLand, vec3(0.012, 0.010, 0.008), scorch * 0.92);
+        // Charred basalt rock borders flanking the fault line (Rich contrast)
+        float scorch = (1.0 - smoothstep(0.0025, 0.0120, min(dSpine, dBranch)));
+        currentLand = mix(currentLand, vec3(0.008, 0.007, 0.006), scorch * 0.95);
 
-        // Magma pulse & incandescent radiation (cools down as planet heals)
-        float lavaPulse = 0.90 + 0.10 * sin(uTime * 3.2 + vUv.y * 36.0);
-        vec3 lavaCoreCol = vec3(1.0, 0.98, 0.88);   // Hot white-yellow core
-        vec3 lavaInnerCol = vec3(1.0, 0.58, 0.06);  // Blazing orange
-        vec3 lavaOuterCol = vec3(0.95, 0.16, 0.01); // Deep magma red-orange
+        // Convective pulse & ember glow
+        float magmaPulse = 0.92 + 0.08 * sin(uTime * 3.5 + vUv.y * 40.0 - vUv.x * 24.0);
+        float emberFlicker = 0.94 + 0.06 * sin(vUv.x * 320.0 + vUv.y * 280.0 + uTime * 6.0);
 
-        float lavaCooling = smoothstep(0.55, 0.05, effectiveClean);
-        heroFissureEmission = (lavaCoreCol * hotCore * 5.8 + lavaInnerCol * innerGlow * 3.8 + lavaOuterCol * outerFalloff * 2.2) * lavaPulse * uHeroSolutions * lavaCooling;
+        vec3 coreCol   = vec3(1.00, 0.99, 0.96); // Blinding white-hot core
+        vec3 plasmaCol = vec3(1.00, 0.86, 0.22); // Hot electric gold
+        vec3 orangeCol = vec3(1.00, 0.42, 0.04); // Vibrant fiery orange
+        vec3 redCol    = vec3(0.85, 0.12, 0.02); // Deep crustal crimson
+
+        float lavaCooling = smoothstep(0.65, 0.05, effectiveClean);
+        heroFissureEmission = (coreCol * hotCore * 8.5 + plasmaCol * plasmaGlow * 5.0 + orangeCol * innerGlow * 3.2 + redCol * outerGlow * 1.5) * magmaPulse * emberFlicker * lavaCooling * uHeroSolutions;
       }
 
       vec3 surfaceColor = mix(currentLand, currentOcean, oceanMask);
+      vec3 fireEmission = heroFissureEmission;
 
-      // ── 3. SURFACE FIRES (Active at 0-25%, extinguishes by 50-60%) ──
-      vec3 fireEmission = vec3(0.0);
-      float fireFactor = smoothstep(0.55, 0.02, effectiveClean);
-      if (oceanMask < 0.25 && fireFactor > 0.01) {
-        vec2 f1 = vec2(0.819, 0.694); // East Asia
-        vec2 f2 = vec2(0.727, 0.636); // South Asia / India
-        vec2 f3 = vec2(0.526, 0.780); // Europe
-        vec2 f4 = vec2(0.276, 0.728); // Eastern US
-        vec2 f5 = vec2(0.638, 0.650); // Middle East
-
-        float p1 = 0.75 + 0.25 * sin(uTime * 1.4 + 0.0);
-        float p2 = 0.70 + 0.30 * sin(uTime * 1.8 + 1.6);
-        float p3 = 0.72 + 0.28 * sin(uTime * 1.2 + 3.1);
-        float p4 = 0.70 + 0.30 * sin(uTime * 1.6 + 4.5);
-        float p5 = 0.75 + 0.25 * sin(uTime * 1.5 + 2.3);
-
-        float flicker = 0.88 + 0.12 * sin(vUv.x * 280.0 + vUv.y * 280.0 + uTime * 3.5);
-
-        float s1 = smoothstep(0.022, 0.003, length((vUv - f1) * vec2(2.0, 1.0))) * p1;
-        float s2 = smoothstep(0.020, 0.003, length((vUv - f2) * vec2(2.0, 1.0))) * p2;
-        float s3 = smoothstep(0.018, 0.003, length((vUv - f3) * vec2(2.0, 1.0))) * p3;
-        float s4 = smoothstep(0.020, 0.003, length((vUv - f4) * vec2(2.0, 1.0))) * p4;
-        float s5 = smoothstep(0.016, 0.003, length((vUv - f5) * vec2(2.0, 1.0))) * p5;
-
-        float fireTotal = (s1 + s2 + s3 + s4 + s5) * flicker * fireFactor;
-        vec3 fireColor = mix(vec3(0.95, 0.24, 0.02), vec3(0.95, 0.60, 0.10), 0.30);
-        fireEmission = fireColor * fireTotal * 1.25 + heroFissureEmission;
-      } else if (uHeroSolutions > 0.01) {
-        fireEmission = heroFissureEmission;
-      }
-
-      // ── 4. NIGHT SIDE CITY LIGHTS (Fades in at 50%+, bright at 75-100%; always dense golden in hero mode) ──
+      // ── 4. NIGHT SIDE CITY LIGHTS (Dense sparkling golden grids on dark hemisphere) ──
       vec3 cityLightsEmission = vec3(0.0);
-      float nightDarkness = clamp(-NdotL * 1.5, 0.0, 1.0);
-      float cityPower = mix(smoothstep(0.48, 0.95, effectiveClean), 1.0, uHeroSolutions);
-      if (cityPower > 0.01 && oceanMask < 0.28) {
+      float nightDarkness = smoothstep(0.08, -0.24, NdotL);
+      float landFactor = 1.0 - smoothstep(0.05, 0.38, oceanMask);
+      if (nightDarkness > 0.01 && landFactor > 0.01) {
         vec3 lightsTex = texture2D(uLightsMap, vUv).rgb;
-        vec3 warmCityColor = mix(vec3(1.0, 0.85, 0.55), vec3(1.0, 0.82, 0.38) * 3.6, uHeroSolutions);
-        cityLightsEmission = lightsTex * warmCityColor * cityPower * pow(nightDarkness, 0.5) * 3.6;
+        float sparkle = 0.88 + 0.12 * sin(vUv.x * 620.0 + vUv.y * 580.0 + uTime * 3.5);
+        vec3 warmCityColor = vec3(1.0, 0.86, 0.44); // Brilliant golden amber
+        cityLightsEmission = lightsTex * warmCityColor * nightDarkness * landFactor * sparkle * 18.0;
       }
 
       // ── 5. OCEAN SHEEN ──

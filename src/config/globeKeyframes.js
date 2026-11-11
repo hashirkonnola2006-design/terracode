@@ -21,8 +21,8 @@ export const DESKTOP_GLOBE_KEYFRAMES = [
     posX: HERO_CONFIG.planetXDesktop, // 0.16
     posY: HERO_CONFIG.planetYDesktop, // -1.44
     scale: HERO_CONFIG.planetScaleDesktop, // 1.30
-    rotX: AXIAL_TILT_X + 0.14,
-    rotZ: AXIAL_TILT_Z,
+    rotX: -0.38,
+    rotZ: -0.06,
     rotYOffset: 0.0,
     dim: 1.0,
     healProgress: 0.0,
@@ -89,8 +89,8 @@ export const MOBILE_GLOBE_KEYFRAMES = [
     posX: 0.0,
     posY: HERO_CONFIG.planetYMobile, // -1.28
     scale: HERO_CONFIG.planetScaleMobile, // 1.18
-    rotX: AXIAL_TILT_X + 0.14,
-    rotZ: AXIAL_TILT_Z,
+    rotX: -0.38,
+    rotZ: -0.06,
     rotYOffset: 0.0,
     dim: 1.0,
     healProgress: 0.0,

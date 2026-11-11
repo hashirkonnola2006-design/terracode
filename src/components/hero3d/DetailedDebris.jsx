@@ -284,6 +284,28 @@ function getCachedTextures() {
   hazardTexture.wrapS = THREE.RepeatWrapping;
   hazardTexture.wrapT = THREE.RepeatWrapping;
 
+  // 1H. Craggy Dark Asteroid Rock Texture (Pitted Basalt with Flecks & Craters)
+  const rockCanvas = document.createElement('canvas');
+  rockCanvas.width = 256;
+  rockCanvas.height = 256;
+  const rCtx = rockCanvas.getContext('2d');
+  if (rCtx) {
+    rCtx.fillStyle = '#1e232a';
+    rCtx.fillRect(0, 0, 256, 256);
+    // Mottled basalt texture
+    for (let i = 0; i < 400; i++) {
+      const rx = (i * 37) % 256;
+      const ry = (i * 61) % 256;
+      const rRad = 1.5 + (i % 6);
+      const shade = 28 + ((i * 13) % 40);
+      rCtx.fillStyle = `rgb(${shade}, ${shade + 2}, ${shade + 6})`;
+      rCtx.beginPath();
+      rCtx.arc(rx, ry, rRad, 0, Math.PI * 2);
+      rCtx.fill();
+    }
+  }
+  const rockTexture = new THREE.CanvasTexture(rockCanvas);
+
   cachedTextures = {
     cola: colaTexture,
     energy: energyTexture,
@@ -292,6 +314,7 @@ function getCachedTextures() {
     coffee: coffeeTexture,
     solar: solarTexture,
     hazard: hazardTexture,
+    rock: rockTexture,
   };
 
   return cachedTextures;
@@ -438,17 +461,20 @@ function getCachedGeometries() {
   const boxGeom = new THREE.BoxGeometry(0.075, 0.045, 0.065);
   boxGeom.center();
 
-  // ── 2J. Craggy Space Slag / Burnt Heatshield Fragment ──
-  const slagGeom = new THREE.DodecahedronGeometry(0.038, 1);
+  // ── 2J. Craggy Space Asteroid / Slag (Organic High-Detail Mesh) ──
+  const slagGeom = new THREE.IcosahedronGeometry(0.042, 2);
   const sPos = slagGeom.attributes.position;
   for (let i = 0; i < sPos.count; i++) {
     const x = sPos.getX(i);
     const y = sPos.getY(i);
     const z = sPos.getZ(i);
-    const noise = Math.sin(x * 35.0) * 0.006 + Math.cos(y * 35.0) * 0.006;
-    sPos.setXYZ(i, x + noise, y + noise, z + noise);
+    const crag = Math.sin(x * 38.0 + y * 24.0) * 0.007 +
+                 Math.cos(y * 42.0 - z * 32.0) * 0.005 +
+                 Math.sin(z * 65.0 + x * 50.0) * 0.003;
+    sPos.setXYZ(i, x + crag, y + crag, z + crag);
   }
   slagGeom.computeVertexNormals();
+  slagGeom.center();
 
   cachedGeoms = {
     can: canGeom,
@@ -501,11 +527,12 @@ export const DetailedBottle = ({ capColor = '#2563eb', scale = 1.0 }) => {
 
   const plasticMat = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: '#cbe7fa',
-      roughness: 0.12,
-      metalness: 0.08,
+      color: '#93c5fd',
+      roughness: 0.10,
+      metalness: 0.15,
       transparent: true,
-      opacity: 0.84,
+      opacity: 0.68,
+      depthWrite: false,
     });
   }, []);
 
@@ -725,15 +752,17 @@ export const DetailedTakeoutBox = ({ scale = 1.0 }) => {
 };
 
 export const DetailedSpaceSlag = ({ geomIdx = 0, scale = 1.0 }) => {
+  const textures = getCachedTextures();
   const geoms = getCachedGeometries();
   const slagMat = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: '#282c35',
-      roughness: 0.86,
-      metalness: 0.34,
-      flatShading: true,
+      map: textures.rock,
+      color: '#cbd5e1',
+      roughness: 0.88,
+      metalness: 0.22,
+      flatShading: false,
     });
-  }, []);
+  }, [textures]);
 
   return (
     <group scale={[scale, scale, scale]}>
