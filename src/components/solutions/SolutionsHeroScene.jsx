@@ -56,11 +56,11 @@ const DEBRIS_ITEMS = [
   {
     type: 'can',
     brand: 'cola',
-    pos: [0.74, -0.25, 0.82],
-    rot: [0.42, 0.68, -0.35],
-    scale: 1.15,
-    spin: [-0.003, 0.004, 0.003],
-    drift: 0.055,
+    pos: [0.74, -0.25, 0.84],
+    rot: [0.32, 0.90, -0.40],
+    scale: 1.35,
+    spin: [-0.0008, 0.0018, 0.0008],
+    drift: 0.045,
   },
 
   // 3. Craggy Space Asteroid between 'H' and 'E' (Floats in empty gap, does NOT touch either letter)
@@ -393,12 +393,11 @@ const PersistentPlanetController = ({
     // Evaluate target state from keyframe interpolation
     const target = interpolateGlobeKeyframes(progress, isMobile);
 
-    // Compute effective heal progress combining storytelling curve with user's earned game progress
-    const baseHeal = typeof storyHealProgress === 'number' ? storyHealProgress : target.healProgress;
-    const effectiveTargetHeal = Math.min(
-      1.0,
-      Math.max(baseHeal, (userCleanProgress || 0) * 0.82 + baseHeal * 0.20)
-    );
+    // If storyHealProgress is explicitly supplied by the active story section, use it strictly.
+    // In Hero and Damage: strictly 0.0. In Pillars: 0.0->0.60. In Impact: 0.60->0.82. In Play: linked to userCleanProgress.
+    const effectiveTargetHeal = typeof storyHealProgress === 'number'
+      ? storyHealProgress
+      : Math.min(1.0, target.healProgress);
 
     // Smooth delta-based easing for 60fps butter-smooth transitions
     const lerpSpeed = prefersReducedMotion ? 1.0 : Math.min(delta * 4.2, 1.0);
@@ -512,12 +511,6 @@ const PersistentPlanetController = ({
         <Smog
           pollution={1.0 - activeHeal}
           escalation={0.8}
-        />
-
-        {/* Orbital Floating Waste & Surface Plastic Clutter (like Landing Page) */}
-        <FloatingDebris
-          pollution={1.0 - activeHeal}
-          healProgress={activeHeal}
         />
 
         {/* Billowing Smoke Plumes rising over damaged rifts (fades as planet heals) */}

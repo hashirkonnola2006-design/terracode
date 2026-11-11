@@ -70,16 +70,20 @@ export const Solutions = () => {
       let detectedSection = 'hero';
       let navTarget = 'home';
 
-      if (playEl && scrollPos >= playEl.offsetTop - 300) {
+      // Guard top hero viewport explicitly to prevent unmeasured offsetTop race conditions
+      if (scrollPos < 250) {
+        detectedSection = 'hero';
+        navTarget = 'home';
+      } else if (playEl && playEl.offsetTop > 400 && scrollPos >= playEl.offsetTop - 300) {
         detectedSection = 'play';
         navTarget = 'play';
-      } else if (impactEl && scrollPos >= impactEl.offsetTop - 300) {
+      } else if (impactEl && impactEl.offsetTop > 400 && scrollPos >= impactEl.offsetTop - 300) {
         detectedSection = 'impact';
         navTarget = 'solutions';
-      } else if (solutionsEl && scrollPos >= solutionsEl.offsetTop - 300) {
+      } else if (solutionsEl && solutionsEl.offsetTop > 400 && scrollPos >= solutionsEl.offsetTop - 300) {
         detectedSection = 'pillars';
         navTarget = 'solutions';
-      } else if (damageEl && scrollPos >= damageEl.offsetTop - 320) {
+      } else if (damageEl && damageEl.offsetTop > 400 && scrollPos >= damageEl.offsetTop - 320) {
         detectedSection = 'damage';
         navTarget = 'solutions';
       } else {

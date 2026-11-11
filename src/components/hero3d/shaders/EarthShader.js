@@ -140,12 +140,13 @@ export const EarthShader = {
 
       float globalClean = 1.0 - clamp(max(uPollution, 1.0 - uHeal), 0.0, 1.0);
       
-      // When uUseLocalMask > 0.5 (Quiz & Cleanup games):
-      // The mask texture defines EXACTLY which parts are clean vs dirty.
-      // If global clean is 1.0 (100% full victory), the entire planet is clean.
-      // Otherwise, ONLY regions painted in maskVal are clean; unhealed regions remain genuinely dirty (0.0)!
+      // When uHeroSolutions > 0.5 (Hero & Solutions story flow):
+      // Planet healing is strictly driven by the narrative uHeal uniform (0.0 in Hero/Damage, 0.0-0.6 in Pillars, etc.)
+      // It must NOT inherit painted regions from the Cleanup Mission mini-game singleton!
       float effectiveClean;
-      if (uUseLocalMask > 0.5) {
+      if (uHeroSolutions > 0.5) {
+        effectiveClean = clamp(uHeal, 0.0, 1.0);
+      } else if (uUseLocalMask > 0.5) {
         if (globalClean >= 0.999) {
           effectiveClean = 1.0;
         } else {
@@ -170,7 +171,7 @@ export const EarthShader = {
       // Boost normal roughness in hero mode for cracked terrain
       float normStrength = mix(0.30, 0.58, uHeroSolutions);
       // Smoothly taper normal perturbation to zero near poles to eliminate UV singularity / swirl pinch
-      float poleDamp = smoothstep(0.96, 0.82, abs(wn.y));
+      float poleDamp = 1.0 - smoothstep(0.82, 0.96, abs(wn.y));
       normStrength *= poleDamp;
 
       vec3 perturbedWorld = normalize(wn + (T_world * normMap.x + B_world * normMap.y) * normStrength);
@@ -250,42 +251,42 @@ export const EarthShader = {
       // 1. Great North Pacific Garbage Patch (lon ~ -145°, lat ~ 32°) -> u ~ 0.097, v ~ 0.678
       vec2 pacNorthPos = vec2(0.097, 0.678);
       float dPacN = length((vUv - pacNorthPos) * vec2(1.2, 1.6));
-      float pacNorthMask = smoothstep(0.22, 0.02, dPacN);
+      float pacNorthMask = 1.0 - smoothstep(0.02, 0.22, dPacN);
 
       // 2. South Pacific Ocean Gyre (lon ~ -110°, lat ~ -25°) -> u ~ 0.194, v ~ 0.361
       vec2 pacSouthPos = vec2(0.194, 0.361);
       float dPacS = length((vUv - pacSouthPos) * vec2(1.1, 1.5));
-      float pacSouthMask = smoothstep(0.20, 0.02, dPacS);
+      float pacSouthMask = 1.0 - smoothstep(0.02, 0.20, dPacS);
 
       // 3. North Atlantic Ocean Gyre (lon ~ -42°, lat ~ 28°) -> u ~ 0.383, v ~ 0.655
       vec2 atlNorthPos = vec2(0.383, 0.655);
       float dAtlN = length((vUv - atlNorthPos) * vec2(1.2, 1.6));
-      float atlNorthMask = smoothstep(0.22, 0.02, dAtlN);
+      float atlNorthMask = 1.0 - smoothstep(0.02, 0.22, dAtlN);
 
       // 4. South Atlantic Ocean Gyre (lon ~ -15°, lat ~ -30°) -> u ~ 0.458, v ~ 0.333
       vec2 atlSouthPos = vec2(0.458, 0.333);
       float dAtlS = length((vUv - atlSouthPos) * vec2(1.3, 1.7));
-      float atlSouthMask = smoothstep(0.19, 0.02, dAtlS);
+      float atlSouthMask = 1.0 - smoothstep(0.02, 0.19, dAtlS);
 
       // 5. Indian Ocean Garbage Gyre (lon ~ 80°, lat ~ -15°) -> u ~ 0.722, v ~ 0.416
       vec2 indGyrePos = vec2(0.722, 0.416);
       float dInd = length((vUv - indGyrePos) * vec2(1.2, 1.6));
-      float indMask = smoothstep(0.20, 0.02, dInd);
+      float indMask = 1.0 - smoothstep(0.02, 0.20, dInd);
 
       // 6. East Asian / Philippine Sea plastic convergence (lon ~ 135°, lat ~ 22°) -> u ~ 0.875, v ~ 0.622
       vec2 asiaSeaPos = vec2(0.875, 0.622);
       float dAsia = length((vUv - asiaSeaPos) * vec2(1.3, 1.8));
-      float asiaSeaMask = smoothstep(0.18, 0.02, dAsia);
+      float asiaSeaMask = 1.0 - smoothstep(0.02, 0.18, dAsia);
 
       // 7. North Atlantic / European shipping lane plastic slick (lon ~ -25°, lat ~ 42°) -> u ~ 0.430, v ~ 0.733
       vec2 atlEuroPos = vec2(0.430, 0.733);
       float dAtlEuro = length((vUv - atlEuroPos) * vec2(1.2, 1.5));
-      float atlEuroMask = smoothstep(0.24, 0.02, dAtlEuro);
+      float atlEuroMask = 1.0 - smoothstep(0.02, 0.24, dAtlEuro);
 
       // 8. Mediterranean Sea trash & industrial oil basin (lon ~ 18°, lat ~ 35°) -> u ~ 0.550, v ~ 0.694
       vec2 medPos = vec2(0.550, 0.694);
       float dMed = length((vUv - medPos) * vec2(1.5, 1.8));
-      float medMask = smoothstep(0.14, 0.01, dMed);
+      float medMask = 1.0 - smoothstep(0.01, 0.14, dMed);
 
       // High-density procedural fractal noise for floating plastic trash islands and slicks
       float trashFbm = fbm2D(vUv * vec2(90.0, 50.0));
@@ -316,15 +317,15 @@ export const EarthShader = {
 
       // ── PROCEDURAL WILDFIRES & BURN HOTSPOTS ON UNHEALED CONTINENTS ──
       // Active burning hotspots across Europe, Africa, Americas, Asia, Australia
-      float fire1 = smoothstep(0.042, 0.006, length((vUv - vec2(0.165, 0.705)) * vec2(1.2, 1.4))); // California/West US
-      float fire2 = smoothstep(0.048, 0.008, length((vUv - vec2(0.335, 0.450)) * vec2(1.1, 1.3))); // Amazon Rainforest
-      float fire3 = smoothstep(0.038, 0.005, length((vUv - vec2(0.490, 0.710)) * vec2(1.3, 1.5))); // Mediterranean / Iberia & Southern Europe
-      float fire4 = smoothstep(0.045, 0.008, length((vUv - vec2(0.560, 0.485)) * vec2(1.2, 1.3))); // Central Africa
-      float fire5 = smoothstep(0.040, 0.006, length((vUv - vec2(0.888, 0.345)) * vec2(1.2, 1.4))); // Australia
-      float fire6 = smoothstep(0.038, 0.006, length((vUv - vec2(0.750, 0.780)) * vec2(1.2, 1.5))); // Siberian Boreal
-      float fire7 = smoothstep(0.035, 0.005, length((vUv - vec2(0.816, 0.490)) * vec2(1.3, 1.5))); // SE Asia / Borneo
-      float fire8 = smoothstep(0.036, 0.006, length((vUv - vec2(0.525, 0.585)) * vec2(1.2, 1.4))); // North Africa / Sahel
-      float fire9 = smoothstep(0.032, 0.005, length((vUv - vec2(0.530, 0.785)) * vec2(1.3, 1.5))); // Eastern Europe / Industrial
+      float fire1 = 1.0 - smoothstep(0.006, 0.042, length((vUv - vec2(0.165, 0.705)) * vec2(1.2, 1.4))); // California/West US
+      float fire2 = 1.0 - smoothstep(0.008, 0.048, length((vUv - vec2(0.335, 0.450)) * vec2(1.1, 1.3))); // Amazon Rainforest
+      float fire3 = 1.0 - smoothstep(0.005, 0.038, length((vUv - vec2(0.490, 0.710)) * vec2(1.3, 1.5))); // Mediterranean / Iberia & Southern Europe
+      float fire4 = 1.0 - smoothstep(0.008, 0.045, length((vUv - vec2(0.560, 0.485)) * vec2(1.2, 1.3))); // Central Africa
+      float fire5 = 1.0 - smoothstep(0.006, 0.040, length((vUv - vec2(0.888, 0.345)) * vec2(1.2, 1.4))); // Australia
+      float fire6 = 1.0 - smoothstep(0.006, 0.038, length((vUv - vec2(0.750, 0.780)) * vec2(1.2, 1.5))); // Siberian Boreal
+      float fire7 = 1.0 - smoothstep(0.005, 0.035, length((vUv - vec2(0.816, 0.490)) * vec2(1.3, 1.5))); // SE Asia / Borneo
+      float fire8 = 1.0 - smoothstep(0.006, 0.036, length((vUv - vec2(0.525, 0.585)) * vec2(1.2, 1.4))); // North Africa / Sahel
+      float fire9 = 1.0 - smoothstep(0.005, 0.032, length((vUv - vec2(0.530, 0.785)) * vec2(1.3, 1.5))); // Eastern Europe / Industrial
 
       float allWildfires = max(max(max(max(fire1, fire2), max(fire3, fire4)), max(max(fire5, fire6), max(fire7, fire8))), fire9) * (1.0 - oceanMask);
 
@@ -458,7 +459,7 @@ export const EarthShader = {
         vec3 basaltCrust = vec3(0.03, 0.02, 0.02) + redCol * innerGlow * 0.85;
         vec3 fissureLava = mix(basaltCrust, activeMagma, moltenIntensity);
 
-        float lavaCooling = smoothstep(0.70, 0.05, effectiveClean);
+        float lavaCooling = 1.0 - smoothstep(0.05, 0.70, effectiveClean);
         heroFissureEmission = fissureLava * magmaPulse * emberFlicker * lavaCooling * uHeroSolutions;
       }
 
@@ -467,7 +468,7 @@ export const EarthShader = {
 
       // ── 4. NIGHT SIDE CITY LIGHTS (Dense sparkling golden grids on dark hemisphere) ──
       vec3 cityLightsEmission = vec3(0.0);
-      float nightDarkness = smoothstep(0.08, -0.24, NdotL);
+      float nightDarkness = 1.0 - smoothstep(-0.24, 0.08, NdotL);
       float landFactor = 1.0 - smoothstep(0.05, 0.38, oceanMask);
       if (nightDarkness > 0.01 && landFactor > 0.01) {
         vec3 lightsTex = texture2D(uLightsMap, vUv).rgb;
