@@ -3,6 +3,12 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore, OCEAN_GYRES } from '../store/gameStore';
 import { GAME_CONFIG } from '../config/game';
+import {
+  createPlasticBottleGeometry,
+  createSodaCanGeometry,
+  createCrumpledBagGeometry,
+  createMilkJugGeometry,
+} from '../utils/wasteGeometries';
 
 // Convert Lat/Lon (degrees) into 3D sphere coordinate
 export function latLonToVector3(lat, lon, radius = 1.0) {
@@ -117,11 +123,11 @@ export const InteractiveOceans = ({ isInteractive = true }) => {
     return { items: list, clusterAnchors: anchors };
   }, [liteMode]);
 
-  // Shared Geometries for low-poly ocean waste
-  const bottleGeom = useMemo(() => new THREE.CylinderGeometry(0.3, 0.3, 1.0, 6), []);
-  const bagGeom    = useMemo(() => new THREE.DodecahedronGeometry(0.55, 0), []);
-  const canGeom    = useMemo(() => new THREE.CylinderGeometry(0.35, 0.35, 0.7, 6), []);
-  const crateGeom  = useMemo(() => new THREE.BoxGeometry(0.8, 0.6, 0.7), []);
+  // Shared Geometries for realistic ocean waste
+  const bottleGeom = useMemo(() => createPlasticBottleGeometry(false), []);
+  const bagGeom    = useMemo(() => createCrumpledBagGeometry(false), []);
+  const canGeom    = useMemo(() => createSodaCanGeometry(false), []);
+  const crateGeom  = useMemo(() => createMilkJugGeometry(), []);
   const netGeom    = useMemo(() => new THREE.TorusGeometry(0.45, 0.15, 4, 8), []);
   const decalGeom  = useMemo(() => new THREE.CircleGeometry(0.16, 24), []);
 

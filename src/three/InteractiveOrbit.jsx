@@ -3,46 +3,14 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore';
 import { GAME_CONFIG } from '../config/game';
-
-// Procedural geometries for debris types
-function createBottleGeom() {
-  const pts = [
-    new THREE.Vector2(0, 0),
-    new THREE.Vector2(0.28, 0.04),
-    new THREE.Vector2(0.32, 0.12),
-    new THREE.Vector2(0.32, 0.9),
-    new THREE.Vector2(0.16, 1.15),
-    new THREE.Vector2(0.12, 1.38),
-    new THREE.Vector2(0.0, 1.38),
-  ];
-  const g = new THREE.LatheGeometry(pts, 12);
-  g.center();
-  return g;
-}
-
-function createBagGeom() {
-  const g = new THREE.CylinderGeometry(0.28, 0.40, 1.0, 10, 5, true);
-  g.center();
-  return g;
-}
-
-function createCanGeom() {
-  const g = new THREE.CylinderGeometry(0.26, 0.26, 0.72, 12);
-  g.center();
-  return g;
-}
-
-function createTireGeom() {
-  const g = new THREE.TorusGeometry(0.42, 0.17, 8, 16);
-  g.center();
-  return g;
-}
-
-function createCrateGeom() {
-  const g = new THREE.BoxGeometry(0.78, 0.52, 0.62);
-  g.center();
-  return g;
-}
+import {
+  createPlasticBottleGeometry,
+  createSodaCanGeometry,
+  createCoffeeCupGeometry,
+  createCrumpledBagGeometry,
+  createMilkJugGeometry,
+  createRubberTireGeometry,
+} from '../utils/wasteGeometries';
 
 export const InteractiveOrbit = ({ isInteractive = true }) => {
   const collectDebrisItem = useGameStore((s) => s.collectDebrisItem);
@@ -106,11 +74,11 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
   }, [liteMode]);
 
   // Shared Geometries
-  const bottleGeom = useMemo(() => createBottleGeom(), []);
-  const bagGeom    = useMemo(() => createBagGeom(), []);
-  const canGeom    = useMemo(() => createCanGeom(), []);
-  const tireGeom   = useMemo(() => createTireGeom(), []);
-  const crateGeom  = useMemo(() => createCrateGeom(), []);
+  const bottleGeom = useMemo(() => createPlasticBottleGeometry(false), []);
+  const bagGeom    = useMemo(() => createCrumpledBagGeometry(false), []);
+  const canGeom    = useMemo(() => createSodaCanGeometry(false), []);
+  const tireGeom   = useMemo(() => createRubberTireGeometry(), []);
+  const crateGeom  = useMemo(() => createMilkJugGeometry(), []);
   const hitGeom    = useMemo(() => new THREE.SphereGeometry(0.26, 8, 8), []);
 
   // Shared Materials with proper physical properties
@@ -144,9 +112,9 @@ export const InteractiveOrbit = ({ isInteractive = true }) => {
   }), []);
 
   const matCrate = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#1d4ed8',
+    color: '#f1f5f9',
     roughness: 0.45,
-    metalness: 0.35,
+    metalness: 0.08,
   }), []);
 
   const matHit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);

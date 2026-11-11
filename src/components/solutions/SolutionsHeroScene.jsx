@@ -5,6 +5,11 @@ import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../hero3d
 import { Clouds } from '../hero3d/Clouds';
 import { Atmosphere } from '../hero3d/Atmosphere';
 import { HERO_CONFIG } from '../../config/heroSolutions';
+import {
+  createPlasticBottleGeometry,
+  createCoffeeCupGeometry,
+  createCrumpledBagGeometry,
+} from '../../utils/wasteGeometries';
 
 // ═══════════════════════════════════════════════════════════════
 // TUNABLE CONSTANTS (Solutions Hero Destroyed Earth Look)
@@ -210,6 +215,12 @@ const OrbitalDebrisRing = ({ isLowEnd = false }) => {
   const groupRef = useRef(null);
   const count = isLowEnd ? 18 : 36;
 
+  const { bottleGeom, cupGeom, bagGeom } = useMemo(() => ({
+    bottleGeom: createPlasticBottleGeometry(false),
+    cupGeom: createCoffeeCupGeometry(false),
+    bagGeom: createCrumpledBagGeometry(false),
+  }), []);
+
   const debris = useMemo(() => {
     const items = [];
     for (let i = 0; i < count; i++) {
@@ -238,14 +249,16 @@ const OrbitalDebrisRing = ({ isLowEnd = false }) => {
   return (
     <group ref={groupRef} rotation={[0.42, 0.2, -0.3]}>
       {debris.map((d, i) => (
-        <mesh key={i} position={d.pos} scale={d.scale}>
-          {d.type === 0 && <cylinderGeometry args={[0.4, 0.4, 1.2, 5]} />}
-          {d.type === 1 && <boxGeometry args={[0.8, 0.8, 0.8]} />}
-          {d.type === 2 && <dodecahedronGeometry args={[0.6, 0]} />}
+        <mesh
+          key={i}
+          position={d.pos}
+          scale={d.scale}
+          geometry={d.type === 0 ? bottleGeom : d.type === 1 ? cupGeom : bagGeom}
+        >
           <meshStandardMaterial
-            color={d.type === 0 ? '#cbd5e1' : d.type === 1 ? '#78716c' : '#334155'}
+            color={d.type === 0 ? '#cbd5e1' : d.type === 1 ? '#fed7aa' : '#f8fafc'}
             roughness={0.8}
-            metalness={0.3}
+            metalness={0.2}
           />
         </mesh>
       ))}

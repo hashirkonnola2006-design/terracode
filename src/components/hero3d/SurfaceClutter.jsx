@@ -1,6 +1,11 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import {
+  createPlasticBottleGeometry,
+  createSodaCanGeometry,
+  createMilkJugGeometry,
+} from '../../utils/wasteGeometries';
 import { ClutterShaderMaterial } from './shaders/clutterShader';
 import {
   EARTH_RADIUS,
@@ -44,27 +49,15 @@ function createTireGeom() {
 }
 
 function createCrateGeom() {
-  return new THREE.BoxGeometry(0.85, 0.45, 0.65);
+  return createMilkJugGeometry();
 }
 
 function createCanGeom() {
-  return new THREE.CylinderGeometry(0.28, 0.28, 0.70, 12);
+  return createSodaCanGeometry(false);
 }
 
 function createBottleGeom() {
-  const pts = [
-    new THREE.Vector2(0.0, 0.0),
-    new THREE.Vector2(0.30, 0.04),
-    new THREE.Vector2(0.32, 0.12),
-    new THREE.Vector2(0.32, 0.80),
-    new THREE.Vector2(0.18, 1.05),
-    new THREE.Vector2(0.13, 1.20),
-    new THREE.Vector2(0.13, 1.30),
-    new THREE.Vector2(0.0, 1.30),
-  ];
-  const g = new THREE.LatheGeometry(pts, 12);
-  g.center();
-  return g;
+  return createPlasticBottleGeometry(false);
 }
 
 function createNetGeom() {

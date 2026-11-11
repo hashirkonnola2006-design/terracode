@@ -1,6 +1,16 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import {
+  createPlasticBottleGeometry,
+  createSodaCanGeometry,
+  createCoffeeCupGeometry,
+  createCrumpledBagGeometry,
+  createMilkJugGeometry,
+  createRubberTireGeometry,
+  createSodaCanTexture,
+  createCoffeeCupTexture,
+} from '../../utils/wasteGeometries';
 
 // ═══════════════════════════════════════════════════════════════
 // TWEAKABLE CONSTANTS (Cinematic Clutter of Floating Wastes)
@@ -9,114 +19,12 @@ export const SMALL_DEBRIS_SCALE = 0.058;  // Crisp visible size relative to Eart
 export const ORBIT_MIN_RADIUS   = 1.08;   // Orbit skimming just above atmosphere
 export const ORBIT_MAX_RADIUS   = 1.62;   // Outer edge of orbital debris halo
 
-// Optimized instance counts across 5 distinct low-poly debris types
-export const COUNT_BOTTLES = 60; // Water bottles
-export const COUNT_BAGS    = 70; // Crumpled plastic bags
-export const COUNT_CANS    = 50; // Soda cans
-export const COUNT_TIRES   = 25; // Rubber tires
-export const COUNT_CRATES  = 25; // Industrial crates
-
-// ── 1. LOW-POLY GEOMETRIES (Optimized for performance) ──
-function createWaterBottleGeometry() {
-  const geom = new THREE.CylinderGeometry(0.24, 0.28, 1.25, 10);
-  geom.center();
-  return geom;
-}
-
-function createShoppingBagGeometry() {
-  const geom = new THREE.DodecahedronGeometry(0.48, 0);
-  const pos = geom.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    pos.setXYZ(i, x * 0.85, y * 1.35, z * 0.70);
-  }
-  geom.computeVertexNormals();
-  return geom;
-}
-
-function createDentedCanGeometry() {
-  const geom = new THREE.CylinderGeometry(0.26, 0.26, 0.75, 12);
-  const pos = geom.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const y = pos.getY(i);
-    if (Math.abs(y) < 0.25 && pos.getX(i) > 0.05) {
-      pos.setX(i, pos.getX(i) * 0.85);
-    }
-  }
-  geom.computeVertexNormals();
-  return geom;
-}
-
-function createTireGeometry() {
-  const geom = new THREE.TorusGeometry(0.42, 0.17, 8, 16);
-  geom.center();
-  return geom;
-}
-
-function createCrateGeometry() {
-  const geom = new THREE.BoxGeometry(0.75, 0.52, 0.60);
-  geom.center();
-  return geom;
-}
-
-// Higher-detail geometries for cinematic foreground debris
-function createDetailedBottleGeometry() {
-  const points = [
-    new THREE.Vector2(0, -0.65),
-    new THREE.Vector2(0.20, -0.63),
-    new THREE.Vector2(0.24, -0.55),
-    new THREE.Vector2(0.24, 0.20),
-    new THREE.Vector2(0.22, 0.25),
-    new THREE.Vector2(0.24, 0.30),
-    new THREE.Vector2(0.12, 0.48),
-    new THREE.Vector2(0.08, 0.52),
-    new THREE.Vector2(0.08, 0.62),
-    new THREE.Vector2(0.10, 0.63),
-    new THREE.Vector2(0.10, 0.68),
-    new THREE.Vector2(0, 0.68),
-  ];
-  const geom = new THREE.LatheGeometry(points, 20);
-  geom.center();
-  return geom;
-}
-
-function createDetailedBagGeometry() {
-  const geom = new THREE.DodecahedronGeometry(0.42, 1);
-  const pos = geom.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    const ripple = Math.sin(x * 5.0) * Math.cos(y * 4.0) * 0.06;
-    pos.setXYZ(i, x * (0.9 + ripple), y * (1.3 + ripple * 1.5), z * (0.75 + ripple));
-  }
-  geom.computeVertexNormals();
-  return geom;
-}
-
-// Low-res procedural texture for soda can
-function createSodaCanTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = '#b91c1c';
-    ctx.fillRect(0, 0, 128, 128);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 48, 128, 32);
-    ctx.fillStyle = '#dc2626';
-    ctx.fillRect(0, 54, 128, 20);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px sans-serif';
-    ctx.fillText('COLA', 28, 70);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  return texture;
-}
+// Optimized instance counts across 5 distinct realistic waste types
+export const COUNT_BOTTLES = 65; // Disposable plastic water bottles
+export const COUNT_BAGS    = 65; // Crumpled plastic grocery bags
+export const COUNT_CANS    = 50; // Dented aluminum soda cans
+export const COUNT_TIRES   = 25; // Discarded rubber tires
+export const COUNT_CUPS    = 35; // Takeout coffee cups with sipping lids
 
 // ═══════════════════════════════════════════════════════════════
 // 1. ORBITAL DEBRIS HALO (Encircles the planet in Earth's group)
@@ -130,67 +38,78 @@ export const FloatingDebris = ({
   const bagInstRef    = useRef(null);
   const canInstRef    = useRef(null);
   const tireInstRef   = useRef(null);
-  const crateInstRef  = useRef(null);
+  const cupInstRef    = useRef(null);
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // Shared low-poly geometries & materials
-  const { bottleGeom, bagGeom, canGeom, tireGeom, crateGeom } = useMemo(() => ({
-    bottleGeom: createWaterBottleGeometry(),
-    bagGeom:    createShoppingBagGeometry(),
-    canGeom:    createDentedCanGeometry(),
-    tireGeom:   createTireGeometry(),
-    crateGeom:  createCrateGeometry(),
+  // Shared realistic waste geometries
+  const { bottleGeom, bagGeom, canGeom, tireGeom, cupGeom } = useMemo(() => ({
+    bottleGeom: createPlasticBottleGeometry(false),
+    bagGeom:    createCrumpledBagGeometry(false),
+    canGeom:    createSodaCanGeometry(false),
+    tireGeom:   createRubberTireGeometry(),
+    cupGeom:    createCoffeeCupGeometry(false),
   }), []);
 
   const canTexture = useMemo(() => createSodaCanTexture(), []);
+  const cupTexture = useMemo(() => createCoffeeCupTexture(), []);
 
-  const { matBottle, matBag, matCan, matTire, matCrate } = useMemo(() => ({
+  // Realistic materials tailored to waste types
+  const { matBottle, matBag, matCan, matTire, matCup } = useMemo(() => ({
     matBottle: new THREE.MeshStandardMaterial({
       color: '#cbd5e1',
-      roughness: 0.15,
-      metalness: 0.10,
+      roughness: 0.18,
+      metalness: 0.15,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.78,
     }),
     matBag: new THREE.MeshStandardMaterial({
-      color: '#e2e8f0',
-      roughness: 0.60,
+      color: '#f8fafc',
+      roughness: 0.65,
+      metalness: 0.05,
       transparent: true,
       opacity: 0.80,
       side: THREE.DoubleSide,
     }),
     matCan: new THREE.MeshStandardMaterial({
       map: canTexture,
-      roughness: 0.35,
-      metalness: 0.50,
+      roughness: 0.32,
+      metalness: 0.55,
     }),
     matTire: new THREE.MeshStandardMaterial({
       color: '#18181c',
-      roughness: 0.92,
+      roughness: 0.94,
       metalness: 0.05,
     }),
-    matCrate: new THREE.MeshStandardMaterial({
-      color: '#1d4ed8',
-      roughness: 0.45,
-      metalness: 0.35,
+    matCup: new THREE.MeshStandardMaterial({
+      map: cupTexture,
+      roughness: 0.70,
+      metalness: 0.10,
     }),
-  }), [canTexture]);
+  }), [canTexture, cupTexture]);
 
-  // Color palettes for clutter variation
+  // Color palettes for realistic waste variety (soft water tints, not solid primary blocks)
   const bottlePalette = useMemo(() => [
-    new THREE.Color('#94a3b8'),
-    new THREE.Color('#38bdf8'),
-    new THREE.Color('#cbd5e1'),
+    new THREE.Color('#cbd5e1'), // Clear PET
+    new THREE.Color('#93c5fd'), // Soft blue mineral water bottle
+    new THREE.Color('#a7f3d0'), // Soft green soda bottle
+    new THREE.Color('#e2e8f0'), // Clear plastic
   ], []);
 
   const bagPalette = useMemo(() => [
-    new THREE.Color('#f1f5f9'),
-    new THREE.Color('#e2e8f0'),
-    new THREE.Color('#fed7aa'),
+    new THREE.Color('#f8fafc'), // White plastic grocery bag
+    new THREE.Color('#fef08a'), // Yellow shopping bag
+    new THREE.Color('#bae6fd'), // Light blue store bag
+    new THREE.Color('#fed7aa'), // Light beige market bag
   ], []);
 
-  // Generate orbital shell parameters (~70% clustered in orbital belt)
+  const cupPalette = useMemo(() => [
+    new THREE.Color('#ffffff'),
+    new THREE.Color('#fed7aa'), // Kraft sleeve
+    new THREE.Color('#e0f2fe'),
+  ], []);
+
+  // Generate orbital shell parameters (~67% clustered in orbital belt)
   const generateClutterData = (count, baseScale, minRadius, maxRadius, colorPalette = null) => {
     const list = [];
     let seed = 12345 + count * 19;
@@ -239,7 +158,7 @@ export const FloatingDebris = ({
   const bagData    = useMemo(() => generateClutterData(COUNT_BAGS,    SMALL_DEBRIS_SCALE * 1.05, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS, bagPalette), [bagPalette]);
   const canData    = useMemo(() => generateClutterData(COUNT_CANS,    SMALL_DEBRIS_SCALE * 0.90, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS), []);
   const tireData   = useMemo(() => generateClutterData(COUNT_TIRES,   SMALL_DEBRIS_SCALE * 0.90, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS), []);
-  const crateData  = useMemo(() => generateClutterData(COUNT_CRATES,  SMALL_DEBRIS_SCALE * 0.90, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS), []);
+  const cupData    = useMemo(() => generateClutterData(COUNT_CUPS,    SMALL_DEBRIS_SCALE * 0.90, ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS, cupPalette), [cupPalette]);
 
   // Compute 3D position in Earth's local coordinate system with central exclusion zone
   const computeOrbitalPos = (item) => {
@@ -299,8 +218,8 @@ export const FloatingDebris = ({
     initMesh(bagInstRef.current,    bagData);
     initMesh(canInstRef.current,    canData);
     initMesh(tireInstRef.current,   tireData);
-    initMesh(crateInstRef.current,  crateData);
-  }, [bottleData, bagData, canData, tireData, crateData]);
+    initMesh(cupInstRef.current,    cupData);
+  }, [bottleData, bagData, canData, tireData, cupData]);
 
   const effectivePollution = pollution !== undefined ? pollution : 1.0 - healProgress;
 
@@ -315,38 +234,38 @@ export const FloatingDebris = ({
 
   return (
     <group ref={clutterGroupRef} visible={effectivePollution > 0.01}>
-      {/* 1. Transparent Water Bottles */}
+      {/* 1. Realistic Translucent Water Bottles */}
       <instancedMesh
         ref={bottleInstRef}
         args={[bottleGeom, matBottle, COUNT_BOTTLES]}
         frustumCulled={true}
       />
 
-      {/* 2. Translucent Crumpled Bags */}
+      {/* 2. Crumpled Plastic Grocery Bags */}
       <instancedMesh
         ref={bagInstRef}
         args={[bagGeom, matBag, COUNT_BAGS]}
         frustumCulled={true}
       />
 
-      {/* 3. Dented Soda Cans */}
+      {/* 3. Dented Soda Cans with Cola Labels */}
       <instancedMesh
         ref={canInstRef}
         args={[canGeom, matCan, COUNT_CANS]}
         frustumCulled={true}
       />
 
-      {/* 4. Rubber Tires */}
+      {/* 4. Rubber Vehicle Tires */}
       <instancedMesh
         ref={tireInstRef}
         args={[tireGeom, matTire, COUNT_TIRES]}
         frustumCulled={true}
       />
 
-      {/* 5. Industrial Cargo Crates */}
+      {/* 5. Disposable Takeout Coffee Cups with Lids */}
       <instancedMesh
-        ref={crateInstRef}
-        args={[crateGeom, matCrate, COUNT_CRATES]}
+        ref={cupInstRef}
+        args={[cupGeom, matCup, COUNT_CUPS]}
         frustumCulled={true}
       />
     </group>
@@ -367,9 +286,9 @@ export const ForegroundDebris = ({
   const bagRef = useRef(null);
   const tireRef = useRef(null);
   const canRef = useRef(null);
-  const crateRef = useRef(null);
+  const cupRef = useRef(null);
   const smallBottleRef = useRef(null);
-  const cartonRef = useRef(null);
+  const jugRef = useRef(null);
 
   const { size } = useThree();
   const aspect = size.width / Math.max(1, size.height);
@@ -380,26 +299,27 @@ export const ForegroundDebris = ({
     detailBagGeom,
     tireGeom,
     canGeom,
-    crateGeom,
-    cartonGeom,
+    cupGeom,
+    jugGeom,
   } = useMemo(() => ({
-    detailBottleGeom: createDetailedBottleGeometry(),
-    detailBagGeom:    createDetailedBagGeometry(),
-    tireGeom:         createTireGeometry(),
-    canGeom:          createDentedCanGeometry(),
-    crateGeom:        createCrateGeometry(),
-    cartonGeom:       new THREE.BoxGeometry(0.48, 0.62, 0.42),
+    detailBottleGeom: createPlasticBottleGeometry(true),
+    detailBagGeom:    createCrumpledBagGeometry(true),
+    tireGeom:         createRubberTireGeometry(),
+    canGeom:          createSodaCanGeometry(true),
+    cupGeom:          createCoffeeCupGeometry(true),
+    jugGeom:          createMilkJugGeometry(),
   }), []);
 
   const canTexture = useMemo(() => createSodaCanTexture(), []);
+  const cupTexture = useMemo(() => createCoffeeCupTexture(), []);
 
   const materials = useMemo(() => ({
     bottle: new THREE.MeshStandardMaterial({
-      color: '#94a3b8',
-      roughness: 0.12,
+      color: '#93c5fd', // Translucent blue water bottle
+      roughness: 0.15,
       metalness: 0.20,
       transparent: true,
-      opacity: 0.62,
+      opacity: 0.65,
       depthWrite: false,
     }),
     bag: new THREE.MeshStandardMaterial({
@@ -407,7 +327,7 @@ export const ForegroundDebris = ({
       roughness: 0.60,
       metalness: 0.05,
       transparent: true,
-      opacity: 0.70,
+      opacity: 0.75,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
@@ -421,17 +341,17 @@ export const ForegroundDebris = ({
       roughness: 0.32,
       metalness: 0.60,
     }),
-    crate: new THREE.MeshStandardMaterial({
-      color: '#1d4ed8', // Iconic blue cargo container
+    cup: new THREE.MeshStandardMaterial({
+      map: cupTexture,
+      roughness: 0.65,
+      metalness: 0.10,
+    }),
+    jug: new THREE.MeshStandardMaterial({
+      color: '#f1f5f9', // Milky white HDPE detergent/milk jug
       roughness: 0.45,
-      metalness: 0.35,
+      metalness: 0.08,
     }),
-    carton: new THREE.MeshStandardMaterial({
-      color: '#78350f', // Industrial brown carton box
-      roughness: 0.75,
-      metalness: 0.05,
-    }),
-  }), [canTexture]);
+  }), [canTexture, cupTexture]);
 
   const effectivePollution = pollution !== undefined ? pollution : 1.0 - healProgress;
 
@@ -476,15 +396,16 @@ export const ForegroundDebris = ({
       canRef.current.position.y = (-0.76 * spreadY) + Math.cos(t * 0.8 + 2.0) * 0.016;
       canRef.current.rotation.y += delta * 0.045;
     }
-    if (crateRef.current) {
-      crateRef.current.rotation.y += delta * 0.015;
-      crateRef.current.rotation.z += delta * 0.01;
+    if (cupRef.current) {
+      cupRef.current.rotation.y += delta * 0.025;
+      cupRef.current.rotation.z += delta * 0.015;
     }
     if (smallBottleRef.current) {
       smallBottleRef.current.rotation.y += delta * 0.03;
     }
-    if (cartonRef.current) {
-      cartonRef.current.rotation.x += delta * 0.02;
+    if (jugRef.current) {
+      jugRef.current.rotation.x += delta * 0.02;
+      jugRef.current.rotation.y += delta * 0.015;
     }
   });
 
@@ -530,14 +451,14 @@ export const ForegroundDebris = ({
         scale={0.26}
       />
 
-      {/* 5. Blue Industrial Shipping Crate (Mid-Right space) */}
+      {/* 5. Takeout Coffee Cup with Sipping Lid (Mid-Right space - replaces the blue box!) */}
       <mesh
-        ref={crateRef}
-        geometry={crateGeom}
-        material={materials.crate}
+        ref={cupRef}
+        geometry={cupGeom}
+        material={materials.cup}
         position={[0.96 * spreadX, -0.32 * spreadY, 0.52]}
-        rotation={[0.22, -0.50, 0.35]}
-        scale={0.18}
+        rotation={[0.42, -0.35, 0.25]}
+        scale={0.30}
       />
 
       {/* 6. Smaller Tilted Water Bottle (Mid-Left space) */}
@@ -550,14 +471,14 @@ export const ForegroundDebris = ({
         scale={0.18}
       />
 
-      {/* 7. Industrial Brown Carton Box (Lower-Mid space) */}
+      {/* 7. Molded Plastic Milk / Detergent Jug with Handle (Lower-Mid space - replaces the brown box!) */}
       <mesh
-        ref={cartonRef}
-        geometry={cartonGeom}
-        material={materials.carton}
+        ref={jugRef}
+        geometry={jugGeom}
+        material={materials.jug}
         position={[0.72 * spreadX, -0.66 * spreadY, 0.58]}
-        rotation={[0.45, 0.20, -0.30]}
-        scale={0.16}
+        rotation={[0.35, 0.40, -0.20]}
+        scale={0.28}
       />
     </group>
   );
