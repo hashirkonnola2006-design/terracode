@@ -74,6 +74,22 @@ body {
   border-color: rgba(11, 236, 194, 0.45);
 }
 
+/* 8-bit Equalizer Animation for SoundControl */
+@keyframes musicBar1 {
+  0%, 100% { height: 4px; }
+  50% { height: 14px; }
+}
+
+@keyframes musicBar2 {
+  0%, 100% { height: 12px; }
+  50% { height: 5px; }
+}
+
+@keyframes musicBar3 {
+  0%, 100% { height: 6px; }
+  50% { height: 15px; }
+}
+
 /* Accessibility: respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {

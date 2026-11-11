@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useIntroStatus } from '../intro/useIntroStatus';
 import { HERO_CONFIG } from '../../config/heroSolutions';
 import { Play, Leaf, ChevronDown } from 'lucide-react';
+import { musicEngine } from '../../audio/musicEngine';
 
 export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
   const heroContainerRef = useRef(null);
@@ -61,6 +62,7 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
 
   const handlePlayClick = (e) => {
     e.preventDefault();
+    musicEngine.playClick();
     if (onScrollToPlay) {
       onScrollToPlay();
     } else {
@@ -73,6 +75,7 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
 
   const handleSolutionsClick = (e) => {
     e.preventDefault();
+    musicEngine.playClick();
     if (onScrollToPillars) {
       onScrollToPillars();
     } else {
@@ -178,6 +181,7 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
             <a
               href="#play"
               onClick={handlePlayClick}
+              onMouseEnter={() => musicEngine.playHover()}
               className="group relative inline-flex items-center gap-2.5 px-6 sm:px-7 py-3 rounded-full bg-[#14e6c0] text-[#050505] font-bold text-xs sm:text-sm tracking-wide shadow-[0_0_22px_rgba(20,230,192,0.38)] hover:shadow-[0_0_36px_rgba(20,230,192,0.70)] hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
             >
               <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current transition-transform group-hover:scale-110" />
@@ -188,6 +192,7 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
             <a
               href="#solutions-grid"
               onClick={handleSolutionsClick}
+              onMouseEnter={() => musicEngine.playHover()}
               className="group inline-flex items-center gap-2.5 px-5 sm:px-6 py-3 rounded-full border border-white/30 text-white font-medium text-xs sm:text-sm tracking-wide bg-transparent hover:bg-[#14e6c0]/10 hover:border-[#14e6c0] hover:text-[#14e6c0] hover:shadow-[0_0_24px_rgba(20,230,192,0.22)] hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer backdrop-blur-sm"
             >
               <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:rotate-12" />
@@ -203,6 +208,7 @@ export const SolutionsHero = ({ onScrollToPillars, onScrollToPlay }) => {
           entered && scrollFade > 0.5 ? 'opacity-85 hover:opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={handleSolutionsClick}
+        onMouseEnter={() => musicEngine.playHover()}
         role="button"
         aria-label="Scroll down to solutions"
       >

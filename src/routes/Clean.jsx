@@ -9,6 +9,8 @@ import { Tutorial } from '../ui/Tutorial';
 import { EndingScreen } from '../ui/EndingScreen';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { navigateWithTransition } from '../utils/navigation';
+import { SoundControl } from '../components/audio/SoundControl';
+import { musicEngine } from '../audio/musicEngine';
 import {
   Volume2,
   VolumeX,
@@ -23,7 +25,16 @@ export const Clean = () => {
 
   useEffect(() => {
     document.title = 'TerraHeal | Clean the Earth';
+    musicEngine.setSection('game');
+    return () => {
+      musicEngine.setSection('hero');
+    };
   }, []);
+
+  useEffect(() => {
+    musicEngine.setHealAmount(cleanliness);
+  }, [cleanliness]);
+
   const cleanliness = useGameStore((s) => s.cleanup?.health ?? s.cleanliness ?? 0);
   const isFinished = cleanliness >= 100;
   const muted = useGameStore((s) => s.muted);
@@ -78,19 +89,8 @@ export const Clean = () => {
             </button>
           )}
 
-          {/* Sound Toggle */}
-          <button
-            onClick={toggleMute}
-            className={`p-1.5 sm:p-2 rounded-lg border text-xs transition-colors cursor-pointer ${
-              muted
-                ? 'bg-[#050505]/80 border-white/10 text-white/30'
-                : 'bg-[#050505]/80 border-white/10 text-white/80 hover:text-white hover:bg-white/[0.08]'
-            }`}
-            title={muted ? 'Unmute audio' : 'Mute audio'}
-            aria-label={muted ? 'Unmute audio' : 'Mute audio'}
-          >
-            {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-[#0becc2]" />}
-          </button>
+          {/* Chiptune Audio Control with Volume Popover */}
+          <SoundControl buttonClass="p-1.5 sm:p-2 rounded-lg border text-xs" />
 
           {/* Lite Mode Toggle */}
           <button

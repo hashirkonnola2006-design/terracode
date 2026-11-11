@@ -8,6 +8,8 @@ import { SectionFade } from '../components/Common/SectionFade';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { Footer } from '../components/Footer/Footer';
 import { navigateWithTransition } from '../utils/navigation';
+import { SoundControl } from '../components/audio/SoundControl';
+import { musicEngine } from '../audio/musicEngine';
 import {
   Leaf,
   Sparkles,
@@ -142,6 +144,16 @@ export const Solutions = () => {
 
   // Smooth scroll to #play or redirect #sources
   useEffect(() => {
+    const sectionName = activeNavSection === 'solutions' ? 'pillars' : activeNavSection === 'play' ? 'play' : 'hero';
+    musicEngine.setSection(sectionName);
+  }, [activeNavSection]);
+
+  useEffect(() => {
+    musicEngine.setHealAmount(cleanup?.health || 0);
+  }, [cleanup?.health]);
+
+  // Smooth scroll to #play or redirect #sources
+  useEffect(() => {
     if (location.hash === '#play') {
       setTimeout(() => {
         const el = document.getElementById('play');
@@ -197,7 +209,11 @@ export const Solutions = () => {
         {/* Nav Links (Desktop) */}
         <nav className="hidden md:flex items-center gap-8 font-label uppercase text-xs tracking-[0.18em]">
           <button
-            onClick={handleHomeClick}
+            onClick={() => {
+              musicEngine.playClick();
+              handleHomeClick();
+            }}
+            onMouseEnter={() => musicEngine.playHover()}
             className={`transition-colors cursor-pointer relative py-1 ${
               activeNavSection === 'home'
                 ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
@@ -207,7 +223,11 @@ export const Solutions = () => {
             Home
           </button>
           <button
-            onClick={handleSolutionsClick}
+            onClick={() => {
+              musicEngine.playClick();
+              handleSolutionsClick();
+            }}
+            onMouseEnter={() => musicEngine.playHover()}
             className={`transition-colors cursor-pointer relative py-1 ${
               activeNavSection === 'solutions'
                 ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
@@ -217,7 +237,11 @@ export const Solutions = () => {
             Solutions
           </button>
           <button
-            onClick={handlePlayClick}
+            onClick={() => {
+              musicEngine.playClick();
+              handlePlayClick();
+            }}
+            onMouseEnter={() => musicEngine.playHover()}
             className={`transition-colors cursor-pointer relative py-1 ${
               activeNavSection === 'play'
                 ? 'text-[#14e6c0] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
@@ -231,7 +255,10 @@ export const Solutions = () => {
         {/* Nav Links (Mobile) */}
         <nav className="flex md:hidden items-center gap-3 font-label uppercase text-[10px] tracking-[0.14em]">
           <button
-            onClick={handleHomeClick}
+            onClick={() => {
+              musicEngine.playClick();
+              handleHomeClick();
+            }}
             className={`transition-colors cursor-pointer py-1 ${
               activeNavSection === 'home' ? 'text-white font-semibold' : 'text-white/60'
             }`}
@@ -239,7 +266,10 @@ export const Solutions = () => {
             Home
           </button>
           <button
-            onClick={handleSolutionsClick}
+            onClick={() => {
+              musicEngine.playClick();
+              handleSolutionsClick();
+            }}
             className={`transition-colors cursor-pointer py-1 ${
               activeNavSection === 'solutions' ? 'text-white font-semibold' : 'text-white/60'
             }`}
@@ -247,7 +277,10 @@ export const Solutions = () => {
             Solutions
           </button>
           <button
-            onClick={handlePlayClick}
+            onClick={() => {
+              musicEngine.playClick();
+              handlePlayClick();
+            }}
             className={`transition-colors cursor-pointer py-1 ${
               activeNavSection === 'play' ? 'text-[#14e6c0] font-semibold' : 'text-[#14e6c0]/80'
             }`}
@@ -258,19 +291,8 @@ export const Solutions = () => {
 
         {/* Controls */}
         <div className="flex items-center gap-2">
-          {/* Audio */}
-          <button
-            onClick={toggleMute}
-            className={`p-2 rounded-lg backdrop-blur-md border text-xs transition-colors cursor-pointer ${
-              muted
-                ? 'bg-slate-900/80 border-white/10 text-slate-500'
-                : 'bg-slate-900/80 border-white/20 text-[#14e6c0] hover:bg-white/[0.08]'
-            }`}
-            title={muted ? 'Unmute' : 'Mute'}
-            aria-label="Toggle sound"
-          >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
+          {/* Chiptune Audio Control with Volume Popover */}
+          <SoundControl />
 
           {/* Theme / Lite Mode */}
           <button

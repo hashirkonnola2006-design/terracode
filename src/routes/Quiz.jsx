@@ -15,6 +15,8 @@ import {
 } from '../utils/quizCertificate';
 import { TerraHealLogo } from '../components/brand/TerraHealLogo';
 import { navigateWithTransition } from '../utils/navigation';
+import { SoundControl } from '../components/audio/SoundControl';
+import { musicEngine } from '../audio/musicEngine';
 import {
   ArrowLeft,
   Volume2,
@@ -37,7 +39,15 @@ export const Quiz = () => {
 
   useEffect(() => {
     document.title = 'TerraHeal | Zero-Waste Quiz';
+    musicEngine.setSection('game');
+    return () => {
+      musicEngine.setSection('hero');
+    };
   }, []);
+
+  useEffect(() => {
+    musicEngine.setHealAmount(quiz?.health || 0);
+  }, [quiz?.health]);
 
   const quiz = useGameStore((s) => s.quiz);
   const answerQuizQuestion = useGameStore((s) => s.answerQuizQuestion);
@@ -187,8 +197,11 @@ export const Quiz = () => {
     setIsAnswered(true);
 
     if (isCorrect) {
+      musicEngine.playSuccess();
       setFloatingBonus(true);
       setTimeout(() => setFloatingBonus(false), 1400);
+    } else {
+      musicEngine.playFail();
     }
 
     answerQuizQuestion(currentQ.id, option, isCorrect, currentQ.region);
@@ -349,18 +362,7 @@ export const Quiz = () => {
 
         {/* Right: Audio & Lite Toggles */}
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={toggleMute}
-            className={`p-1.5 sm:p-2 rounded-lg backdrop-blur-md border text-xs transition-colors cursor-pointer ${
-              muted
-                ? 'bg-slate-900/80 border-white/10 text-slate-500'
-                : 'bg-slate-900/80 border-white/20 text-sky-400 hover:bg-white/[0.08]'
-            }`}
-            title={muted ? 'Unmute' : 'Mute'}
-            aria-label="Toggle Sound"
-          >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
+          <SoundControl buttonClass="p-1.5 sm:p-2 rounded-lg backdrop-blur-md border text-xs" />
 
           <button
             onClick={toggleLiteMode}
