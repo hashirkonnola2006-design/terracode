@@ -13,10 +13,10 @@ export const HERO_CONFIG = {
   planetTopEdgePercentMobile: 0.58,
 
   // 3D Planet Group Positioning
-  // Shifted slightly right (X = 0.16) and down (Y = -1.44) so left text area stays clean
-  planetYDesktop: -1.44,
+  // Shifted slightly right (X = 0.16) and up (Y = -1.22) to cover ~40% of E and A in HEAL
+  planetYDesktop: -1.22,
   planetXDesktop: 0.16,
-  planetYMobile: -1.28,
+  planetYMobile: -0.96,
   planetXMobile: 0.0,
 
   // Planet Scale & Camera Z (preserving close-up cinematic feel)

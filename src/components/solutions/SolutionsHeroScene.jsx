@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Earth, AXIAL_TILT_X, AXIAL_TILT_Z, INITIAL_ROTATION_Y } from '../hero3d/Earth';
 import { Clouds } from '../hero3d/Clouds';
 import { interpolateGlobeKeyframes } from '../../config/globeKeyframes';
+import { HERO_CONFIG } from '../../config/heroSolutions';
 import {
   DetailedCan,
   DetailedBottle,
@@ -143,10 +144,10 @@ const FloatingDebrisField = ({ mouseRef, visible = true, opacity = 1.0, prefersR
     const mx = mouseRef.current ? mouseRef.current.x : 0;
     const my = mouseRef.current ? mouseRef.current.y : 0;
 
-    // Guaranteed clearance from Earth: center is (0.16, -1.44), radius is 1.30.
+    // Guaranteed clearance from Earth: center is (0.16, HERO_CONFIG.planetYDesktop), radius is 1.30.
     // Minimum distance 1.56 guarantees ZERO intersection or entry into Earth!
-    const earthCenterX = 0.16;
-    const earthCenterY = -1.44;
+    const earthCenterX = HERO_CONFIG.planetXDesktop;
+    const earthCenterY = HERO_CONFIG.planetYDesktop;
     const minDistance = 1.56;
 
     itemsRef.current.forEach((itemObj, idx) => {
@@ -333,7 +334,10 @@ const PersistentPlanetController = ({
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Persistent smoothed state refs
-  const currentPos = useRef({ x: isMobile ? 0 : 0.16, y: isMobile ? -1.28 : -1.44 });
+  const currentPos = useRef({
+    x: isMobile ? HERO_CONFIG.planetXMobile : HERO_CONFIG.planetXDesktop,
+    y: isMobile ? HERO_CONFIG.planetYMobile : HERO_CONFIG.planetYDesktop,
+  });
   const currentScale = useRef(isMobile ? 1.18 : 1.30);
   const currentRotX = useRef(AXIAL_TILT_X + 0.14);
   const currentRotZ = useRef(AXIAL_TILT_Z);
