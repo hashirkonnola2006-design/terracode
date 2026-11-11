@@ -45,23 +45,24 @@ const AtmosphereShader = {
       vec3 wn = normalize(vWorldNormal);
       vec3 viewDir = normalize(uCameraPos - vWorldPos);
 
-      // Thin, soft Fresnel limb
+      // Thin, crisp Fresnel limb
       float NdotV = max(dot(wn, viewDir), 0.0);
       float fresnel = 1.0 - NdotV;
-      float rim = pow(fresnel, 5.6);
+      float rim = pow(fresnel, mix(5.6, 7.2, uColdRim));
 
-      // Light direction (cool rim from upper left in cold mode)
+      // Light direction & horizon arc modulation
       vec3 lightDir = normalize(mix(vec3(-0.55, 0.65, 0.52), vec3(-0.75, 0.58, 0.32), uColdRim));
       float sunDot = max(dot(wn, lightDir), 0.0);
-      float rimMod = 0.50 + 0.55 * pow(sunDot, 1.5);
+      float topArc = smoothstep(-0.15, 0.55, wn.y);
+      float rimMod = mix(0.50 + 0.55 * pow(sunDot, 1.5), 0.55 + 0.95 * topArc, uColdRim);
 
-      // Colors: Muted rust-gray when polluted standard; cold blue-grey when coldRim=1; bright cyan when clean
+      // Colors: Muted rust-gray when polluted standard; bright electric cyan when coldRim=1 (hero target reference)
       vec3 colStandardPolluted = vec3(0.42, 0.28, 0.22);
-      vec3 colColdPolluted     = vec3(0.24, 0.38, 0.58);
+      vec3 colColdPolluted     = vec3(0.04, 0.82, 1.00);
       vec3 colPolluted   = mix(colStandardPolluted, colColdPolluted, uColdRim);
 
       vec3 colClean      = vec3(0.00, 0.78, 1.00); // Bright electric cyan
-      vec3 crestPolluted = mix(vec3(0.50, 0.35, 0.26), vec3(0.35, 0.52, 0.72), uColdRim);
+      vec3 crestPolluted = mix(vec3(0.50, 0.35, 0.26), vec3(0.40, 0.90, 1.00), uColdRim);
       vec3 crestClean    = vec3(0.72, 0.90, 1.00);
 
       vec3 atmoColor = mix(colClean, colPolluted, pollution);

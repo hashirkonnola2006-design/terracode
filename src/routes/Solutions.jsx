@@ -182,7 +182,7 @@ export const Solutions = () => {
             onClick={handleHomeClick}
             className={`transition-colors cursor-pointer relative py-1 ${
               activeNavSection === 'home'
-                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#0becc2]'
+                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
                 : 'text-white/60 hover:text-white'
             }`}
           >
@@ -192,7 +192,7 @@ export const Solutions = () => {
             onClick={handleSolutionsClick}
             className={`transition-colors cursor-pointer relative py-1 ${
               activeNavSection === 'solutions'
-                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#0becc2]'
+                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
                 : 'text-white/60 hover:text-white'
             }`}
           >
@@ -202,8 +202,8 @@ export const Solutions = () => {
             onClick={handlePlayClick}
             className={`transition-colors cursor-pointer relative py-1 ${
               activeNavSection === 'play'
-                ? 'text-[#0becc2] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#0becc2]'
-                : 'text-[#0becc2]/80 hover:text-[#0becc2]'
+                ? 'text-[#14e6c0] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#14e6c0]'
+                : 'text-[#14e6c0]/90 hover:text-[#14e6c0]'
             }`}
           >
             Play Games
@@ -231,7 +231,7 @@ export const Solutions = () => {
           <button
             onClick={handlePlayClick}
             className={`transition-colors cursor-pointer py-1 ${
-              activeNavSection === 'play' ? 'text-[#0becc2] font-semibold' : 'text-[#0becc2]/70'
+              activeNavSection === 'play' ? 'text-[#14e6c0] font-semibold' : 'text-[#14e6c0]/80'
             }`}
           >
             Play
@@ -246,7 +246,7 @@ export const Solutions = () => {
             className={`p-2 rounded-lg backdrop-blur-md border text-xs transition-colors cursor-pointer ${
               muted
                 ? 'bg-slate-900/80 border-white/10 text-slate-500'
-                : 'bg-slate-900/80 border-white/20 text-emerald-400 hover:bg-white/[0.08]'
+                : 'bg-slate-900/80 border-white/20 text-[#14e6c0] hover:bg-white/[0.08]'
             }`}
             title={muted ? 'Unmute' : 'Mute'}
             aria-label="Toggle sound"
@@ -254,7 +254,7 @@ export const Solutions = () => {
             {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
 
-          {/* Lite Mode */}
+          {/* Theme / Lite Mode */}
           <button
             onClick={toggleLiteMode}
             className={`p-2 rounded-lg backdrop-blur-md border text-xs transition-colors cursor-pointer ${
@@ -263,9 +263,9 @@ export const Solutions = () => {
                 : 'bg-slate-900/80 border-white/10 text-slate-300 hover:text-white hover:bg-white/[0.08]'
             }`}
             title={liteMode ? 'Switch to Cinematic High-DPI' : 'Switch to Eco/Lite Mode'}
-            aria-label="Toggle Lite Mode"
+            aria-label="Toggle Mode"
           >
-            <Zap className="w-4 h-4" />
+            <Sun className="w-4 h-4" />
           </button>
         </div>
       </header>
@@ -274,6 +274,7 @@ export const Solutions = () => {
       <SolutionsHero
         liteMode={liteMode}
         onScrollToPillars={() => scrollToSection('solutions-grid')}
+        onScrollToPlay={() => scrollToSection('play')}
       />
 
       {/* ── Content Below Hero: Solid #050505 Background (No WebGL) ── */}

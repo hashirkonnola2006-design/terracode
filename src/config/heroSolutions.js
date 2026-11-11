@@ -3,39 +3,38 @@
  * TERRAHEAL — SOLUTIONS HERO TUNING CONFIGURATION
  * ═══════════════════════════════════════════════════════════════
  * Tunable parameters for Earth horizon height, letter visibility,
- * camera framing, and headline positioning.
+ * camera framing, floating debris, and headline positioning.
  */
 
 export const HERO_CONFIG = {
   // Target position of Earth's horizon peak at horizontal center
-  // as a fraction of hero viewport height from top (0.42 = 42% from top)
-  planetTopEdgePercent: 0.42,
-  planetTopEdgePercentMobile: 0.43,
+  // 0.56 places the horizon peak ~56% from top, leaving upper 60-65% of HEAL clearly visible
+  planetTopEdgePercent: 0.56,
+  planetTopEdgePercentMobile: 0.58,
 
-  // Target visible share of H, E, A, L letters (upper 55% - 65% visible)
-  visibleShareLetters: 0.60,
+  // 3D Planet Group Positioning
+  // Shifted slightly right (X = 0.16) and down (Y = -1.44) so left text area stays clean
+  planetYDesktop: -1.44,
+  planetXDesktop: 0.16,
+  planetYMobile: -1.28,
+  planetXMobile: 0.0,
 
-  // 3D Planet Group Vertical Position
-  // -0.96 places the horizon peak at ~42% of hero height, cutting across lower 35-45% of letters
-  planetYDesktop: -0.96,
-  planetYMobile: -0.92,
-
-  // Planet Scale & Camera Z (preserving close-up cropped feel)
-  planetScaleDesktop: 1.22,
+  // Planet Scale & Camera Z (preserving close-up cinematic feel)
+  planetScaleDesktop: 1.30,
   planetScaleMobile: 1.18,
   cameraZDesktop: 2.18,
-  cameraZMobile: 2.22,
+  cameraZMobile: 2.25,
   cameraFov: 40,
-  rotationSpeed: 0.0055,
+  rotationSpeed: 0.0030, // Slow majestic auto-rotation
 
-  // HEAL Typography Fine Positioning
-  healTopOffsetDesktop: 'pt-8 sm:pt-10 md:pt-6',
-  healTopOffsetMobile: 'pt-8',
-  healFontSize: 'text-[34vw] sm:text-[32vw] md:text-[28vw]',
+  // HEAL Typography Positioning
+  healTopOffsetDesktop: 'pt-16 sm:pt-20 md:pt-22',
+  healTopOffsetMobile: 'pt-16',
+  healFontSize: 'text-[clamp(90px,23.5vw,350px)]',
 
-  // Headline ("Broken planet. Your move.") and Caption Positioning
-  headlineBottomDesktop: 'bottom-7 sm:bottom-10 md:bottom-12',
-  headlineLeftDesktop: 'left-6 sm:left-10 md:left-14 lg:left-16',
+  // Headline ("Broken planet. Your move.") and Action Buttons Positioning
+  headlineBottomDesktop: 'bottom-10 sm:bottom-12 md:bottom-16',
+  headlineLeftDesktop: 'left-6 sm:left-12 md:left-16 lg:left-20',
 };
 
 export default HERO_CONFIG;

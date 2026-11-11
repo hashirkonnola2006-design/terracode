@@ -146,11 +146,11 @@ export const TerraHealLogo = ({
       <TerraHealMark size={markSize} className="transition-transform group-hover:rotate-3" />
       {showText && (
         <span
-          className={`font-pixel font-bold tracking-tight leading-none select-none ${textClass}`}
-          style={{ fontFamily: "'Pixelify Sans', monospace, sans-serif" }}
+          className={`font-display font-extrabold tracking-tight leading-none select-none ${textClass}`}
+          style={{ fontFamily: "'Outfit', 'Montserrat', sans-serif", letterSpacing: '-0.03em' }}
         >
           <span className="text-white">Terra</span>
-          <span className="text-[#0becc2]">Heal</span>
+          <span className="text-[#14e6c0]">Heal</span>
         </span>
       )}
     </button>
