@@ -32,6 +32,7 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
   const isUserInteracting = useRef(false);
   const lastInteractionTime = useRef(performance.now());
   const currentSpinSpeed = useRef(0.014);
+  const currentScale = useRef(1.0);
   const hasSignaledReady = useRef(false);
 
   // Heal mask persistence: restore saved regions on mount and synchronize on game resets
@@ -120,9 +121,18 @@ const SceneController = ({ cleanliness, liteMode, onCanvasRef }) => {
     if (planetGroupRef.current) {
       planetGroupRef.current.rotation.y += delta * currentSpinSpeed.current;
 
-      // When 100% healed and on desktop, smoothly frame planet in right viewport so it's not obscured by the victory card
-      const targetPosX = (!isPortrait && cleanliness >= 100) ? 0.45 : 0.0;
-      const targetPosY = (isPortrait && cleanliness >= 100) ? 0.35 : 0.0;
+      // When 100% healed and on desktop, smoothly scale down slightly and frame in right viewport so it's not obscured
+      const targetPosX = (!isPortrait && cleanliness >= 100) ? 0.48 : 0.0;
+      const targetPosY = (isPortrait && cleanliness >= 100) ? 0.36 : 0.0;
+      const targetScale = cleanliness >= 100 ? (isPortrait ? 0.70 : 0.80) : 1.0;
+
+      currentScale.current = THREE.MathUtils.lerp(
+        currentScale.current,
+        targetScale,
+        Math.min(delta * 2.2, 1.0)
+      );
+      planetGroupRef.current.scale.setScalar(currentScale.current);
+
       planetGroupRef.current.position.x = THREE.MathUtils.lerp(
         planetGroupRef.current.position.x,
         targetPosX,
